@@ -33,8 +33,10 @@ A page is reachable at `/pages/{slug}`, handled by `CustomPagesController`. When
 
 Upload images on the **Assets** tab. Each image is stored (Base64-encoded) in the plugin configuration and served at `/pages/asset/{name}`. Reference one from your page's HTML or CSS using the relative path **`asset/{name}`**. For example:
 
-`<img src="asset/logo.png">`
-`background: url('asset/logo.png')`
+```
+<img src="asset/logo.png">
+background: url('asset/logo.png')
+```
 
 Because your page renders at `/pages/{slug}`, that relative path resolves to `/pages/asset/{name}` automatically, regardless of the base Jellyfin URL or subfolder.
 
