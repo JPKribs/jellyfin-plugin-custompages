@@ -1,0 +1,35 @@
+<div id="CustomPagesAssetsPage" data-role="page"
+     class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-input,emby-button"
+     data-controller="__plugin/custompages_assets.js">
+    <div data-role="content">
+        <div class="content-primary">
+            <form id="CustomPagesAssetsForm">
+                <div class="verticalSection verticalSection-extrabottompadding">
+
+                    <div class="sectionTitleContainer flex align-items-center">
+                        <h1 class="sectionTitle">Assets</h1>
+                    </div>
+
+                    <div class="fieldDescription" style="margin-bottom: 12px;">
+                        Upload images to host them on the server at <code>/pages/asset/{name}</code>. Reference one
+                        from a page's HTML or CSS with the path shown on its card, for example
+                        <code>&lt;img src="asset/logo.png"&gt;</code> or <code>url('asset/logo.png')</code>.
+                    </div>
+
+                    <div class="inputContainer">
+                        <label for="assetFile">Upload images</label>
+                        <input type="file" id="assetFile" accept="image/*" multiple />
+                    </div>
+
+                    <div id="assetEmpty" class="cp-empty hidden">No images uploaded yet.</div>
+                    <div id="assetList" class="cp-asset-list"></div>
+                    <span id="assetStatus" class="cp-status-text"></span>
+
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="configurationpage?name=custompages_shared.css">
+</div>

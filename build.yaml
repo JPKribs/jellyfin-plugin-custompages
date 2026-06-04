@@ -1,24 +1,19 @@
 ---
-name: "User Management"
-guid: "670167bd-e7f8-4549-98e2-5ab2e11bc89f"
-version: "10.11.1.2"
-targetAbi: "10.11.10.0"
+name: "Custom Pages"
+guid: "409ef72d-6014-47fd-8928-ebad581bf81b"
+version: "10.11.1.0"
+targetAbi: "10.11.0.0"
 framework: "net9.0"
-overview: "Group policy templates, account lifecycle, password hygiene, and easier user onboarding for Jellyfin."
+overview: "Author and serve authorization-gated HTML pages at /pages/{slug}."
 description: >
-  User Management provides user groups and password hygiene to accounts that already exist on your
-  Jellyfin server. Define group permission templates with live sync, set account expiry and auto-disable
-  inactive users, and enforce password requirements. Use these groups to send user-managed, and protected 
-  invite links.
+  Custom Pages lets administrators publish custom pages served by Jellyfin at
+  /pages/{slug}. Each page can be public or restricted to users or administrators, 
+  enforced by Jellyfin's own authorization policies.
 category: "General"
-imageUrl: "https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-usermanagement/refs/heads/master/Jellyfin.Plugin.UserManagement/Assets/Logo.png"
+imageUrl: "https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-custompages/refs/heads/master/Jellyfin.Plugin.CustomPages/Assets/Logo.png"
 owner: "JPKribs"
 artifacts:
-- "Jellyfin.Plugin.UserManagement.dll"
+- "Jellyfin.Plugin.CustomPages.dll"
 changelog:
-  fixes:
-  - Allow locking/unlocking invites
-  - Allow editing an invite's expiration date
-  - Add a media conversion permission to groups
-  - Keep expired and inactive users disabled when a group would otherwise re-enable them
-  - Fix poor formatting
+  features:
+  - Initial release!

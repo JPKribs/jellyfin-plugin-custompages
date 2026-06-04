@@ -5,8 +5,8 @@ set -e
 # Configuration
 CONFIGURATION="${1:-Release}"
 OUTPUT_DIR="dist"
-PROJECT_DIR="Jellyfin.Plugin.UserManagement"
-PROJECT_FILE="$PROJECT_DIR/Jellyfin.Plugin.UserManagement.csproj"
+PROJECT_DIR="Jellyfin.Plugin.CustomPages"
+PROJECT_FILE="$PROJECT_DIR/Jellyfin.Plugin.CustomPages.csproj"
 
 # Colors
 RED='\033[0;31m'
@@ -49,8 +49,8 @@ get_plugin_version() {
 # Get plugin info from build.yaml
 get_plugin_info() {
     local build_file="build.yaml"
-    local name="User Management"
-    local guid="670167bd-e7f8-4549-98e2-5ab2e11bc89f"
+    local name="Custom Pages"
+    local guid="409ef72d-6014-47fd-8928-ebad581bf81b"
 
     if [[ -f "$build_file" ]]; then
         local extracted_name=$(grep '^name:' "$build_file" | cut -d':' -f2 | tr -d ' "')
@@ -69,12 +69,16 @@ validate_resources() {
 
     local missing_files=()
     local config_files=(
-        "$PROJECT_DIR/Configuration/usermanagement_user.html"
-        "$PROJECT_DIR/Configuration/usermanagement_user.js"
-        "$PROJECT_DIR/Configuration/usermanagement_invites.html"
-        "$PROJECT_DIR/Configuration/usermanagement_invites.js"
-        "$PROJECT_DIR/Configuration/usermanagement_shared.css"
-        "$PROJECT_DIR/Configuration/usermanagement_shared.js"
+        "$PROJECT_DIR/Configuration/custompages_pages.html"
+        "$PROJECT_DIR/Configuration/custompages_pages.js"
+        "$PROJECT_DIR/Configuration/custompages_assets.html"
+        "$PROJECT_DIR/Configuration/custompages_assets.js"
+        "$PROJECT_DIR/Configuration/custompages_shared.css"
+        "$PROJECT_DIR/Configuration/custompages_shared.js"
+        "$PROJECT_DIR/Templates/custompages_wrapper.html"
+        "$PROJECT_DIR/Templates/custompages_inner.html"
+        "$PROJECT_DIR/Templates/custompages_fallback.html"
+        "$PROJECT_DIR/Templates/custompages_shell.html"
     )
 
     for file in "${config_files[@]}"; do
@@ -100,7 +104,7 @@ validate_resources() {
 
 # Main build process
 main() {
-    log "INFO" "Starting User Management Plugin build"
+    log "INFO" "Starting Custom Pages Plugin build"
 
     # Get version and plugin info once at the start
     log "INFO" "Reading version from build.yaml"
@@ -157,7 +161,7 @@ main() {
     fi
 
     # Find the built DLL
-    local dll_path="$PROJECT_DIR/bin/$CONFIGURATION/net9.0/Jellyfin.Plugin.UserManagement.dll"
+    local dll_path="$PROJECT_DIR/bin/$CONFIGURATION/net9.0/Jellyfin.Plugin.CustomPages.dll"
     if [[ ! -f "$dll_path" ]]; then
         log "ERROR" "Could not find built DLL at: $dll_path"
         exit 1
@@ -166,7 +170,7 @@ main() {
     log "SUCCESS" "Build completed: $dll_path"
 
     # Create ZIP package
-    local zip_name="jellyfin-plugin-usermanagement-$VERSION.zip"
+    local zip_name="jellyfin-plugin-custompages-$VERSION.zip"
     local zip_path="$OUTPUT_DIR/$zip_name"
 
     log "INFO" "Creating package: $zip_name"

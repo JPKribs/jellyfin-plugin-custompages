@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
-    <RootNamespace>Jellyfin.Plugin.UserManagement</RootNamespace>
+    <RootNamespace>Jellyfin.Plugin.CustomPages</RootNamespace>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <Nullable>enable</Nullable>
     <AnalysisMode>AllEnabledByDefault</AnalysisMode>
@@ -10,10 +10,6 @@
     <NoWarn>NU1605;CA1002;CA2227;CA1305</NoWarn>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
-
-  <ItemGroup>
-    <InternalsVisibleTo Include="Jellyfin.Plugin.UserManagement.Tests" />
-  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Jellyfin.Controller" Version="10.11.10">
@@ -27,17 +23,19 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Groups page -->
-    <EmbeddedResource Include="Configuration\usermanagement_user.html" />
-    <EmbeddedResource Include="Configuration\usermanagement_user.js" />
-    <!-- Invites page -->
-    <EmbeddedResource Include="Configuration\usermanagement_invites.html" />
-    <EmbeddedResource Include="Configuration\usermanagement_invites.js" />
-    <!-- Public invite redemption page (served by InviteController, not a dashboard page) -->
-    <EmbeddedResource Include="Configuration\usermanagement_invite_public.html" />
+    <!-- Admin dashboard pages -->
+    <EmbeddedResource Include="Configuration\custompages_pages.html" />
+    <EmbeddedResource Include="Configuration\custompages_pages.js" />
+    <EmbeddedResource Include="Configuration\custompages_assets.html" />
+    <EmbeddedResource Include="Configuration\custompages_assets.js" />
     <!-- Shared resources -->
-    <EmbeddedResource Include="Configuration\usermanagement_shared.css" />
-    <EmbeddedResource Include="Configuration\usermanagement_shared.js" />
+    <EmbeddedResource Include="Configuration\custompages_shared.css" />
+    <EmbeddedResource Include="Configuration\custompages_shared.js" />
+    <!-- Served-page templates (rendered by PageService) -->
+    <EmbeddedResource Include="Templates\custompages_wrapper.html" />
+    <EmbeddedResource Include="Templates\custompages_inner.html" />
+    <EmbeddedResource Include="Templates\custompages_fallback.html" />
+    <EmbeddedResource Include="Templates\custompages_shell.html" />
   </ItemGroup>
 
 </Project>
