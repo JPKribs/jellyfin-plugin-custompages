@@ -136,7 +136,7 @@ jobs:
 
             # Delete old assets if they exist
             gh release view "${TAG}" --json assets --jq '.assets[].name' | while read asset; do
-              if [[ "$asset" == *"jellyfin-plugin-usermanagement"* ]]; then
+              if [[ "$asset" == *"jellyfin-plugin-custompages"* ]]; then
                 echo "Deleting old asset: $asset"
                 gh release delete-asset "${TAG}" "$asset" -y || true
               fi
@@ -154,8 +154,8 @@ jobs:
 
           # Upload new assets
           gh release upload "${TAG}" \
-            ./dist/jellyfin-plugin-usermanagement-${FINAL_VERSION}.zip \
-            ./dist/jellyfin-plugin-usermanagement-${FINAL_VERSION}.zip.md5 \
+            ./dist/jellyfin-plugin-custompages-${FINAL_VERSION}.zip \
+            ./dist/jellyfin-plugin-custompages-${FINAL_VERSION}.zip.md5 \
             --clobber
 
           echo "Successfully uploaded assets to ${TAG}"
