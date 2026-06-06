@@ -91,9 +91,6 @@ jobs:
         run: |
           chmod +x build.sh
           ./build.sh
-        env:
-          GITHUB_PACKAGES_USER: ${{ github.actor }}
-          GITHUB_PACKAGES_TOKEN: ${{ secrets.PACKAGES_PAT }}
 
       - name: Extract Changelog
         id: changelog

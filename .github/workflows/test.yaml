@@ -14,20 +14,5 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 9.0.x
-
-      # Authenticate the GitHub Packages source so JPKribs.Jellyfin.Base restores
-      - name: Test
-        run: dotnet test Jellyfin.Plugin.CustomPages.Tests/Jellyfin.Plugin.CustomPages.Tests.csproj -c Release
-        env:
-          GITHUB_PACKAGES_USER: ${{ github.actor }}
-          GITHUB_PACKAGES_TOKEN: ${{ secrets.PACKAGES_PAT }}
+  call:
+    uses: jellyfin/jellyfin-meta-plugins/.github/workflows/test.yaml@master
