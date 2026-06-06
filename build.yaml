@@ -16,5 +16,5 @@ artifacts:
 - "Jellyfin.Plugin.CustomPages.dll"
 changelog:
   developer:
-  - Bump to base 2026.6.11
+  - Bump to base 2026.6.12
   - Favicon changes for rendering
