@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -17,10 +16,6 @@ namespace Jellyfin.Plugin.CustomPages.Services;
 public partial class PageService
 {
     private readonly IServerApplicationPaths _paths;
-    private readonly object _faviconLock = new();
-    private bool _faviconResolved;
-    private byte[]? _faviconBytes;
-    private string _faviconContentType = "image/x-icon";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PageService"/> class.
@@ -35,19 +30,7 @@ public partial class PageService
     /// Resolves the web client's favicon bytes so served pages can reuse the server's real icon.
     /// </summary>
     /// <returns>The favicon bytes and content type, or <c>null</c> when none could be located.</returns>
-    public (byte[] Bytes, string ContentType)? GetFavicon()
-    {
-        lock (_faviconLock)
-        {
-            if (!_faviconResolved)
-            {
-                ResolveFavicon();
-                _faviconResolved = true;
-            }
-        }
-
-        return _faviconBytes is null ? null : (_faviconBytes, _faviconContentType);
-    }
+    public (byte[] Bytes, string ContentType)? GetFavicon() => FaviconResolver.Resolve(_paths);
 
     /// <summary>
     /// Finds an enabled page by slug, case-insensitively. Rejects slugs outside the safe character set.
@@ -173,54 +156,6 @@ public partial class PageService
         });
     }
 
-    private void ResolveFavicon()
-    {
-        try
-        {
-            var web = _paths.WebPath;
-            if (string.IsNullOrEmpty(web) || !Directory.Exists(web))
-            {
-                return;
-            }
-
-            var root = Path.GetFullPath(web);
-            var rootPrefix = root.EndsWith(Path.DirectorySeparatorChar) ? root : root + Path.DirectorySeparatorChar;
-            string? file = null;
-
-            var indexPath = Path.Combine(root, "index.html");
-            if (File.Exists(indexPath))
-            {
-                var match = IconLinkPattern().Match(File.ReadAllText(indexPath));
-                if (match.Success)
-                {
-                    var href = match.Groups[1].Value.Replace('/', Path.DirectorySeparatorChar).TrimStart(Path.DirectorySeparatorChar);
-                    var candidate = Path.GetFullPath(Path.Combine(root, href));
-                    if (candidate.StartsWith(rootPrefix, StringComparison.Ordinal) && File.Exists(candidate))
-                    {
-                        file = candidate;
-                    }
-                }
-            }
-
-            file ??= Directory.EnumerateFiles(root, "favicon*.ico").FirstOrDefault();
-            if (file is null)
-            {
-                return;
-            }
-
-            _faviconBytes = File.ReadAllBytes(file);
-            _faviconContentType = file.EndsWith(".png", StringComparison.OrdinalIgnoreCase) ? "image/png" : "image/x-icon";
-        }
-        catch (IOException)
-        {
-            // Leave the favicon unresolved; the endpoint returns 404 and the browser falls back.
-        }
-        catch (UnauthorizedAccessException)
-        {
-            // Leave the favicon unresolved; the endpoint returns 404 and the browser falls back.
-        }
-    }
-
     private static string EscapeJsString(string value)
     {
         var sb = new StringBuilder(value.Length);
@@ -247,8 +182,4 @@ public partial class PageService
 
     [GeneratedRegex("^[a-z0-9._-]+$", RegexOptions.IgnoreCase)]
     private static partial Regex AssetNamePattern();
-
-
-    [GeneratedRegex("rel=\"(?:shortcut )?icon\"[^>]*href=\"([^\"]+)\"", RegexOptions.IgnoreCase)]
-    private static partial Regex IconLinkPattern();
 }
