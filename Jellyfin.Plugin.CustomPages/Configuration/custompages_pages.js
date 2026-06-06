@@ -1,12 +1,25 @@
 export default function (view) {
     'use strict';
 
+    var PLUGIN_ID = '409ef72d-6014-47fd-8928-ebad581bf81b';
+    var TABS = [
+        { href: 'configurationpage?name=custompages_pages', name: 'Pages' },
+        { href: 'configurationpage?name=custompages_assets', name: 'Assets' }
+    ];
+
     var Shared = null;
-    var getTabs = null;
-    var _sharedPromise = import('/web/configurationpage?name=custompages_shared.js').then(function (mod) {
-        Shared = mod.createShared(view);
-        getTabs = mod.getTabs;
+    var setTabs = null;
+    var _sharedPromise = import('/web/configurationpage?name=jpkribs_shared.js').then(function (mod) {
+        Shared = mod.createShared(view, PLUGIN_ID);
+        setTabs = mod.setTabs;
     });
+
+    function slugify(value) {
+        return String(value || '')
+            .toLowerCase()
+            .replace(/[^a-z0-9-_]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
 
     var VISIBILITIES = ['Anonymous', 'User', 'Admin'];
 
@@ -37,10 +50,27 @@ export default function (view) {
         return ApiClient.serverAddress ? ApiClient.serverAddress() : window.location.origin;
     }
 
+    function renderCounts() {
+        var c = { pub: 0, user: 0, admin: 0, unpublished: 0 };
+        pages.forEach(function (p) {
+            if (p.Enabled === false) { c.unpublished++; return; }
+            var v = normalizeVisibility(p.Visibility);
+            if (v === 'User') c.user++;
+            else if (v === 'Admin') c.admin++;
+            else c.pub++;
+        });
+        el('pageCounts').innerHTML =
+            '<div class="jpk-card blue"><span class="jpk-card-count">' + c.pub + '</span><span class="jpk-card-label">Public</span></div>' +
+            '<div class="jpk-card green"><span class="jpk-card-count">' + c.user + '</span><span class="jpk-card-label">User</span></div>' +
+            '<div class="jpk-card purple"><span class="jpk-card-count">' + c.admin + '</span><span class="jpk-card-label">Admin</span></div>' +
+            '<div class="jpk-card gray"><span class="jpk-card-count">' + c.unpublished + '</span><span class="jpk-card-label">Unpublished</span></div>';
+    }
+
     function renderSelect() {
+        renderCounts();
         var select = el('selectPage');
         select.innerHTML = pages.map(function (p, i) {
-            var label = (p.Slug || '(new page)') + (p.Enabled === false ? ' — unpublished' : '');
+            var label = (p.Slug || 'new page') + (p.Enabled === false ? ', unpublished' : '');
             return '<option value="' + i + '">' + Shared.escapeHtml(label) + '</option>';
         }).join('');
 
@@ -59,8 +89,8 @@ export default function (view) {
 
     function setPublishVisual(enabled) {
         var btn = el('btnPublish');
-        btn.classList.toggle('button-submit', enabled);
-        btn.classList.toggle('cp-secondary', !enabled);
+        btn.classList.toggle('jpk-button-submit', enabled);
+        btn.classList.toggle('jpk-secondary', !enabled);
         el('publishLabel').textContent = enabled ? 'Published' : 'Unpublished';
         btn.querySelector('.material-icons').textContent = enabled ? 'visibility' : 'visibility_off';
     }
@@ -106,7 +136,7 @@ export default function (view) {
     }
 
     function updateUrlPreview() {
-        var slug = Shared.slugify(el('pageSlug').value);
+        var slug = slugify(el('pageSlug').value);
         var link = el('pageUrl');
         var href = pageOrigin().replace(/\/+$/, '') + '/pages/' + (slug || '');
         link.textContent = '/pages/' + (slug || '');
@@ -115,7 +145,7 @@ export default function (view) {
 
     function readEditorInto(p) {
         flushSource();
-        p.Slug = Shared.slugify(el('pageSlug').value);
+        p.Slug = slugify(el('pageSlug').value);
         p.Title = el('pageTitle').value.trim();
         p.Visibility = el('pageVisibility').value;
         p.SingleFile = editorSingle;
@@ -212,7 +242,7 @@ export default function (view) {
 
     view.addEventListener('viewshow', function () {
         _sharedPromise.then(function () {
-            LibraryMenu.setTabs('custompages', 0, getTabs);
+            setTabs('custompages', 0, TABS);
             if (!_bound) { bind(); _bound = true; }
             load();
         });

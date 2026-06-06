@@ -15,5 +15,8 @@ owner: "JPKribs"
 artifacts:
 - "Jellyfin.Plugin.CustomPages.dll"
 changelog:
+  developer:
+  - Cleanup CSS and JS
+  - Standardize layouts with other projects
   features:
-  - Initial release!
+  - Add metrics using stat cards

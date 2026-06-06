@@ -20,6 +20,7 @@
       <PrivateAssets>all</PrivateAssets>
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
+    <PackageReference Include="JPKribs.Jellyfin.Base" Version="2026.6.5" />
   </ItemGroup>
 
   <ItemGroup>
@@ -28,9 +29,6 @@
     <EmbeddedResource Include="Configuration\custompages_pages.js" />
     <EmbeddedResource Include="Configuration\custompages_assets.html" />
     <EmbeddedResource Include="Configuration\custompages_assets.js" />
-    <!-- Shared resources -->
-    <EmbeddedResource Include="Configuration\custompages_shared.css" />
-    <EmbeddedResource Include="Configuration\custompages_shared.js" />
     <!-- Served-page templates (rendered by PageService) -->
     <EmbeddedResource Include="Templates\custompages_wrapper.html" />
     <EmbeddedResource Include="Templates\custompages_inner.html" />

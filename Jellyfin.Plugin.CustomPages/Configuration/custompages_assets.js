@@ -1,11 +1,17 @@
 export default function (view) {
     'use strict';
 
+    var PLUGIN_ID = '409ef72d-6014-47fd-8928-ebad581bf81b';
+    var TABS = [
+        { href: 'configurationpage?name=custompages_pages', name: 'Pages' },
+        { href: 'configurationpage?name=custompages_assets', name: 'Assets' }
+    ];
+
     var Shared = null;
-    var getTabs = null;
-    var _sharedPromise = import('/web/configurationpage?name=custompages_shared.js').then(function (mod) {
-        Shared = mod.createShared(view);
-        getTabs = mod.getTabs;
+    var setTabs = null;
+    var _sharedPromise = import('/web/configurationpage?name=jpkribs_shared.js').then(function (mod) {
+        Shared = mod.createShared(view, PLUGIN_ID);
+        setTabs = mod.setTabs;
     });
 
     var MAX_ASSET_BYTES = 5 * 1024 * 1024;
@@ -90,22 +96,45 @@ export default function (view) {
         persistAssets('Deleted.');
     }
 
+    function base64Bytes(b64) {
+        if (!b64) return 0;
+        var padding = b64.endsWith('==') ? 2 : (b64.endsWith('=') ? 1 : 0);
+        return Math.floor(b64.length * 3 / 4) - padding;
+    }
+
+    function renderCounts() {
+        var images = 0;
+        var other = 0;
+        var bytes = 0;
+        assets.forEach(function (a) {
+            if ((a.ContentType || '').indexOf('image/') === 0) images++;
+            else other++;
+            bytes += base64Bytes(a.DataBase64);
+        });
+        var size = Shared.formatSize(bytes);
+        el('assetCounts').innerHTML =
+            '<div class="jpk-card blue"><span class="jpk-card-count">' + images + '</span><span class="jpk-card-label">Images</span></div>' +
+            '<div class="jpk-card green"><span class="jpk-card-count">' + other + '</span><span class="jpk-card-label">Other</span></div>' +
+            '<div class="jpk-card gray"><span class="jpk-card-count">' + size + '</span><span class="jpk-card-label">Size</span></div>';
+    }
+
     function renderAssets() {
+        renderCounts();
         var list = el('assetList');
         Shared.setVisible('assetEmpty', assets.length === 0);
         list.innerHTML = assets.map(function (a) {
             var name = Shared.escapeHtml(a.Name);
             var src = 'data:' + a.ContentType + ';base64,' + a.DataBase64;
-            return '<div class="cp-asset-item">'
-                + '<img class="cp-asset-thumb" src="' + src + '" alt="" />'
-                + '<div class="cp-asset-info">'
-                + '<div class="cp-asset-name">' + name + '</div>'
-                + '<div class="cp-asset-ref">asset/' + name + '</div>'
+            return '<div class="jpk-asset-item">'
+                + '<img class="jpk-asset-thumb" src="' + src + '" alt="" />'
+                + '<div class="jpk-asset-info">'
+                + '<div class="jpk-asset-name">' + name + '</div>'
+                + '<div class="jpk-asset-ref">asset/' + name + '</div>'
                 + '</div>'
-                + '<div class="cp-asset-actions">'
-                + '<button type="button" class="cp-icon-btn" data-copy="' + name + '" title="Copy path" aria-label="Copy path">'
+                + '<div class="jpk-asset-actions">'
+                + '<button type="button" class="jpk-asset-btn" data-copy="' + name + '" title="Copy path" aria-label="Copy path">'
                 + '<span class="material-icons" aria-hidden="true">content_copy</span></button>'
-                + '<button type="button" class="cp-icon-btn danger" data-del="' + name + '" title="Delete" aria-label="Delete">'
+                + '<button type="button" class="jpk-asset-btn danger" data-del="' + name + '" title="Delete" aria-label="Delete">'
                 + '<span class="material-icons" aria-hidden="true">delete</span></button>'
                 + '</div>'
                 + '</div>';
@@ -135,7 +164,7 @@ export default function (view) {
 
     view.addEventListener('viewshow', function () {
         _sharedPromise.then(function () {
-            LibraryMenu.setTabs('custompages', 1, getTabs);
+            setTabs('custompages', 1, TABS);
             if (!_bound) { bind(); _bound = true; }
             load();
         });

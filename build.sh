@@ -73,8 +73,6 @@ validate_resources() {
         "$PROJECT_DIR/Configuration/custompages_pages.js"
         "$PROJECT_DIR/Configuration/custompages_assets.html"
         "$PROJECT_DIR/Configuration/custompages_assets.js"
-        "$PROJECT_DIR/Configuration/custompages_shared.css"
-        "$PROJECT_DIR/Configuration/custompages_shared.js"
         "$PROJECT_DIR/Templates/custompages_wrapper.html"
         "$PROJECT_DIR/Templates/custompages_inner.html"
         "$PROJECT_DIR/Templates/custompages_fallback.html"

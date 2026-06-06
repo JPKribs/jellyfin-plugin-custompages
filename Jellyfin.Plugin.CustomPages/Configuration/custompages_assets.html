@@ -7,29 +7,35 @@
             <form id="CustomPagesAssetsForm">
                 <div class="verticalSection verticalSection-extrabottompadding">
 
+                    <!-- Page title -->
                     <div class="sectionTitleContainer flex align-items-center">
                         <h1 class="sectionTitle">Assets</h1>
                     </div>
 
-                    <div class="fieldDescription" style="margin-bottom: 12px;">
+                    <div class="fieldDescription">
                         Upload images to host them on the server at <code>/pages/asset/{name}</code>. Reference one
                         from a page's HTML or CSS with the path shown on its card, for example
                         <code>&lt;img src="asset/logo.png"&gt;</code> or <code>url('asset/logo.png')</code>.
                     </div>
 
+                    <!-- Asset counts -->
+                    <div id="assetCounts" class="jpk-cards"></div>
+
+                    <!-- Upload -->
                     <div class="inputContainer">
                         <label for="assetFile">Upload images</label>
                         <input type="file" id="assetFile" accept="image/*" multiple />
                     </div>
 
-                    <div id="assetEmpty" class="cp-empty hidden">No images uploaded yet.</div>
-                    <div id="assetList" class="cp-asset-list"></div>
-                    <span id="assetStatus" class="cp-status-text"></span>
+                    <!-- Asset list -->
+                    <div id="assetEmpty" class="jpk-empty-section hidden">No images uploaded yet.</div>
+                    <div id="assetList" class="jpk-asset-list"></div>
+                    <span id="assetStatus" class="jpk-status-text"></span>
 
                 </div>
             </form>
         </div>
     </div>
 
-    <link rel="stylesheet" href="configurationpage?name=custompages_shared.css">
+    <link rel="stylesheet" href="configurationpage?name=jpkribs_shared.css">
 </div>

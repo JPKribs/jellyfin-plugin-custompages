@@ -7,44 +7,51 @@
             <form id="CustomPagesForm">
                 <div class="verticalSection verticalSection-extrabottompadding">
 
+                    <!-- Page title -->
                     <div class="sectionTitleContainer flex align-items-center">
                         <h1 class="sectionTitle">Custom Pages</h1>
                     </div>
 
-                    <div class="fieldDescription" style="margin-bottom: 12px;">
+                    <div class="fieldDescription">
                         Publish pages served at <code>/pages/{slug}</code>. Choose <strong>Source</strong> to edit the
                         HTML body, CSS, or JavaScript separately, or switch to <strong>Single file</strong> to serve one
                         complete HTML document. Visibility controls who can view the page.
                     </div>
 
-                    <div class="cp-selector">
-                        <div class="selectContainer cp-selector-dropdown">
+                    <!-- Page counts -->
+                    <div id="pageCounts" class="jpk-cards"></div>
+
+                    <!-- Page selector -->
+                    <div class="jpk-selector">
+                        <div class="selectContainer">
                             <label class="selectLabel" for="selectPage">Page</label>
                             <select is="emby-select" id="selectPage" class="emby-select-withcolor"></select>
                         </div>
-                        <div class="cp-selector-actions">
-                            <button is="emby-button" type="button" id="btnNewPage" class="raised cp-action button-submit" title="New page">
+                        <div class="jpk-selector-actions">
+                            <button is="emby-button" type="button" id="btnNewPage" class="raised jpk-icon-btn jpk-button-submit" title="New page">
                                 <span class="material-icons" aria-hidden="true">add</span>
                                 <span>New</span>
                             </button>
-                            <button is="emby-button" type="button" id="btnPublish" class="raised cp-action" title="Toggle published">
+                            <button is="emby-button" type="button" id="btnPublish" class="raised jpk-icon-btn" title="Toggle published">
                                 <span class="material-icons" aria-hidden="true">visibility</span>
                                 <span id="publishLabel">Published</span>
                             </button>
-                            <button is="emby-button" type="button" id="btnDeletePage" class="raised cp-action button-destructive" title="Delete page">
+                            <button is="emby-button" type="button" id="btnDeletePage" class="raised jpk-icon-btn jpk-button-destructive" title="Delete page">
                                 <span class="material-icons" aria-hidden="true">delete</span>
                                 <span>Delete</span>
                             </button>
                         </div>
                     </div>
 
-                    <div id="emptyState" class="cp-empty hidden">No pages yet. Click <strong>New</strong> to create one.</div>
+                    <!-- Empty state -->
+                    <div id="emptyState" class="jpk-empty-section hidden">No pages yet. Click <strong>New</strong> to create one.</div>
 
+                    <!-- Page editor -->
                     <div id="pageEditor" class="hidden">
                         <div class="inputContainer">
                             <label for="pageSlug">Slug</label>
                             <input is="emby-input" type="text" id="pageSlug" autocomplete="off" />
-                            <div class="fieldDescription cp-url">URL: <a id="pageUrl" href="#" target="_blank" rel="noopener"></a></div>
+                            <div class="fieldDescription jpk-url">URL: <a id="pageUrl" href="#" target="_blank" rel="noopener"></a></div>
                         </div>
 
                         <div class="inputContainer">
@@ -81,15 +88,16 @@
                         </div>
 
                         <div class="inputContainer">
-                            <textarea id="pageSource" class="cp-code" spellcheck="false" aria-label="Page source"></textarea>
+                            <textarea id="pageSource" class="jpk-code" spellcheck="false" aria-label="Page source"></textarea>
                             <div class="fieldDescription" id="sourceHint"></div>
                         </div>
 
-                        <div class="inputContainer" style="margin-top: 16px;">
-                            <button is="emby-button" type="button" id="btnSavePage" data-theme="b" class="raised button-submit block">
+                        <!-- Save -->
+                        <div class="inputContainer">
+                            <button is="emby-button" type="button" id="btnSavePage" data-theme="b" class="raised jpk-button-submit block">
                                 <span>Save</span>
                             </button>
-                            <span id="pageStatus" class="cp-status-text"></span>
+                            <span id="pageStatus" class="jpk-status-text"></span>
                         </div>
                     </div>
 
@@ -98,5 +106,5 @@
         </div>
     </div>
 
-    <link rel="stylesheet" href="configurationpage?name=custompages_shared.css">
+    <link rel="stylesheet" href="configurationpage?name=jpkribs_shared.css">
 </div>

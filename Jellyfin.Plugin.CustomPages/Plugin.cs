@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using Jellyfin.Plugin.CustomPages.Models;
+using JPKribs.Jellyfin.Base;
 using MediaBrowser.Common.Configuration;
-using MediaBrowser.Common.Plugins;
 using MediaBrowser.Model.Plugins;
 using MediaBrowser.Model.Serialization;
 using Microsoft.Extensions.Logging;
@@ -12,12 +12,8 @@ namespace Jellyfin.Plugin.CustomPages;
 /// <summary>
 /// Main plugin entry point for Custom Pages.
 /// </summary>
-public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
+public class Plugin : PluginBase<Plugin, PluginConfiguration>
 {
-    private static readonly object ConfigLock = new();
-
-    private readonly ILogger<Plugin> _logger;
-
     /// <summary>
     /// Initializes a new instance of the <see cref="Plugin"/> class.
     /// </summary>
@@ -30,10 +26,8 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
         ILogger<Plugin> logger)
         : base(applicationPaths, xmlSerializer)
     {
-        Instance = this;
-        _logger = logger;
-
-        _logger.LogInformation("Custom Pages plugin initialized");
+        ArgumentNullException.ThrowIfNull(logger);
+        logger.LogInformation("Custom Pages plugin initialized");
     }
 
     /// <inheritdoc />
@@ -45,47 +39,12 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
     /// <inheritdoc />
     public override string Description => "Author and serve authorization-gated pages at /pages/{slug}.";
 
-    /// <summary>
-    /// Gets the current plugin instance.
-    /// </summary>
-    public static Plugin? Instance { get; private set; }
-
-    /// <summary>
-    /// Atomically mutates and (optionally) persists the configuration under a process-wide lock.
-    /// </summary>
-    /// <param name="mutate">Mutation to apply; return <c>true</c> to persist the change.</param>
-    public void MutateConfiguration(Func<PluginConfiguration, bool> mutate)
-    {
-        ArgumentNullException.ThrowIfNull(mutate);
-        lock (ConfigLock)
-        {
-            if (mutate(Configuration))
-            {
-                SaveConfiguration();
-            }
-        }
-    }
-
-    /// <summary>
-    /// Reads from the configuration under the same lock (safe against concurrent mutation).
-    /// </summary>
-    /// <typeparam name="T">The read result type.</typeparam>
-    /// <param name="read">The read projection.</param>
-    /// <returns>The projected value.</returns>
-    public T ReadConfiguration<T>(Func<PluginConfiguration, T> read)
-    {
-        ArgumentNullException.ThrowIfNull(read);
-        lock (ConfigLock)
-        {
-            return read(Configuration);
-        }
-    }
-
     /// <inheritdoc />
-    public IEnumerable<PluginPageInfo> GetPages()
+    public override IEnumerable<PluginPageInfo> GetPages()
     {
         var ns = typeof(Plugin).Namespace;
 
+        // Tab 1: Pages (the dashboard menu entry).
         yield return new PluginPageInfo
         {
             Name = "custompages_pages",
@@ -101,6 +60,7 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             EmbeddedResourcePath = $"{ns}.Configuration.custompages_pages.js"
         };
 
+        // Tab 2: Assets.
         yield return new PluginPageInfo
         {
             Name = "custompages_assets",
@@ -113,16 +73,10 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             EmbeddedResourcePath = $"{ns}.Configuration.custompages_assets.js"
         };
 
-        yield return new PluginPageInfo
+        // Shared base CSS and JS compiled in from the JPKribs.Jellyfin.Base package.
+        foreach (var page in GetSharedPages())
         {
-            Name = "custompages_shared.css",
-            EmbeddedResourcePath = $"{ns}.Configuration.custompages_shared.css"
-        };
-
-        yield return new PluginPageInfo
-        {
-            Name = "custompages_shared.js",
-            EmbeddedResourcePath = $"{ns}.Configuration.custompages_shared.js"
-        };
+            yield return page;
+        }
     }
 }
