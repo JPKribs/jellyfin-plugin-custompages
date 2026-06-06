@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "10.11.1.4",
+        "changelog": "## Developer\r\n- Bump to base 2026.6.11\r\n- Favicon changes for rendering",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.1.4/jellyfin-plugin-custompages-10.11.1.4.zip",
+        "checksum": "80385c2a3d86bd4c9f843c7c72f817ae",
+        "timestamp": "2026-06-06T09:56:24Z"
+      },
+      {
         "version": "10.11.1.3",
         "changelog": "## Developer\r\n- Bump to base 2026.6.9\r\n- Use inhertance instead of recreating shared elements\r\n- Use the shared modal for unavailable pages",
         "targetAbi": "10.11.0.0",
