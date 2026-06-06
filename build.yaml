@@ -16,4 +16,6 @@ artifacts:
 - "Jellyfin.Plugin.CustomPages.dll"
 changelog:
   developer:
-  - Bump to base 2026.6.7
+  - Bump to base 2026.6.9
+  - Use inhertance instead of recreating shared elements
+  - Use the shared modal for unavailable pages

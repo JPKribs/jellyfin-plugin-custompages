@@ -20,7 +20,7 @@
       <PrivateAssets>all</PrivateAssets>
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
-    <PackageReference Include="JPKribs.Jellyfin.Base" Version="2026.6.7" />
+    <PackageReference Include="JPKribs.Jellyfin.Base" Version="2026.6.9" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,7 +32,6 @@
     <!-- Served-page templates (rendered by PageService) -->
     <EmbeddedResource Include="Templates\custompages_wrapper.html" />
     <EmbeddedResource Include="Templates\custompages_inner.html" />
-    <EmbeddedResource Include="Templates\custompages_fallback.html" />
     <EmbeddedResource Include="Templates\custompages_shell.html" />
   </ItemGroup>
 

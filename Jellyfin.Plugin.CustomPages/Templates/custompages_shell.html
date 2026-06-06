@@ -1,176 +1,85 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="robots" content="noindex, nofollow" />
-    <link rel="icon" href="favicon.ico" />
-    <title>Loading…</title>
-    <style>
-        :root {
-            --cp-accent: #00a4dc;
-            --cp-accent-hover: #0095c8;
-            --cp-bg: #101010;
-            --cp-card: #1c1c1f;
-            --cp-border: rgba(255, 255, 255, 0.08);
-            --cp-text: #f2f2f2;
-            --cp-muted: rgba(255, 255, 255, 0.55);
-        }
-        * { box-sizing: border-box; }
-        html, body { height: 100%; }
-        body {
-            margin: 0;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 24px;
-            color: var(--cp-text);
-            background:
-                radial-gradient(1200px 600px at 50% -10%, rgba(0, 164, 220, 0.12), transparent 60%),
-                var(--cp-bg);
-            font-family: "Noto Sans", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            -webkit-font-smoothing: antialiased;
-        }
-        .cp-card {
-            width: 100%;
-            max-width: 420px;
-            text-align: center;
-            background: var(--cp-card);
-            border: 1px solid var(--cp-border);
-            border-radius: 14px;
-            padding: 40px 32px;
-            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-        }
-        .cp-logo {
-            width: 72px;
-            height: 72px;
-            margin: 0 auto 20px;
-            display: block;
-            border-radius: 16px;
-        }
-        .cp-spinner {
-            width: 38px;
-            height: 38px;
-            margin: 4px auto 0;
-            border: 3px solid rgba(255, 255, 255, 0.15);
-            border-top-color: var(--cp-accent);
-            border-radius: 50%;
-            animation: cp-spin 0.8s linear infinite;
-        }
-        @keyframes cp-spin { to { transform: rotate(360deg); } }
-        h1 {
-            font-size: 1.4rem;
-            font-weight: 600;
-            margin: 0 0 8px;
-        }
-        p {
-            margin: 0 0 4px;
-            color: var(--cp-muted);
-            font-size: 0.95rem;
-            line-height: 1.5;
-        }
-        .cp-btn {
-            display: inline-block;
-            margin-top: 22px;
-            padding: 0.7em 1.6em;
-            border-radius: 8px;
-            background: var(--cp-accent);
-            color: #fff;
-            font-size: 0.95rem;
-            font-weight: 600;
-            text-decoration: none;
-            transition: background 0.15s ease, transform 0.1s ease;
-        }
-        .cp-btn:hover { background: var(--cp-accent-hover); }
-        .cp-btn:active { transform: translateY(1px); }
-        .hidden { display: none; }
-    </style>
-</head>
-<body>
-    <div class="cp-card">
-        <img class="cp-logo" src="../web/favicons/touchicon.png" alt="" />
+<!-- Content fragment injected into the base JPKribs.Jellyfin.Base status card. -->
+<div id="signin" class="hidden">
+    <h1>Sign in required</h1>
+    <p>Sign in to your account to view this page.</p>
+    <a id="signinLink" class="jpk-btn" href="/web/">Sign in</a>
+</div>
 
-        <div id="loading">
-            <h1>Loading…</h1>
-            <div class="cp-spinner" role="status" aria-label="Loading"></div>
-        </div>
+<div id="denied" class="hidden">
+    <h1>Not authorized</h1>
+    <p>Your account doesn't have access to this page.</p>
+    <a id="homeLink" class="jpk-btn" href="/web/">Back to Jellyfin</a>
+</div>
 
-        <div id="signin" class="hidden">
-            <h1>Sign in required</h1>
-            <p>Sign in to your account to view this page.</p>
-            <a id="signinLink" class="cp-btn" href="/web/">Sign in</a>
-        </div>
+<div id="missing" class="hidden">
+    <h1>Page not found</h1>
+    <p>This page is no longer available.</p>
+    <a id="missingLink" class="jpk-btn" href="/web/">Back to Jellyfin</a>
+</div>
 
-        <div id="denied" class="hidden">
-            <h1>Not authorized</h1>
-            <p>Your account doesn't have access to this page.</p>
-            <a id="homeLink" class="cp-btn" href="/web/">Back to Jellyfin</a>
-        </div>
+<script>
+    (function () {
+        var slug = '{{SLUG}}';
+        var tier = '{{TIER}}';
 
-        <div id="missing" class="hidden">
-            <h1>Page not found</h1>
-            <p>This page is no longer available.</p>
-            <a id="missingLink" class="cp-btn" href="/web/">Back to Jellyfin</a>
-        </div>
-    </div>
+        var prefix = location.pathname.split('/pages/')[0];
+        var contentUrl = prefix + '/pages/' + encodeURIComponent(slug) + '/' + tier;
+        var webHref = prefix + '/web/';
 
-    <script>
-        (function () {
-            var slug = '{{SLUG}}';
-            var tier = '{{TIER}}';
+        ['signinLink', 'homeLink', 'missingLink'].forEach(function (id) {
+            var a = document.getElementById(id);
+            if (a) a.href = webHref;
+        });
 
-            var prefix = location.pathname.split('/pages/')[0];
-            var contentUrl = prefix + '/pages/' + encodeURIComponent(slug) + '/' + tier;
-            var webHref = prefix + '/web/';
+        // Hide the base card's loading heading + spinner before revealing a state.
+        function leaveLoading() {
+            var h = document.querySelector('.jpk-card > h1');
+            var s = document.querySelector('.jpk-card > .jpk-spinner');
+            if (h) h.style.display = 'none';
+            if (s) s.style.display = 'none';
+        }
 
-            ['signinLink', 'homeLink', 'missingLink'].forEach(function (id) {
-                var a = document.getElementById(id);
-                if (a) a.href = webHref;
+        function show(id) {
+            leaveLoading();
+            ['signin', 'denied', 'missing'].forEach(function (k) {
+                document.getElementById(k).classList.toggle('hidden', k !== id);
             });
+        }
 
-            function show(id) {
-                ['loading', 'signin', 'denied', 'missing'].forEach(function (k) {
-                    document.getElementById(k).classList.toggle('hidden', k !== id);
-                });
-            }
-
-            function getToken() {
-                try {
-                    var raw = localStorage.getItem('jellyfin_credentials');
-                    if (!raw) return null;
-                    var creds = JSON.parse(raw);
-                    var servers = (creds && creds.Servers) || [];
-                    for (var i = 0; i < servers.length; i++) {
-                        if (servers[i] && servers[i].AccessToken) return servers[i].AccessToken;
-                    }
-                } catch (e) { /* fall through to no-token */ }
-                return null;
-            }
-
-            var token = getToken();
-            if (!token) { show('signin'); return; }
-
-            fetch(contentUrl, {
-                headers: {
-                    'Authorization': 'MediaBrowser Token="' + token + '"',
-                    'Accept': 'text/html'
+        function getToken() {
+            try {
+                var raw = localStorage.getItem('jellyfin_credentials');
+                if (!raw) return null;
+                var creds = JSON.parse(raw);
+                var servers = (creds && creds.Servers) || [];
+                for (var i = 0; i < servers.length; i++) {
+                    if (servers[i] && servers[i].AccessToken) return servers[i].AccessToken;
                 }
+            } catch (e) { /* fall through to no-token */ }
+            return null;
+        }
+
+        var token = getToken();
+        if (!token) { show('signin'); return; }
+
+        fetch(contentUrl, {
+            headers: {
+                'Authorization': 'MediaBrowser Token="' + token + '"',
+                'Accept': 'text/html'
+            }
+        })
+            .then(function (r) {
+                if (r.status === 401) { show('signin'); return null; }
+                if (r.status === 403) { show('denied'); return null; }
+                if (r.status === 404) { show('missing'); return null; }
+                return r.text();
             })
-                .then(function (r) {
-                    if (r.status === 401) { show('signin'); return null; }
-                    if (r.status === 403) { show('denied'); return null; }
-                    if (r.status === 404) { show('missing'); return null; }
-                    return r.text();
-                })
-                .then(function (html) {
-                    if (html === null || html === undefined) return;
-                    document.open();
-                    document.write(html);
-                    document.close();
-                })
-                .catch(function () { show('signin'); });
-        })();
-    </script>
-</body>
-</html>
+            .then(function (html) {
+                if (html === null || html === undefined) return;
+                document.open();
+                document.write(html);
+                document.close();
+            })
+            .catch(function () { show('signin'); });
+    })();
+</script>

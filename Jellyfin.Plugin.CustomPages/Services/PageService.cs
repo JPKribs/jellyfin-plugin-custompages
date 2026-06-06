@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,6 +6,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.CustomPages.Models;
+using JPKribs.Jellyfin.Base;
 using MediaBrowser.Controller;
 
 namespace Jellyfin.Plugin.CustomPages.Services;
@@ -16,8 +16,6 @@ namespace Jellyfin.Plugin.CustomPages.Services;
 /// </summary>
 public partial class PageService
 {
-    private static readonly ConcurrentDictionary<string, string> TemplateCache = new();
-
     private readonly IServerApplicationPaths _paths;
     private readonly object _faviconLock = new();
     private bool _faviconResolved;
@@ -78,7 +76,7 @@ public partial class PageService
     {
         ArgumentNullException.ThrowIfNull(page);
 
-        return FillTemplate("custompages_wrapper.html", new Dictionary<string, string>
+        return TemplateLoader.Fill("custompages_wrapper", new Dictionary<string, string>
         {
             ["TITLE"] = WebUtility.HtmlEncode(page.Title),
             ["SRCDOC"] = WebUtility.HtmlEncode(BuildInnerDocument(page))
@@ -94,10 +92,20 @@ public partial class PageService
     public string GetShellHtml(string slug, PageVisibility visibility)
     {
         var tier = visibility == PageVisibility.Admin ? "admin" : "user";
-        return FillTemplate("custompages_shell.html", new Dictionary<string, string>
+        var content = TemplateLoader.Fill("custompages_shell", new Dictionary<string, string>
         {
             ["SLUG"] = EscapeJsString(slug),
             ["TIER"] = EscapeJsString(tier)
+        });
+
+        return TemplateLoader.Fill("status", new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["TITLE"] = "Loading…",
+            ["HEADING"] = "Loading…",
+            ["MESSAGE"] = string.Empty,
+            ["SPINNER"] = "<div class=\"jpk-spinner\" role=\"status\" aria-label=\"Loading\"></div>",
+            ["BUTTON"] = string.Empty,
+            ["CONTENT"] = content
         });
     }
 
@@ -108,13 +116,12 @@ public partial class PageService
     /// <returns>A standalone 404 HTML document.</returns>
     public string NotFoundHtml(string slug)
     {
-        var where = IsValidSlug(slug) ? "/pages/" + WebUtility.HtmlEncode(slug) : "this address";
-        return FillTemplate("custompages_fallback.html", new Dictionary<string, string>
-        {
-            ["TITLE"] = "Page not found",
-            ["HEADING"] = "Page not found",
-            ["MESSAGE"] = "There's nothing published at " + where + "."
-        });
+        var where = IsValidSlug(slug) ? "/pages/" + slug : "this address";
+        return StatusPage.Render(
+            "Page not found",
+            "There's nothing published at " + where + ".",
+            buttonText: "Back to Jellyfin",
+            buttonHref: "../web/");
     }
 
     /// <summary>
@@ -157,7 +164,7 @@ public partial class PageService
             return page.Document ?? string.Empty;
         }
 
-        return FillTemplate("custompages_inner.html", new Dictionary<string, string>
+        return TemplateLoader.Fill("custompages_inner", new Dictionary<string, string>
         {
             ["TITLE"] = WebUtility.HtmlEncode(page.Title),
             ["CSS"] = page.Css ?? string.Empty,
@@ -165,29 +172,6 @@ public partial class PageService
             ["JS"] = page.Js ?? string.Empty
         });
     }
-
-    /// <summary>
-    /// Fills an embedded template's <c>{{KEY}}</c> placeholders in a single pass, so substituted
-    /// values are never rescanned for further placeholders.
-    /// </summary>
-    private string FillTemplate(string name, Dictionary<string, string> values)
-    {
-        var template = LoadTemplate(name);
-        return PlaceholderPattern().Replace(template, match =>
-            values.TryGetValue(match.Groups[1].Value, out var value) ? value : match.Value);
-    }
-
-    private static string LoadTemplate(string name)
-        => TemplateCache.GetOrAdd(name, static key =>
-        {
-            var assembly = typeof(Plugin).Assembly;
-            var resourceName = typeof(Plugin).Namespace + ".Templates." + key;
-            using var stream = assembly.GetManifestResourceStream(resourceName)
-                ?? throw new InvalidOperationException($"Embedded template '{resourceName}' was not found.");
-
-            using var reader = new StreamReader(stream);
-            return reader.ReadToEnd();
-        });
 
     private void ResolveFavicon()
     {
@@ -264,8 +248,6 @@ public partial class PageService
     [GeneratedRegex("^[a-z0-9._-]+$", RegexOptions.IgnoreCase)]
     private static partial Regex AssetNamePattern();
 
-    [GeneratedRegex(@"\{\{(\w+)\}\}")]
-    private static partial Regex PlaceholderPattern();
 
     [GeneratedRegex("rel=\"(?:shortcut )?icon\"[^>]*href=\"([^\"]+)\"", RegexOptions.IgnoreCase)]
     private static partial Regex IconLinkPattern();

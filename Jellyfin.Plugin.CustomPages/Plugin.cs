@@ -74,7 +74,7 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         };
 
         // Shared base CSS and JS compiled in from the JPKribs.Jellyfin.Base package.
-        foreach (var page in GetSharedPages())
+        foreach (var page in GetSharedPages("custompages"))
         {
             yield return page;
         }
