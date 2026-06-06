@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "10.11.1.2",
+        "changelog": "## Developer\r\n- Bump to base 2026.6.7",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.1.2/jellyfin-plugin-custompages-10.11.1.2.zip",
+        "checksum": "00d5cf2bfd2b75b2438e9ef366936c52",
+        "timestamp": "2026-06-06T02:51:58Z"
+      },
+      {
         "version": "10.11.1.1",
         "changelog": "## Developer\r\n- Cleanup CSS and JS\r\n- Standardize layouts with other projects\r\n\r\n## Features\r\n- Add metrics using stat cards",
         "targetAbi": "10.11.0.0",
