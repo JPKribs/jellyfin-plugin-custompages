@@ -16,7 +16,4 @@ artifacts:
 - "Jellyfin.Plugin.CustomPages.dll"
 changelog:
   developer:
-  - Cleanup CSS and JS
-  - Standardize layouts with other projects
-  features:
-  - Add metrics using stat cards
+  - Bump to base 2026.6.7
