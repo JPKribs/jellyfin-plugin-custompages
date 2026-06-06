@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "10.11.1.1",
+        "changelog": "",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download//jellyfin-plugin-custompages-10.11.1.1.zip",
+        "checksum": "9d1ead73e678fa2f51a70a933b0bf017",
+        "timestamp": "2026-06-06T01:21:00Z"
+      },
+      {
         "version": "10.11.1.0",
         "changelog": "## Initial Release\r\n\r\nThis creates the project. This is a fairly small plugin that uses the existing  items that already exist and are usable from a plugin layout to allow hosting custom pages. This enables you to host a page that you want users to have for reference while also keeping them permission gated behind .",
         "targetAbi": "10.11.0.0",
