@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "10.11.1.7",
+        "changelog": "## Developer\r\n- Bump to base 2026.6.15",
+        "targetAbi": "10.11.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.1.7/jellyfin-plugin-custompages-10.11.1.7.zip",
+        "checksum": "083f40c85af9a2da2095342ba4c455c3",
+        "timestamp": "2026-06-06T22:15:58Z"
+      },
+      {
         "version": "10.11.1.6",
         "changelog": "## Developer\r\n- Bump to base 2026.6.14",
         "targetAbi": "10.11.0.0",
