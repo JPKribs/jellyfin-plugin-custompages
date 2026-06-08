@@ -11,7 +11,7 @@
       {
         "version": "10.11.1.9",
         "changelog": "## Developer\r\n- Bump to base 2026.6.20\r\n\r\n## Fixes\r\n- Fix CSP issues for JS on Public Pages",
-        "targetAbi": "10.11.0.0",
+        "targetAbi": "10.11.9.0",
         "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.1.9/jellyfin-plugin-custompages-10.11.1.9.zip",
         "checksum": "3556b43da72915dac9e47255ef621c6e",
         "timestamp": "2026-06-08T02:41:14Z"
@@ -19,7 +19,7 @@
       {
         "version": "10.11.1.8",
         "changelog": "## Developer\r\n- Bump to base 2026.6.19",
-        "targetAbi": "10.11.0.0",
+        "targetAbi": "10.11.9.0",
         "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.1.8/jellyfin-plugin-custompages-10.11.1.8.zip",
         "checksum": "bfe9ca30b73e9bd1dfd14717027a41ea",
         "timestamp": "2026-06-08T00:26:02Z"
@@ -27,7 +27,7 @@
       {
         "version": "10.11.1.7",
         "changelog": "## Developer\r\n- Bump to base 2026.6.15",
-        "targetAbi": "10.11.0.0",
+        "targetAbi": "10.11.9.0",
         "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.1.7/jellyfin-plugin-custompages-10.11.1.7.zip",
         "checksum": "083f40c85af9a2da2095342ba4c455c3",
         "timestamp": "2026-06-06T22:15:58Z"
@@ -35,7 +35,7 @@
       {
         "version": "10.11.1.6",
         "changelog": "## Developer\r\n- Bump to base 2026.6.14",
-        "targetAbi": "10.11.0.0",
+        "targetAbi": "10.11.9.0",
         "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.1.6/jellyfin-plugin-custompages-10.11.1.6.zip",
         "checksum": "2b6c29f7c290ab82d2c83e6dd9028227",
         "timestamp": "2026-06-06T21:23:44Z"
@@ -43,7 +43,7 @@
       {
         "version": "10.11.1.5",
         "changelog": "## Developer\r\n- Bump to base 2026.6.13",
-        "targetAbi": "10.11.0.0",
+        "targetAbi": "10.11.9.0",
         "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.1.5/jellyfin-plugin-custompages-10.11.1.5.zip",
         "checksum": "5f2953afee7ac2516f9d6d187e326d96",
         "timestamp": "2026-06-06T11:04:00Z"
@@ -51,7 +51,7 @@
       {
         "version": "10.11.1.4",
         "changelog": "## Developer\r\n- Bump to base 2026.6.11\r\n- Favicon changes for rendering",
-        "targetAbi": "10.11.0.0",
+        "targetAbi": "10.11.9.0",
         "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.1.4/jellyfin-plugin-custompages-10.11.1.4.zip",
         "checksum": "80385c2a3d86bd4c9f843c7c72f817ae",
         "timestamp": "2026-06-06T09:56:24Z"
@@ -59,7 +59,7 @@
       {
         "version": "10.11.1.3",
         "changelog": "## Developer\r\n- Bump to base 2026.6.9\r\n- Use inhertance instead of recreating shared elements\r\n- Use the shared modal for unavailable pages",
-        "targetAbi": "10.11.0.0",
+        "targetAbi": "10.11.9.0",
         "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.1.3/jellyfin-plugin-custompages-10.11.1.3.zip",
         "checksum": "2bd6dfcba8581cf9e307a02c13c7550e",
         "timestamp": "2026-06-06T08:14:36Z"
@@ -67,7 +67,7 @@
       {
         "version": "10.11.1.2",
         "changelog": "## Developer\r\n- Bump to base 2026.6.7",
-        "targetAbi": "10.11.0.0",
+        "targetAbi": "10.11.9.0",
         "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.1.2/jellyfin-plugin-custompages-10.11.1.2.zip",
         "checksum": "00d5cf2bfd2b75b2438e9ef366936c52",
         "timestamp": "2026-06-06T02:51:58Z"
@@ -75,7 +75,7 @@
       {
         "version": "10.11.1.1",
         "changelog": "## Developer\r\n- Cleanup CSS and JS\r\n- Standardize layouts with other projects\r\n\r\n## Features\r\n- Add metrics using stat cards",
-        "targetAbi": "10.11.0.0",
+        "targetAbi": "10.11.9.0",
         "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.1.1/jellyfin-plugin-custompages-10.11.1.1.zip",
         "checksum": "97a5c746020e5067ab78693a052fce1a",
         "timestamp": "2026-06-06T01:21:49Z"
@@ -83,7 +83,7 @@
       {
         "version": "10.11.1.0",
         "changelog": "## Initial Release\r\n\r\nThis creates the project. This is a fairly small plugin that uses the existing  items that already exist and are usable from a plugin layout to allow hosting custom pages. This enables you to host a page that you want users to have for reference while also keeping them permission gated behind .",
-        "targetAbi": "10.11.0.0",
+        "targetAbi": "10.11.9.0",
         "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.1.0/jellyfin-plugin-custompages-10.11.1.0.zip",
         "checksum": "7751bf110815a8727c1109fa16f171d5",
         "timestamp": "2026-06-04T23:21:13Z"

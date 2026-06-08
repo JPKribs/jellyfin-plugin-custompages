@@ -1,6 +1,6 @@
 <div id="CustomPagesPage" data-role="page"
      class="page type-interior pluginConfigurationPage withTabs"
-     data-require="emby-input,emby-button,emby-select,emby-checkbox"
+     data-require="emby-input,emby-button,emby-checkbox"
      data-controller="__plugin/custompages_pages.js">
     <div data-role="content">
         <div class="content-primary">
@@ -25,7 +25,7 @@
                     <div class="jpk-selector">
                         <div class="selectContainer">
                             <label class="selectLabel" for="selectPage">Page</label>
-                            <select is="emby-select" id="selectPage" class="emby-select-withcolor"></select>
+                            <select id="selectPage" class="jpk-selector-dropdown"></select>
                         </div>
                         <div class="jpk-selector-actions">
                             <button is="emby-button" type="button" id="btnNewPage" class="raised jpk-icon-btn jpk-button-submit" title="New page">
@@ -61,7 +61,7 @@
 
                         <div class="selectContainer">
                             <label class="selectLabel" for="pageVisibility">Visibility</label>
-                            <select is="emby-select" id="pageVisibility" class="emby-select-withcolor">
+                            <select id="pageVisibility" class="jpk-selector-dropdown">
                                 <option value="Anonymous">Anyone</option>
                                 <option value="User">Users</option>
                                 <option value="Admin">Administrators</option>
@@ -73,14 +73,14 @@
                                 <input type="checkbox" is="emby-checkbox" id="pageSingleFile" />
                                 <span class="checkboxLabel">Use a single webpage file</span>
                             </label>
-                            <div class="fieldDescription checkboxFieldDescription">
+                            <div class="fieldDescription">
                                 Handle the page as a single file instead of three component files.
                             </div>
                         </div>
 
                         <div class="selectContainer" id="sourceRow">
                             <label class="selectLabel" for="selectSource">Source</label>
-                            <select is="emby-select" id="selectSource" class="emby-select-withcolor">
+                            <select id="selectSource" class="jpk-selector-dropdown">
                                 <option value="html">HTML</option>
                                 <option value="css">CSS</option>
                                 <option value="js">JavaScript</option>

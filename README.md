@@ -1,20 +1,8 @@
 # ![Custom Pages](Jellyfin.Plugin.CustomPages/Assets/Logo.png)
 
-A simple Jellyfin plugin that publishes custom pages on your server at `/pages/{slug}`. These pages utilize Jellyfin's authorization to optionally gate access to only users or adminstrators.
-
----
-
-**All plugins are made for my personal use cases. I've made these publicly available for anyone who has the same use cases and can benefit from this work. I have no desire to advertise or market for these plugins as these are for personal usage only.**
-
-**Thank you,**
-
-*Joe Kribs*
-
----
+**A simple Jellyfin plugin that publishes custom pages on your server at `/pages/{slug}`. These pages utilize Jellyfin's authorization to optionally gate access to only users or adminstrators.**
 
 ## How It Works
-
-Custom Pages runs entirely inside Jellyfin using the same runtimes and resources as the server. When the plugin loads, Jellyfin discovers the plugin's API controller (`CustomPagesController`) and mounts its `/pages` routes onto the existing Jellyfin web API. Everything below is served from there.
 
 ### Authoring a page
 
@@ -27,20 +15,23 @@ Pages live in the plugin's configuration, so they are captured by your normal Je
 
 ### How pages are served
 
-A page is reachable at `/pages/{slug}`, handled by `CustomPagesController`. When the URL is requested, the plugin builds your page document and embeds it inside a tiny host page as a **sandboxed `<iframe>`** via the `srcdoc` attribute. The iframe is sandboxed to an opaque origin (no `allow-same-origin`), so your page can run scripts, submit forms, and open links, but **cannot** reach the Jellyfin, its access token, cookies, or storage. This attempts to keep a custom page isolated from your Jellyfin session. I expand on this more in the [Security model](#security-model) section.
+A page is reachable at `/pages/{slug}`, handled by `CustomPagesController`. When the URL is requested, the plugin builds your page document and embeds it inside a tiny host page as a **sandboxed `<iframe>`** via the `srcdoc` attribute. The iframe is sandboxed to an opaque origin (no `allow-same-origin`), so your page can run scripts, submit forms, and open links in new tabs, but **cannot** reach the Jellyfin, its access token, cookies, or storage. This attempts to keep a custom page isolated from your Jellyfin session. I expand on this more in the [Security](#security) section.
 
 ### Images and assets
 
-Upload images on the **Assets** tab. Each image is stored (Base64-encoded) in the plugin configuration and served at `/pages/asset/{name}`. Reference one from your page's HTML or CSS using the relative path **`asset/{name}`**. For example:
+Upload images on the **Assets** tab. Each image is stored as `Base64-encoded` in the plugin configuration and served at `/pages/asset/{name}`. Reference one from your page's HTML or CSS using the relative path **`asset/{name}`**. For example:
 
 ```
 <img src="asset/logo.png">
+```
+
+```
 background: url('asset/logo.png')
 ```
 
 Because your page renders at `/pages/{slug}`, that relative path resolves to `/pages/asset/{name}` automatically, regardless of the base Jellyfin URL or subfolder.
 
-Assets are served with `nosniff` and a sandbox content-security-policy, and any non-image upload is delivered as a download rather than rendered. Custom pages reuse your server's real favicon, which the plugin exposes at `/pages/favicon.ico` so if you override your original favicon this should cascade to your custom pages.
+Assets are served with `nosniff` and a sandbox `content-security-policy`, and any non-image upload is delivered as a download rather than rendered. Custom pages reuse your server's real favicon, which the plugin exposes at `/pages/favicon.ico` so if you override your original favicon this should cascade to your custom pages.
 
 ### Visibility
 
@@ -50,21 +41,18 @@ Each page declares who may view it, enforced by Jellyfin's authorization policie
 * **Signed-in users** — Any authenticated Jellyfin account.
 * **Administrators** — Administrators only.
 
-Because Jellyfin authenticates with a token rather than a browser session, protected pages are delivered through a small auth shell: visiting `/pages/{slug}` loads a loader that re-fetches the content using your signed-in token, then renders it. Anonymous pages are served directly. If you open a protected page while signed out, you will be prompted to sign in.
+Because Jellyfin authenticates with a token rather than a browser session, protected pages are delivered through a small authentication shell. Visiting `/pages/{slug}` creates a loader that re-fetches the content using your signed-in token, then renders it. Anonymous pages are served directly. If you open a protected page while signed out, you will be prompted to sign in. Opening a page with an underprivileged user will inform the user they are not authorized to view this page.
 
-## Security model
+## Security
 
-I am no security expert. While I personal advise only exposing these pages to known parties via local networks or VPNs, I have attempted to secure this as best as possible. 
+**I personal advise only exposing these pages to known parties via local networks or VPNs to minimize your footprint for malicious actors.** Pages are handled with several protections:
 
-Pages can only be authored only by administrators and are served with several protections:
-
+* **Administrators only** - Pages can be authored only by administrators.
 * **Sandboxed rendering.** Page content runs inside a `sandbox`ed iframe with an opaque origin (no `allow-same-origin`). Author scripts therefore **cannot** read the Jellyfin origin's access token, cookies, or local storage, and cannot call the Jellyfin API as the viewer. They may run scripts, submit forms, and open links.
-* **Authorization on every request.** The `/user` and `/admin` content endpoints are gated by Jellyfin's own policies; the shell's choice of endpoint cannot bypass them. Each endpoint also verifies the page's declared tier.
+* **Authorization on every request.** The `/user` and `/admin` content endpoints are gated by Jellyfin's own policies. The shell's choice of endpoint cannot bypass them and each endpoint also verifies the page's declared tier.
 * **Hardening headers.** Served pages set `Content-Security-Policy`, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `X-Robots-Tag: noindex`. Slugs are restricted to `[a-z0-9_-]`. 
 
-These steps alone cannot prevent all issues so HTTPS, TLS, and Reverse Proxies or VPNs are always recommended. Page content is author-supplied and may load external resources (images, fonts, third-party scripts). **Only publish content you trust!**
-
-*I am always interested in doing this better. Please feel free to reach out to me directly if you believe there are ways I can be doing this better and more securely!*
+These steps alone cannot prevent all issues so HTTPS, TLS, and Reverse Proxies or VPNs are always recommended *if* you choose to expose this publicly. Page content is author-supplied and may load external resources (images, fonts, third-party scripts). **Only publish content you trust!**
 
 ---
 
