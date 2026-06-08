@@ -1,7 +1,8 @@
 using System.Collections.Generic;
+using Jellyfin.Plugin.CustomPages.Models;
 using MediaBrowser.Model.Plugins;
 
-namespace Jellyfin.Plugin.CustomPages.Models;
+namespace Jellyfin.Plugin.CustomPages.Configuration;
 
 /// <summary>
 /// Single configuration object for the plugin. XML-serialized by Jellyfin.

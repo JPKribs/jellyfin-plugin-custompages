@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Jellyfin.Plugin.CustomPages.Configuration;
 using Jellyfin.Plugin.CustomPages.Models;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Common.Configuration;

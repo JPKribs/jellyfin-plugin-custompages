@@ -63,7 +63,7 @@ public class CustomPagesController : ControllerBase
             return Content(_pages.NotFoundHtml(slug), "text/html");
         }
 
-        if (page.Visibility == PageVisibility.Anonymous)
+        if (!page.Visibility.RequiresAuth())
         {
             Harden(PageCsp);
             return Content(_pages.Render(page), "text/html");

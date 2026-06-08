@@ -74,7 +74,7 @@ public partial class PageService
     /// <returns>The shell HTML document.</returns>
     public string GetShellHtml(string slug, PageVisibility visibility)
     {
-        var tier = visibility == PageVisibility.Admin ? "admin" : "user";
+        var tier = visibility.EndpointTier();
         var content = TemplateLoader.Fill("custompages_shell", new Dictionary<string, string>
         {
             ["SLUG"] = EscapeJsString(slug),
