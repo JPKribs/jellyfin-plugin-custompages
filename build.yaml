@@ -1,7 +1,7 @@
 ---
 name: "Custom Pages"
 guid: "409ef72d-6014-47fd-8928-ebad581bf81b"
-version: "10.11.1.7"
+version: "10.11.1.8"
 targetAbi: "10.11.0.0"
 framework: "net9.0"
 overview: "Author and serve authorization-gated HTML pages at /pages/{slug}."
@@ -16,4 +16,4 @@ artifacts:
 - "Jellyfin.Plugin.CustomPages.dll"
 changelog:
   developer:
-  - Bump to base 2026.6.15
+  - Bump to base 2026.6.19
