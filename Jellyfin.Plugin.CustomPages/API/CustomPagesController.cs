@@ -16,9 +16,14 @@ public class CustomPagesController : ControllerBase
 {
     private const string AdminPolicy = "RequiresElevation";
 
-    // CSP for served page wrappers: the wrapper only frames the sandboxed iframe and uses inline style.
+    // CSP for served page wrappers. The wrapper itself only frames the sandboxed iframe and uses inline
+    // style; script-src 'unsafe-inline' is present so the author's JS can run INSIDE that iframe. srcdoc
+    // frames inherit the embedder's CSP, so without it default-src 'none' silently blocks page scripts.
+    // The frame is sandboxed without allow-same-origin, so its scripts run on an opaque origin that
+    // cannot read the Jellyfin token, cookies, or storage. (The auth-shell path already allows this via
+    // ShellCsp; this brings anonymous pages in line.)
     private const string PageCsp =
-        "default-src 'none'; style-src 'unsafe-inline'; img-src 'self' data:; "
+        "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; "
         + "frame-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 
     // CSP for the auth shell: it runs one inline script and fetches the content same-origin, then frames it.
