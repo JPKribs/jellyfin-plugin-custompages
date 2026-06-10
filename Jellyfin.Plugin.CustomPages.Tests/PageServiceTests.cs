@@ -162,6 +162,130 @@ public class PageServiceTests
         Assert.DoesNotContain("'a'b", html, System.StringComparison.Ordinal);
     }
 
+    // MARK: Gated asset inlining
+
+    private static PageAsset MakeAsset(
+        string name,
+        PageVisibility visibility,
+        string contentType = "image/png",
+        string? dataBase64 = null)
+        => new PageAsset
+        {
+            Name = name,
+            Visibility = visibility,
+            ContentType = contentType,
+            DataBase64 = dataBase64 ?? System.Convert.ToBase64String(new byte[] { 1, 2, 3 })
+        };
+
+    [Theory]
+    [InlineData(PageVisibility.User, PageVisibility.User)]
+    [InlineData(PageVisibility.Admin, PageVisibility.User)]
+    [InlineData(PageVisibility.Admin, PageVisibility.Admin)]
+    public void InlineGatedAssets_EmbedsAssetCoveredByPageTier(PageVisibility pageTier, PageVisibility assetTier)
+    {
+        var asset = MakeAsset("secret.png", assetTier);
+        var html = PageService.InlineGatedAssets("<img src=\"asset/secret.png\">", pageTier, new[] { asset });
+
+        Assert.DoesNotContain("asset/secret.png", html, System.StringComparison.Ordinal);
+        Assert.Contains("data:image/png;base64," + asset.DataBase64, html, System.StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData(PageVisibility.Anonymous, PageVisibility.User)]
+    [InlineData(PageVisibility.Anonymous, PageVisibility.Admin)]
+    [InlineData(PageVisibility.User, PageVisibility.Admin)]
+    public void InlineGatedAssets_NeverEmbedsAssetAbovePageTier(PageVisibility pageTier, PageVisibility assetTier)
+    {
+        var asset = MakeAsset("secret.png", assetTier);
+        var html = PageService.InlineGatedAssets("<img src=\"asset/secret.png\">", pageTier, new[] { asset });
+
+        Assert.Contains("asset/secret.png", html, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("data:image/png", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InlineGatedAssets_IgnoresAnonymousAssets()
+    {
+        // Anonymous assets stay URL served so the browser can cache them.
+        var asset = MakeAsset("logo.png", PageVisibility.Anonymous);
+        var html = PageService.InlineGatedAssets("<img src=\"asset/logo.png\">", PageVisibility.Admin, new[] { asset });
+
+        Assert.Contains("asset/logo.png", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InlineGatedAssets_SkipsNonImageContentTypes()
+    {
+        var asset = MakeAsset("page.html", PageVisibility.User, contentType: "text/html");
+        var html = PageService.InlineGatedAssets("<a href=\"asset/page.html\">x</a>", PageVisibility.User, new[] { asset });
+
+        Assert.Contains("asset/page.html", html, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("data:text/html", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InlineGatedAssets_SkipsInvalidBase64()
+    {
+        var asset = MakeAsset("bad.png", PageVisibility.User, dataBase64: "not base64!");
+        var html = PageService.InlineGatedAssets("<img src=\"asset/bad.png\">", PageVisibility.User, new[] { asset });
+
+        Assert.Contains("asset/bad.png", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InlineGatedAssets_MatchesReferencesCaseInsensitively()
+    {
+        var asset = MakeAsset("secret.png", PageVisibility.User);
+        var html = PageService.InlineGatedAssets("<img src=\"Asset/Secret.PNG\">", PageVisibility.User, new[] { asset });
+
+        Assert.DoesNotContain("Asset/Secret.PNG", html, System.StringComparison.Ordinal);
+        Assert.Contains("data:image/png;base64,", html, System.StringComparison.Ordinal);
+    }
+
+    // MARK: Asset byte decoding
+
+    [Fact]
+    public void GetAssetBytes_DecodesValidBase64()
+    {
+        var asset = MakeAsset("logo.png", PageVisibility.Anonymous);
+
+        var bytes = CreateService().GetAssetBytes(asset);
+
+        Assert.Equal(new byte[] { 1, 2, 3 }, bytes);
+    }
+
+    [Fact]
+    public void GetAssetBytes_ReturnsNullForInvalidBase64()
+    {
+        var asset = MakeAsset("bad.png", PageVisibility.Anonymous, dataBase64: "not base64!");
+
+        Assert.Null(CreateService().GetAssetBytes(asset));
+    }
+
+    [Fact]
+    public void GetAssetBytes_ReturnsCachedBytesForRepeatedRequests()
+    {
+        var service = CreateService();
+        var asset = MakeAsset("logo.png", PageVisibility.Anonymous);
+
+        var first = service.GetAssetBytes(asset);
+        var second = service.GetAssetBytes(asset);
+
+        Assert.NotNull(first);
+        Assert.Same(first, second);
+    }
+
+    // MARK: Visibility tier ordering
+
+    [Theory]
+    [InlineData(PageVisibility.Anonymous, PageVisibility.Anonymous, true)]
+    [InlineData(PageVisibility.User, PageVisibility.Anonymous, true)]
+    [InlineData(PageVisibility.Admin, PageVisibility.User, true)]
+    [InlineData(PageVisibility.Anonymous, PageVisibility.User, false)]
+    [InlineData(PageVisibility.User, PageVisibility.Admin, false)]
+    public void Covers_FollowsTierOrdering(PageVisibility tier, PageVisibility required, bool expected)
+        => Assert.Equal(expected, tier.Covers(required));
+
     // MARK: Not-found fallback
 
     [Fact]

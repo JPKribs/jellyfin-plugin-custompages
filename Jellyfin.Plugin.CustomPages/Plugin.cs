@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Jellyfin.Plugin.CustomPages.Configuration;
 using Jellyfin.Plugin.CustomPages.Models;
+using Jellyfin.Plugin.CustomPages.Services;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Model.Plugins;
@@ -39,6 +40,22 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
 
     /// <inheritdoc />
     public override string Description => "Author and serve authorization-gated pages at /pages/{slug}.";
+
+    /// <summary>
+    /// Validates incoming configuration before persisting it. The dashboard enforces the same rules in
+    /// the browser, but configuration can arrive from any API client, so reachable slugs must be unique
+    /// and assets must be valid Base64 under the size cap before they are accepted.
+    /// </summary>
+    /// <param name="configuration">The incoming configuration.</param>
+    public override void UpdateConfiguration(BasePluginConfiguration configuration)
+    {
+        if (configuration is PluginConfiguration config)
+        {
+            ConfigurationValidator.Validate(config);
+        }
+
+        base.UpdateConfiguration(configuration);
+    }
 
     /// <inheritdoc />
     public override IEnumerable<PluginPageInfo> GetPages()

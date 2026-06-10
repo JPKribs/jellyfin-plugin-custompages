@@ -16,6 +16,9 @@ namespace Jellyfin.Plugin.CustomPages.Services;
 public partial class PageService
 {
     private readonly IServerApplicationPaths _paths;
+    private readonly object _assetCacheLock = new();
+    private readonly Dictionary<string, byte[]> _assetBytesCache = new(StringComparer.OrdinalIgnoreCase);
+    private object? _assetCacheGeneration;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PageService"/> class.
@@ -53,17 +56,76 @@ public partial class PageService
     /// Renders a page for serving: the author's content runs inside a sandboxed, opaque-origin iframe
     /// so it cannot read the Jellyfin origin's token, cookies, or storage.
     /// </summary>
+    /// <remarks>
+    /// SECURITY INVARIANT. This wrapper is the only barrier between author content and the viewer's
+    /// Jellyfin session. The auth shell document.writes this output into a document that is same origin
+    /// with Jellyfin and whose CSP allows inline script, so author markup must never reach the top level
+    /// document in live form. It may only appear HTML encoded inside the sandboxed iframe's srcdoc
+    /// attribute. Never serve author content without this wrapper and never add allow-same-origin to
+    /// the sandbox. Either change turns page authorship into viewer token theft.
+    /// </remarks>
     /// <param name="page">The page to render.</param>
     /// <returns>The full HTML document to serve.</returns>
     public string Render(CustomPage page)
     {
         ArgumentNullException.ThrowIfNull(page);
 
+        var inner = BuildInnerDocument(page);
+        if (Plugin.Instance is not null)
+        {
+            var gated = Plugin.Instance.ReadConfiguration(config =>
+                config.Assets.Where(a => a.Visibility.RequiresAuth()).ToList());
+            inner = InlineGatedAssets(inner, page.Visibility, gated);
+        }
+
         return TemplateLoader.Fill("custompages_wrapper", new Dictionary<string, string>
         {
             ["TITLE"] = WebUtility.HtmlEncode(page.Title),
-            ["SRCDOC"] = WebUtility.HtmlEncode(BuildInnerDocument(page))
+            ["SRCDOC"] = WebUtility.HtmlEncode(inner)
         });
+    }
+
+    /// <summary>
+    /// Replaces <c>asset/{name}</c> references to gated assets with <c>data:</c> URIs. Image fetches
+    /// cannot carry the viewer's token, so gated assets are never served by URL. Embedding them into
+    /// the rendered document lets the bytes travel inside a response that is already tier gated. Only
+    /// image assets at or below the page's own tier are embedded, so a page can never expose an asset
+    /// its viewers are not cleared for.
+    /// </summary>
+    /// <param name="document">The inner page document.</param>
+    /// <param name="pageVisibility">The tier of the page being rendered.</param>
+    /// <param name="assets">The candidate assets. Anonymous assets are ignored.</param>
+    /// <returns>The document with eligible references embedded.</returns>
+    public static string InlineGatedAssets(string document, PageVisibility pageVisibility, IEnumerable<PageAsset> assets)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+        ArgumentNullException.ThrowIfNull(assets);
+
+        foreach (var asset in assets)
+        {
+            if (!asset.Visibility.RequiresAuth()
+                || !pageVisibility.Covers(asset.Visibility)
+                || !IsValidAssetName(asset.Name)
+                || !asset.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            byte[] bytes;
+            try
+            {
+                bytes = Convert.FromBase64String(asset.DataBase64);
+            }
+            catch (FormatException)
+            {
+                continue;
+            }
+
+            var dataUri = "data:" + asset.ContentType + ";base64," + Convert.ToBase64String(bytes);
+            document = document.Replace("asset/" + asset.Name, dataUri, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return document;
     }
 
     /// <summary>
@@ -130,6 +192,48 @@ public partial class PageService
         return Plugin.Instance.ReadConfiguration(config =>
             config.Assets.FirstOrDefault(a =>
                 string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase)));
+    }
+
+    /// <summary>
+    /// Decodes an asset's bytes, cached per configuration generation so repeated requests do not
+    /// re-decode Base64 config data. The configuration's asset list is replaced wholesale on every
+    /// save, so its identity acts as the generation marker and the cache empties whenever it changes,
+    /// which also releases the bytes of deleted assets.
+    /// </summary>
+    /// <param name="asset">The asset to decode.</param>
+    /// <returns>The decoded bytes, or <c>null</c> when the stored Base64 is invalid.</returns>
+    public byte[]? GetAssetBytes(PageAsset asset)
+    {
+        ArgumentNullException.ThrowIfNull(asset);
+
+        var generation = (object?)Plugin.Instance?.ReadConfiguration(config => config.Assets) ?? asset;
+
+        lock (_assetCacheLock)
+        {
+            if (!ReferenceEquals(_assetCacheGeneration, generation))
+            {
+                _assetCacheGeneration = generation;
+                _assetBytesCache.Clear();
+            }
+
+            if (_assetBytesCache.TryGetValue(asset.Name, out var cached))
+            {
+                return cached;
+            }
+
+            byte[] bytes;
+            try
+            {
+                bytes = Convert.FromBase64String(asset.DataBase64);
+            }
+            catch (FormatException)
+            {
+                return null;
+            }
+
+            _assetBytesCache[asset.Name] = bytes;
+            return bytes;
+        }
     }
 
     /// <summary>

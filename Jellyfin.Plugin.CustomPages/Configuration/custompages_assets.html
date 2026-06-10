@@ -12,9 +12,13 @@
                     </div>
 
                     <div class="fieldDescription">
-                        Upload images to host them on the server at <code>/pages/asset/{name}</code>. Reference one
-                        from a page's HTML or CSS with the path shown on its card, for example
-                        <code>&lt;img src="asset/logo.png"&gt;</code> or <code>url('asset/logo.png')</code>.
+                        Upload images to host them for your pages. Reference one from a page's HTML or CSS with
+                        the path shown on its card, for example <code>&lt;img src="asset/logo.png"&gt;</code> or
+                        <code>url('asset/logo.png')</code>. Visibility controls who can see the image. Assets set
+                        to <strong>Anyone</strong> are served publicly at <code>/pages/asset/{name}</code>. Assets
+                        set to <strong>Users</strong> or <strong>Administrators</strong> are referenced the same way
+                        but are never served by URL. They are embedded into pages of an equal or higher
+                        visibility tier when the page renders.
                     </div>
 
                     <!-- Asset counts -->

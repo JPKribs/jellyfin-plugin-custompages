@@ -15,12 +15,19 @@ export default function (view) {
     });
 
     var MAX_ASSET_BYTES = 5 * 1024 * 1024;
+    var VISIBILITIES = ['Anonymous', 'User', 'Admin'];
+    var VISIBILITY_LABELS = { Anonymous: 'Anyone', User: 'Users', Admin: 'Administrators' };
 
     var config = null;
     var assets = [];
     var _bound = false;
 
     function el(id) { return view.querySelector('#' + id); }
+
+    function normalizeVisibility(value) {
+        if (typeof value === 'number') return VISIBILITIES[value] || 'Anonymous';
+        return VISIBILITIES.indexOf(value) >= 0 ? value : 'Anonymous';
+    }
 
     function sanitizeAssetName(name) {
         var clean = String(name || '').toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^[-.]+|[-.]+$/g, '');
@@ -62,10 +69,14 @@ export default function (view) {
                 var m = /^data:([^;]+);base64,(.*)$/.exec(dataUrl);
                 if (!m) return;
                 var name = sanitizeAssetName(file.name);
-                var entry = { Name: name, ContentType: m[1], DataBase64: m[2] };
+                var entry = { Name: name, ContentType: m[1], DataBase64: m[2], Visibility: 'Anonymous' };
                 var existing = assets.findIndex(function (a) { return (a.Name || '').toLowerCase() === name.toLowerCase(); });
-                if (existing >= 0) assets[existing] = entry;
-                else assets.push(entry);
+                if (existing >= 0) {
+                    entry.Visibility = normalizeVisibility(assets[existing].Visibility);
+                    assets[existing] = entry;
+                } else {
+                    assets.push(entry);
+                }
             });
         });
 
@@ -125,6 +136,11 @@ export default function (view) {
         list.innerHTML = assets.map(function (a) {
             var name = Shared.escapeHtml(a.Name);
             var src = 'data:' + a.ContentType + ';base64,' + a.DataBase64;
+            var visibility = normalizeVisibility(a.Visibility);
+            var options = VISIBILITIES.map(function (v) {
+                return '<option value="' + v + '"' + (v === visibility ? ' selected' : '') + '>'
+                    + VISIBILITY_LABELS[v] + '</option>';
+            }).join('');
             return '<div class="jpk-asset-item">'
                 + '<img class="jpk-asset-thumb" src="' + src + '" alt="" />'
                 + '<div class="jpk-asset-info">'
@@ -132,6 +148,8 @@ export default function (view) {
                 + '<div class="jpk-asset-ref">asset/' + name + '</div>'
                 + '</div>'
                 + '<div class="jpk-asset-actions">'
+                + '<select class="jpk-selector-dropdown" data-vis="' + name + '" title="Visibility" aria-label="Visibility">'
+                + options + '</select>'
                 + '<button type="button" class="jpk-asset-btn" data-copy="' + name + '" title="Copy path" aria-label="Copy path">'
                 + '<span class="material-icons" aria-hidden="true">content_copy</span></button>'
                 + '<button type="button" class="jpk-asset-btn danger" data-del="' + name + '" title="Delete" aria-label="Delete">'
@@ -151,6 +169,15 @@ export default function (view) {
             if (copy) { copyAssetRef(copy.getAttribute('data-copy')); return; }
             var del = e.target.closest('[data-del]');
             if (del) { deleteAsset(del.getAttribute('data-del')); }
+        });
+        el('assetList').addEventListener('change', function (e) {
+            var select = e.target.closest('[data-vis]');
+            if (!select) return;
+            var name = select.getAttribute('data-vis');
+            var idx = assets.findIndex(function (a) { return a.Name === name; });
+            if (idx < 0) return;
+            assets[idx].Visibility = normalizeVisibility(select.value);
+            persistAssets('Saved.');
         });
     }
 

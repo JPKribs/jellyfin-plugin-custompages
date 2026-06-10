@@ -27,9 +27,11 @@ public class CustomPagesController : ControllerBase
         + "frame-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
 
     // CSP for the auth shell: it runs one inline script and fetches the content same-origin, then frames it.
+    // The fetched wrapper is document.written into this document, so its srcdoc frame inherits this CSP.
+    // img-src therefore mirrors PageCsp, including data: for gated assets embedded by the renderer.
     private const string ShellCsp =
         "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; "
-        + "img-src 'self'; frame-src 'self' data:; frame-ancestors 'none'; base-uri 'none'";
+        + "img-src 'self' data:; frame-src 'self' data:; frame-ancestors 'none'; base-uri 'none'";
 
     private readonly PageService _pages;
 
@@ -94,28 +96,27 @@ public class CustomPagesController : ControllerBase
     }
 
     /// <summary>
-    /// Serves a hosted image asset by name. Referenced from pages as <c>asset/{name}</c>.
+    /// Serves a hosted anonymous image asset by name. Referenced from pages as <c>asset/{name}</c>.
     /// </summary>
     /// <param name="name">The asset name.</param>
-    /// <returns>The asset bytes, or 404 when no asset matches.</returns>
+    /// <returns>The asset bytes, or 404 when no anonymous asset matches.</returns>
     [HttpGet("asset/{name}")]
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public ActionResult Asset(string name)
     {
+        // Browsers fetch images without the viewer's token, so this endpoint can only ever serve
+        // anonymous assets. Gated assets are embedded into their pages as data: URIs on render and
+        // return 404 here so the public endpoint does not disclose which gated names exist.
         var asset = _pages.FindAsset(name);
-        if (asset is null)
+        if (asset is null || asset.Visibility.RequiresAuth())
         {
             return NotFound();
         }
 
-        byte[] bytes;
-        try
-        {
-            bytes = Convert.FromBase64String(asset.DataBase64);
-        }
-        catch (FormatException)
+        var bytes = _pages.GetAssetBytes(asset);
+        if (bytes is null)
         {
             return NotFound();
         }
