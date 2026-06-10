@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "10.11.2.0",
+        "changelog": "## Features\r\n- Permission gate assets\r\n- Documenation on calling a gated asset\r\n\r\n## Fixes\r\n- Enforce asset size cap",
+        "targetAbi": "10.11.9.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.2.0/jellyfin-plugin-custompages-10.11.2.0.zip",
+        "checksum": "2506e4b39fb5d94525a42413dad65ce1",
+        "timestamp": "2026-06-10T15:27:04Z"
+      },
+      {
         "version": "10.11.1.11",
         "changelog": "## Developer\r\n- File cleanup",
         "targetAbi": "10.11.9.0",
