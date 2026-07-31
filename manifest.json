@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "10.11.2.2",
+        "changelog": "## Developer\r\n- Serve every page under one Content-Security-Policy so a page behaves the same at any visibility tier\r\n- Allow pages to load external resources and submit forms, which the anonymous tier previously blocked\r\n- Allow pages to be embedded by the Jellyfin origin (frame-ancestors 'self')\r\n- Serve page HTML as UTF-8 so single-file documents without a charset meta tag render correctly\r\n- Sign in correctly when the web client is signed in to more than one server\r\n- Reject unknown visibility tiers and malformed asset content types when configuration is saved\r\n- Key the decoded asset cache to the asset itself, closing a stale-bytes window around a save\r\n- Keep unsaved page edits when switching pages in the dashboard\r\n- Declare targetAbi 10.11.10.0 to match the Jellyfin packages the plugin is compiled against",
+        "targetAbi": "10.11.10.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.2.2/jellyfin-plugin-custompages-10.11.2.2.zip",
+        "checksum": "1c906e8c6d314aadf25f824ab8d19822",
+        "timestamp": "2026-07-31T22:09:55Z"
+      },
+      {
         "version": "10.11.2.1",
         "changelog": "## Developer\r\n- Bump Base to 2026.7.12",
         "targetAbi": "10.11.9.0",
