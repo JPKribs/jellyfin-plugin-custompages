@@ -46,40 +46,71 @@
             });
         }
 
-        function getToken() {
+        // localStorage['jellyfin_credentials'] is an internal of the web client, not a public API. If its
+        // shape ever changes this returns nothing and every protected page degrades to the sign-in
+        // prompt rather than breaking, which is the only safe direction to fail.
+        function getTokens() {
+            var here = location.origin.toLowerCase();
+            var mine = [];
+            var others = [];
             try {
                 var raw = localStorage.getItem('jellyfin_credentials');
-                if (!raw) return null;
-                var creds = JSON.parse(raw);
-                var servers = (creds && creds.Servers) || [];
+                if (!raw) return [];
+                var servers = (JSON.parse(raw) || {}).Servers || [];
                 for (var i = 0; i < servers.length; i++) {
-                    if (servers[i] && servers[i].AccessToken) return servers[i].AccessToken;
+                    var server = servers[i];
+                    if (!server || !server.AccessToken) continue;
+
+                    // A client signed in to several servers stores one entry each, and only this
+                    // server's token can authenticate here. Prefer the entry whose address matches this
+                    // origin so another server's token is not the one we try first.
+                    var addresses = [server.ManualAddress, server.LocalAddress, server.RemoteAddress];
+                    var matches = false;
+                    for (var j = 0; j < addresses.length; j++) {
+                        if (addresses[j] && String(addresses[j]).toLowerCase().indexOf(here) === 0) {
+                            matches = true;
+                            break;
+                        }
+                    }
+
+                    (matches ? mine : others).push(server.AccessToken);
                 }
-            } catch (e) { /* fall through to no-token */ }
-            return null;
+            } catch (e) { return []; }
+
+            // Unmatched entries are still worth trying: a reverse proxy can serve this origin under a
+            // hostname the client never stored.
+            return mine.concat(others);
         }
 
-        var token = getToken();
-        if (!token) { show('signin'); return; }
+        var tokens = getTokens();
+        if (!tokens.length) { show('signin'); return; }
 
-        fetch(contentUrl, {
-            headers: {
-                'Authorization': 'MediaBrowser Token="' + token + '"',
-                'Accept': 'text/html'
-            }
-        })
-            .then(function (r) {
-                if (r.status === 401) { show('signin'); return null; }
-                if (r.status === 403) { show('denied'); return null; }
-                if (r.status === 404) { show('missing'); return null; }
-                return r.text();
+        function attempt(index) {
+            if (index >= tokens.length) { show('signin'); return; }
+
+            fetch(contentUrl, {
+                headers: {
+                    'Authorization': 'MediaBrowser Token="' + tokens[index] + '"',
+                    'Accept': 'text/html'
+                }
             })
-            .then(function (html) {
-                if (html === null || html === undefined) return;
-                document.open();
-                document.write(html);
-                document.close();
-            })
-            .catch(function () { show('signin'); });
+                .then(function (r) {
+                    // 401 only means this token is not valid here, which is expected for another
+                    // server's token. Try the next candidate before declaring the viewer signed out.
+                    if (r.status === 401) { attempt(index + 1); return null; }
+                    if (r.status === 403) { show('denied'); return null; }
+                    if (r.status === 404) { show('missing'); return null; }
+                    return r.text();
+                })
+                .then(function (html) {
+                    if (html === null || html === undefined) return;
+                    document.open();
+                    document.write(html);
+                    document.close();
+                })
+                .catch(function () { show('signin'); });
+        }
+
+        attempt(0);
     })();
 </script>

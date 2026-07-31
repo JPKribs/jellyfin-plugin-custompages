@@ -16,30 +16,36 @@ public class CustomPagesController : ControllerBase
 {
     private const string AdminPolicy = "RequiresElevation";
 
-    // CSP for served page wrappers. The wrapper itself only frames the sandboxed iframe and uses inline
-    // style; script-src 'unsafe-inline' is present so the author's JS can run INSIDE that iframe. srcdoc
-    // frames inherit the embedder's CSP, so without it default-src 'none' silently blocks page scripts.
-    // The frame is sandboxed without allow-same-origin, so its scripts run on an opaque origin that
-    // cannot read the Jellyfin token, cookies, or storage. (The auth-shell path already allows this via
-    // ShellCsp; this brings anonymous pages in line.)
+    private const string HtmlContentType = "text/html; charset=utf-8";
+
+    // ONE policy for every served page. The anonymous path and the auth shell must not diverge: a
+    // srcdoc frame inherits its embedder's policy, so whatever is withheld here is withheld from author
+    // content, and two policies would make the same page behave differently depending on its tier.
+    //
+    // The boundary that actually protects the viewer is the sandboxed, opaque-origin iframe in
+    // PageService.Render, not this header. Content that escaped that sandbox could exfiltrate by simply
+    // navigating, which no CSP directive governs, so tightening the fetch directives buys almost no
+    // security while silently breaking ordinary pages (CDN scripts, web fonts, embeds, form posts).
+    // The fetch directives are therefore permissive, and the directives that protect the framing
+    // document itself stay locked down:
+    //   object-src 'none'    - no legacy plugin content.
+    //   base-uri 'none'      - a <base> tag cannot repoint the wrapper's relative URLs, which is what
+    //                          keeps author `asset/{name}` references resolving to /pages/asset/{name}.
+    //   frame-ancestors 'self' - embeddable by the Jellyfin origin (a dashboard or another page), not
+    //                          by third-party sites.
+    // form-action is deliberately unset, so pages may post forms; it is omitted rather than set to a
+    // value so both paths agree by construction.
     private const string PageCsp =
-        "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; "
-        + "frame-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'none'";
+        "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; "
+        + "object-src 'none'; base-uri 'none'; frame-ancestors 'self'";
 
-    // CSP for the auth shell: it runs one inline script and fetches the content same-origin, then frames it.
-    // The fetched wrapper is document.written into this document, so its srcdoc frame inherits this CSP.
-    // img-src therefore mirrors PageCsp, including data: for gated assets embedded by the renderer.
-    private const string ShellCsp =
-        "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; "
-        + "img-src 'self' data:; frame-src 'self' data:; frame-ancestors 'none'; base-uri 'none'";
-
-    private readonly PageService _pages;
+    private readonly IPageService _pages;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CustomPagesController"/> class.
     /// </summary>
     /// <param name="pages">The page service.</param>
-    public CustomPagesController(PageService pages)
+    public CustomPagesController(IPageService pages)
     {
         _pages = pages;
     }
@@ -57,22 +63,21 @@ public class CustomPagesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public ContentResult Get(string slug)
     {
+        Harden();
+
         var page = _pages.Find(slug);
         if (page is null)
         {
-            Harden(PageCsp);
             Response.StatusCode = StatusCodes.Status404NotFound;
-            return Content(_pages.NotFoundHtml(slug), "text/html");
+            return Content(_pages.NotFoundHtml(slug), HtmlContentType);
         }
 
         if (!page.Visibility.RequiresAuth())
         {
-            Harden(PageCsp);
-            return Content(_pages.Render(page), "text/html");
+            return Content(_pages.Render(page), HtmlContentType);
         }
 
-        Harden(ShellCsp);
-        return Content(_pages.GetShellHtml(page.Slug, page.Visibility), "text/html");
+        return Content(_pages.GetShellHtml(page.Slug, page.Visibility), HtmlContentType);
     }
 
     /// <summary>
@@ -121,15 +126,21 @@ public class CustomPagesController : ControllerBase
             return NotFound();
         }
 
-        var contentType = asset.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
-            ? asset.ContentType
-            : "application/octet-stream";
+        var contentType = asset.ContentType is not null
+            && asset.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+                ? asset.ContentType
+                : "application/octet-stream";
 
         // Assets render fine as <img>/CSS backgrounds, but a script-bearing format (e.g. SVG) opened as a
         // top-level document would otherwise run same-origin. The sandbox CSP neutralizes that without
         // affecting embedded image rendering.
         Response.Headers["Content-Security-Policy"] = "default-src 'none'; sandbox";
         Response.Headers["X-Content-Type-Options"] = "nosniff";
+
+        // Public assets are cached by browsers and by any shared cache in front of the server. Raising an
+        // asset's tier therefore does not retract copies already handed out: expect it to stay fetchable
+        // for up to this window. Anything that must be retracted immediately should be deleted, not
+        // re-tiered.
         Response.Headers["Cache-Control"] = "public, max-age=300";
         return File(bytes, contentType);
     }
@@ -152,8 +163,8 @@ public class CustomPagesController : ControllerBase
             return NotFound();
         }
 
-        Harden(PageCsp);
-        return Content(_pages.Render(page), "text/html");
+        Harden();
+        return Content(_pages.Render(page), HtmlContentType);
     }
 
     /// <summary>
@@ -174,21 +185,22 @@ public class CustomPagesController : ControllerBase
             return NotFound();
         }
 
-        Harden(PageCsp);
-        return Content(_pages.Render(page), "text/html");
+        Harden();
+        return Content(_pages.Render(page), HtmlContentType);
     }
 
     /// <summary>
-    /// Applies response headers that keep served pages out of caches, indexes, and external frames.
+    /// Applies the response headers that keep served pages out of caches, indexes, and third-party frames.
     /// </summary>
-    /// <param name="csp">The Content-Security-Policy to apply to this response.</param>
-    private void Harden(string csp)
+    private void Harden()
     {
-        Response.Headers["Content-Security-Policy"] = csp;
+        Response.Headers["Content-Security-Policy"] = PageCsp;
         Response.Headers["Cache-Control"] = "no-store";
         Response.Headers["Referrer-Policy"] = "no-referrer";
         Response.Headers["X-Content-Type-Options"] = "nosniff";
-        Response.Headers["X-Frame-Options"] = "DENY";
+
+        // Legacy counterpart to frame-ancestors 'self'; browsers that honour both prefer the CSP.
+        Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
         Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
     }
 }

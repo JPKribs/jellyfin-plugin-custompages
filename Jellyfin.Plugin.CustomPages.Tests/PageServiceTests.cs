@@ -1,3 +1,4 @@
+using Jellyfin.Plugin.CustomPages.Configuration;
 using Jellyfin.Plugin.CustomPages.Models;
 using Jellyfin.Plugin.CustomPages.Services;
 using MediaBrowser.Controller;
@@ -13,6 +14,27 @@ public class PageServiceTests
 {
     private static PageService CreateService()
         => new PageService(Substitute.For<IServerApplicationPaths>());
+
+    private static PageService CreateService(PluginConfiguration configuration)
+        => new PageService(Substitute.For<IServerApplicationPaths>(), () => configuration);
+
+    private static PluginConfiguration ConfigWith(params object[] items)
+    {
+        var config = new PluginConfiguration();
+        foreach (var item in items)
+        {
+            if (item is CustomPage page)
+            {
+                config.Pages.Add(page);
+            }
+            else if (item is PageAsset asset)
+            {
+                config.Assets.Add(asset);
+            }
+        }
+
+        return config;
+    }
 
     // MARK: Slug validation
 
@@ -302,5 +324,114 @@ public class PageServiceTests
 
         Assert.DoesNotContain("<script>bad</script>", html, System.StringComparison.Ordinal);
         Assert.Contains("this address", html, System.StringComparison.Ordinal);
+    }
+
+    // MARK: Resolution against configuration
+
+    [Fact]
+    public void Find_ResolvesEnabledPageCaseInsensitively()
+    {
+        var service = CreateService(ConfigWith(new CustomPage { Slug = "alpha", Enabled = true }));
+
+        Assert.NotNull(service.Find("ALPHA"));
+    }
+
+    [Fact]
+    public void Find_IgnoresDisabledPages()
+    {
+        // Unpublishing a page is what makes /pages/{slug} return 404.
+        var service = CreateService(ConfigWith(new CustomPage { Slug = "alpha", Enabled = false }));
+
+        Assert.Null(service.Find("alpha"));
+    }
+
+    [Theory]
+    [InlineData("../etc")]
+    [InlineData("a/b")]
+    [InlineData("")]
+    public void Find_RejectsUnsafeSlugsWithoutConsultingConfiguration(string slug)
+    {
+        var service = CreateService(ConfigWith(new CustomPage { Slug = "alpha", Enabled = true }));
+
+        Assert.Null(service.Find(slug));
+    }
+
+    [Fact]
+    public void Find_ReturnsNullWhenConfigurationUnavailable()
+        => Assert.Null(new PageService(Substitute.For<IServerApplicationPaths>(), () => null).Find("alpha"));
+
+    [Fact]
+    public void FindAsset_ResolvesByNameCaseInsensitively()
+    {
+        var service = CreateService(ConfigWith(MakeAsset("logo.png", PageVisibility.Anonymous)));
+
+        Assert.NotNull(service.FindAsset("LOGO.PNG"));
+    }
+
+    [Fact]
+    public void Render_EmbedsGatedAssetsFromConfiguration()
+    {
+        var asset = MakeAsset("secret.png", PageVisibility.User);
+        var page = new CustomPage
+        {
+            Visibility = PageVisibility.User,
+            Html = "<img src=\"asset/secret.png\">"
+        };
+
+        var html = CreateService(ConfigWith(page, asset)).Render(page);
+
+        Assert.Contains("data:image/png;base64," + asset.DataBase64, html, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("asset/secret.png", html, System.StringComparison.Ordinal);
+    }
+
+    // MARK: Out-of-range tiers
+    //
+    // Save-time validation rejects these, but a hand-edited XML config never passes through it, and an
+    // undefined value compares as covering every tier.
+
+    [Fact]
+    public void InlineGatedAssets_EmbedsNothingForUndefinedPageVisibility()
+    {
+        var asset = MakeAsset("secret.png", PageVisibility.Admin);
+        var html = PageService.InlineGatedAssets(
+            "<img src=\"asset/secret.png\">", (PageVisibility)7, new[] { asset });
+
+        Assert.Contains("asset/secret.png", html, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("data:image/png", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InlineGatedAssets_SkipsAssetWithUndefinedVisibility()
+    {
+        var asset = MakeAsset("secret.png", (PageVisibility)7);
+        var html = PageService.InlineGatedAssets(
+            "<img src=\"asset/secret.png\">", PageVisibility.Admin, new[] { asset });
+
+        Assert.Contains("asset/secret.png", html, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("data:image/png", html, System.StringComparison.Ordinal);
+    }
+
+    // MARK: Asset byte cache identity
+
+    [Fact]
+    public void GetAssetBytes_KeepsAssetsWithTheSameNameDistinct()
+    {
+        // The cache is keyed by the asset instance, not its name, so an asset resolved just before a
+        // configuration save can never publish its bytes under a name the new configuration reused.
+        var service = CreateService();
+        var before = MakeAsset("logo.png", PageVisibility.Anonymous, dataBase64: System.Convert.ToBase64String(new byte[] { 1 }));
+        var after = MakeAsset("logo.png", PageVisibility.Anonymous, dataBase64: System.Convert.ToBase64String(new byte[] { 2 }));
+
+        Assert.Equal(new byte[] { 1 }, service.GetAssetBytes(before));
+        Assert.Equal(new byte[] { 2 }, service.GetAssetBytes(after));
+        Assert.Equal(new byte[] { 1 }, service.GetAssetBytes(before));
+    }
+
+    [Fact]
+    public void GetAssetBytes_ReturnsNullForEmptyData()
+    {
+        var asset = MakeAsset("empty.png", PageVisibility.Anonymous, dataBase64: string.Empty);
+
+        Assert.Null(CreateService().GetAssetBytes(asset));
     }
 }

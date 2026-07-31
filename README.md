@@ -1,6 +1,6 @@
 # ![Custom Pages](Jellyfin.Plugin.CustomPages/Assets/Logo.png)
 
-**A simple Jellyfin plugin that publishes custom pages on your server at `/pages/{slug}`. These pages utilize Jellyfin's authorization to optionally gate access to only users or adminstrators.**
+**A simple Jellyfin plugin that publishes custom pages on your server at `/pages/{slug}`. These pages utilize Jellyfin's authorization to optionally gate access to only users or administrators.**
 
 ## How It Works
 
@@ -15,7 +15,9 @@ Pages live in the plugin's configuration, so they are captured by your normal Je
 
 ### How pages are served
 
-A page is reachable at `/pages/{slug}`, handled by `CustomPagesController`. When the URL is requested, the plugin builds your page document and embeds it inside a tiny host page as a **sandboxed `<iframe>`** via the `srcdoc` attribute. The iframe is sandboxed to an opaque origin (no `allow-same-origin`), so your page can run scripts, submit forms, and open links in new tabs, but **cannot** reach the Jellyfin, its access token, cookies, or storage. This attempts to keep a custom page isolated from your Jellyfin session. I expand on this more in the [Security](#security) section.
+A page is reachable at `/pages/{slug}`, handled by `CustomPagesController`. When the URL is requested, the plugin builds your page document and embeds it inside a tiny host page as a **sandboxed `<iframe>`** via the `srcdoc` attribute. The iframe is sandboxed to an opaque origin (no `allow-same-origin`), so your page can run scripts, submit forms, and open links in new tabs, but **cannot** reach Jellyfin, its access token, cookies, or storage. This attempts to keep a custom page isolated from your Jellyfin session. I expand on this more in the [Security](#security) section.
+
+Pages may be framed by the Jellyfin origin itself, so you can embed one into another custom page or into a dashboard that lives on the same server. Third-party sites cannot frame them.
 
 ### Images and assets
 
@@ -56,6 +58,8 @@ The plugin tells the two apart at render time. Public references are left as URL
 
 Anonymous assets are served with `nosniff` and a sandbox `content-security-policy`, and any non-image upload is delivered as a download rather than rendered so size your images accordingly. Custom pages reuse your server's real favicon, which the plugin exposes at `/pages/favicon.ico` so if you override your original favicon this should cascade to your custom pages.
 
+One caveat on public assets: they are cached by browsers and by any shared cache sitting in front of your server for up to five minutes. Raising an asset's tier from **Anyone** to a gated tier does not retract copies that were already handed out, so if an image must become unreachable immediately, delete it rather than re-tiering it.
+
 ### Visibility
 
 Each page declares who may view it, enforced by Jellyfin's authorization policies:
@@ -68,13 +72,33 @@ Because Jellyfin authenticates with a token rather than a browser session, prote
 
 ## Security
 
-**I personal advise only exposing these pages to known parties via local networks or VPNs to minimize your footprint for malicious actors.** Pages are handled with several protections:
+**I personally advise only exposing these pages to known parties via local networks or VPNs to minimize your footprint for malicious actors.** Pages are handled with several protections:
 
 * **Administrators only** - Pages can be authored only by administrators.
-* **Sandboxed rendering.** Page content runs inside a `sandbox`ed iframe with an opaque origin (no `allow-same-origin`). Author scripts therefore **cannot** read the Jellyfin origin's access token, cookies, or local storage, and cannot call the Jellyfin API as the viewer. They may run scripts, submit forms, and open links.
+* **Sandboxed rendering.** Page content runs inside a `sandbox`ed iframe with an opaque origin (no `allow-same-origin`). Author scripts therefore **cannot** read the Jellyfin origin's access token, cookies, or local storage, and cannot call the Jellyfin API as the viewer. This sandbox, not the Content-Security-Policy, is the boundary that protects your session.
 * **Authorization on every request.** The `/user` and `/admin` content endpoints are gated by Jellyfin's own policies. The shell's choice of endpoint cannot bypass them and each endpoint also verifies the page's declared tier.
 * **Asset tiers.** Only assets marked **Anyone** are reachable at `/pages/asset/{name}`. Gated assets are never URL-addressable and are embedded only into pages of an equal or higher visibility tier, so their bytes travel exclusively inside authorized responses.
-* **Hardening headers.** Served pages set `Content-Security-Policy`, `Cache-Control: no-store`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, and `X-Robots-Tag: noindex`. Slugs are restricted to `[a-z0-9_-]`. 
+* **Hardening headers.** Served pages set `Content-Security-Policy`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, and `X-Robots-Tag: noindex`. Slugs are restricted to `[a-z0-9_-]`.
+* **Popups escape the sandbox.** `allow-popups-to-escape-sandbox` is set so that a link to an external site opens as a normal page instead of a crippled sandboxed one. The trade-off is that author JavaScript can open and drive an unsandboxed window, which is the widest hole in the sandbox.
+
+### What a page is allowed to do
+
+Every page is served under a **single Content-Security-Policy**, byte-identical for public and protected pages. This is deliberate: a `srcdoc` iframe inherits the policy of the document that frames it, so one policy necessarily governs both the plugin's wrapper and your content. Two policies would mean the same page behaved differently depending on its visibility tier.
+
+Your page **may**:
+
+* load images, fonts, stylesheets, scripts, and media from your own server or any external host
+* run inline scripts and styles, including libraries that rely on `eval`
+* submit forms, and open links or popups in new tabs
+* embed other pages in an iframe
+
+Your page **may not**:
+
+* use `<object>` or `<embed>` plugin content
+* set a `<base>` tag — this is what keeps `asset/{name}` resolving to `/pages/asset/{name}`
+* be framed by a third-party site, though the Jellyfin origin itself may frame it
+
+Tightening the resource directives further would buy very little in practice. Content that escaped the sandbox could exfiltrate simply by navigating, which no CSP directive governs. The sandbox is the real boundary; the policy's job is to protect the document that frames it.
 
 These steps alone cannot prevent all issues so HTTPS, TLS, and Reverse Proxies or VPNs are always recommended *if* you choose to expose this publicly. Page content is author-supplied and may load external resources (images, fonts, third-party scripts). **Only publish content you trust!**
 

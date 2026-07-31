@@ -135,7 +135,9 @@ export default function (view) {
         Shared.setVisible('assetEmpty', assets.length === 0);
         list.innerHTML = assets.map(function (a) {
             var name = Shared.escapeHtml(a.Name);
-            var src = 'data:' + a.ContentType + ';base64,' + a.DataBase64;
+            // Both halves are escaped as well as validated server side: this preview runs in the
+            // dashboard, so an attribute break out here would execute against an administrator.
+            var src = 'data:' + Shared.escapeHtml(a.ContentType) + ';base64,' + Shared.escapeHtml(a.DataBase64);
             var visibility = normalizeVisibility(a.Visibility);
             var options = VISIBILITIES.map(function (v) {
                 return '<option value="' + v + '"' + (v === visibility ? ' selected' : '') + '>'

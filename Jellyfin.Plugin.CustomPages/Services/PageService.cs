@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using Jellyfin.Plugin.CustomPages.Configuration;
 using Jellyfin.Plugin.CustomPages.Models;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Controller;
@@ -13,26 +15,40 @@ namespace Jellyfin.Plugin.CustomPages.Services;
 /// <summary>
 /// Resolves slugs to configured pages and renders their served HTML from embedded templates.
 /// </summary>
-public partial class PageService
+public partial class PageService : IPageService
 {
     private readonly IServerApplicationPaths _paths;
-    private readonly object _assetCacheLock = new();
-    private readonly Dictionary<string, byte[]> _assetBytesCache = new(StringComparer.OrdinalIgnoreCase);
-    private object? _assetCacheGeneration;
+    private readonly Func<PluginConfiguration?> _configuration;
+
+    // Decoded asset bytes, keyed by the asset instance rather than by name. Jellyfin replaces the whole
+    // configuration object on save, so an entry becomes unreachable together with the configuration that
+    // produced it and the table drops it. That removes the generation bookkeeping this used to need, and
+    // with it the window where an asset resolved just before a save could publish its bytes under a name
+    // the new configuration had already reused.
+    private readonly ConditionalWeakTable<PageAsset, byte[]> _assetBytesCache = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="PageService"/> class.
     /// </summary>
     /// <param name="paths">The server application paths, used to locate the web client favicon.</param>
     public PageService(IServerApplicationPaths paths)
+        : this(paths, static () => Plugin.Instance?.ReadConfiguration(static config => config))
     {
-        _paths = paths;
     }
 
     /// <summary>
-    /// Resolves the web client's favicon bytes so served pages can reuse the server's real icon.
+    /// Initializes a new instance of the <see cref="PageService"/> class with an explicit configuration
+    /// source, so the resolution and rendering paths can be exercised without a running plugin instance.
     /// </summary>
-    /// <returns>The favicon bytes and content type, or <c>null</c> when none could be located.</returns>
+    /// <param name="paths">The server application paths, used to locate the web client favicon.</param>
+    /// <param name="configuration">Returns the current configuration, or <c>null</c> when unavailable.</param>
+    public PageService(IServerApplicationPaths paths, Func<PluginConfiguration?> configuration)
+    {
+        _paths = paths;
+        _configuration = configuration;
+    }
+
+    /// <inheritdoc />
     public (byte[] Bytes, string ContentType)? GetFavicon() => FaviconResolver.Resolve(_paths);
 
     /// <summary>
@@ -42,14 +58,13 @@ public partial class PageService
     /// <returns>The matching page, or <c>null</c> when none is enabled for the slug.</returns>
     public CustomPage? Find(string slug)
     {
-        if (!IsValidSlug(slug) || Plugin.Instance is null)
+        if (!IsValidSlug(slug))
         {
             return null;
         }
 
-        return Plugin.Instance.ReadConfiguration(config =>
-            config.Pages.FirstOrDefault(p =>
-                p.Enabled && string.Equals(p.Slug, slug, StringComparison.OrdinalIgnoreCase)));
+        return _configuration()?.Pages.FirstOrDefault(p =>
+            p.Enabled && string.Equals(p.Slug, slug, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
@@ -71,11 +86,10 @@ public partial class PageService
         ArgumentNullException.ThrowIfNull(page);
 
         var inner = BuildInnerDocument(page);
-        if (Plugin.Instance is not null)
+        var assets = _configuration()?.Assets;
+        if (assets is not null)
         {
-            var gated = Plugin.Instance.ReadConfiguration(config =>
-                config.Assets.Where(a => a.Visibility.RequiresAuth()).ToList());
-            inner = InlineGatedAssets(inner, page.Visibility, gated);
+            inner = InlineGatedAssets(inner, page.Visibility, assets);
         }
 
         return TemplateLoader.Fill("custompages_wrapper", new Dictionary<string, string>
@@ -101,11 +115,21 @@ public partial class PageService
         ArgumentNullException.ThrowIfNull(document);
         ArgumentNullException.ThrowIfNull(assets);
 
+        // Save time validation rejects out of range tiers, but a hand edited XML config never passes
+        // through it. An undefined value would compare as covering every tier, so embed nothing rather
+        // than let it unlock admin assets on a page the server will happily serve to any signed in user.
+        if (!Enum.IsDefined(pageVisibility))
+        {
+            return document;
+        }
+
         foreach (var asset in assets)
         {
-            if (!asset.Visibility.RequiresAuth()
+            if (!Enum.IsDefined(asset.Visibility)
+                || !asset.Visibility.RequiresAuth()
                 || !pageVisibility.Covers(asset.Visibility)
                 || !IsValidAssetName(asset.Name)
+                || asset.ContentType is null
                 || !asset.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
@@ -117,6 +141,10 @@ public partial class PageService
                 bytes = Convert.FromBase64String(asset.DataBase64);
             }
             catch (FormatException)
+            {
+                continue;
+            }
+            catch (ArgumentNullException)
             {
                 continue;
             }
@@ -184,56 +212,46 @@ public partial class PageService
     /// <returns>The matching asset, or <c>null</c> when none exists for the name.</returns>
     public PageAsset? FindAsset(string name)
     {
-        if (!IsValidAssetName(name) || Plugin.Instance is null)
+        if (!IsValidAssetName(name))
         {
             return null;
         }
 
-        return Plugin.Instance.ReadConfiguration(config =>
-            config.Assets.FirstOrDefault(a =>
-                string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase)));
+        return _configuration()?.Assets.FirstOrDefault(a =>
+            string.Equals(a.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
     /// <summary>
-    /// Decodes an asset's bytes, cached per configuration generation so repeated requests do not
-    /// re-decode Base64 config data. The configuration's asset list is replaced wholesale on every
-    /// save, so its identity acts as the generation marker and the cache empties whenever it changes,
-    /// which also releases the bytes of deleted assets.
+    /// Decodes an asset's bytes, cached so repeated requests do not re-decode Base64 configuration data.
     /// </summary>
     /// <param name="asset">The asset to decode.</param>
-    /// <returns>The decoded bytes, or <c>null</c> when the stored Base64 is invalid.</returns>
+    /// <returns>The decoded bytes, or <c>null</c> when the stored Base64 is missing or invalid.</returns>
     public byte[]? GetAssetBytes(PageAsset asset)
     {
         ArgumentNullException.ThrowIfNull(asset);
 
-        var generation = (object?)Plugin.Instance?.ReadConfiguration(config => config.Assets) ?? asset;
-
-        lock (_assetCacheLock)
+        if (_assetBytesCache.TryGetValue(asset, out var cached))
         {
-            if (!ReferenceEquals(_assetCacheGeneration, generation))
-            {
-                _assetCacheGeneration = generation;
-                _assetBytesCache.Clear();
-            }
-
-            if (_assetBytesCache.TryGetValue(asset.Name, out var cached))
-            {
-                return cached;
-            }
-
-            byte[] bytes;
-            try
-            {
-                bytes = Convert.FromBase64String(asset.DataBase64);
-            }
-            catch (FormatException)
-            {
-                return null;
-            }
-
-            _assetBytesCache[asset.Name] = bytes;
-            return bytes;
+            return cached;
         }
+
+        if (string.IsNullOrEmpty(asset.DataBase64))
+        {
+            return null;
+        }
+
+        byte[] bytes;
+        try
+        {
+            bytes = Convert.FromBase64String(asset.DataBase64);
+        }
+        catch (FormatException)
+        {
+            return null;
+        }
+
+        _assetBytesCache.AddOrUpdate(asset, bytes);
+        return bytes;
     }
 
     /// <summary>

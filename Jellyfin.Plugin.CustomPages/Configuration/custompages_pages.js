@@ -186,7 +186,15 @@ export default function (view) {
         });
     }
 
+    // Edits live in the in-memory page objects until Save persists them, so anything typed into the
+    // editor has to be captured before the editor is pointed at a different page.
+    function keepCurrentEdits() {
+        var current = pages[currentIndex];
+        if (current) readEditorInto(current);
+    }
+
     function addPage() {
+        keepCurrentEdits();
         pages.push({ Slug: '', Title: '', Visibility: 'Anonymous', Html: '', Css: '', Js: '', Document: '', SingleFile: false, Enabled: true });
         currentIndex = pages.length - 1;
         currentPane = 'html';
@@ -208,6 +216,7 @@ export default function (view) {
 
     function bind() {
         el('selectPage').addEventListener('change', function () {
+            keepCurrentEdits();
             currentIndex = parseInt(this.value, 10);
             loadEditor();
         });

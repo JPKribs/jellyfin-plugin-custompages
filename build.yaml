@@ -1,8 +1,8 @@
 ---
 name: "Custom Pages"
 guid: "409ef72d-6014-47fd-8928-ebad581bf81b"
-version: "10.11.2.1"
-targetAbi: "10.11.9.0"
+version: "10.11.2.2"
+targetAbi: "10.11.10.0"
 framework: "net9.0"
 overview: "Author and serve authorization-gated HTML pages at /pages/{slug}."
 description: >
@@ -16,4 +16,12 @@ artifacts:
 - "Jellyfin.Plugin.CustomPages.dll"
 changelog:
   developer:
-  - Bump Base to 2026.7.12
+  - Serve every page under one Content-Security-Policy so a page behaves the same at any visibility tier
+  - Allow pages to load external resources and submit forms, which the anonymous tier previously blocked
+  - Allow pages to be embedded by the Jellyfin origin (frame-ancestors 'self')
+  - Serve page HTML as UTF-8 so single-file documents without a charset meta tag render correctly
+  - Sign in correctly when the web client is signed in to more than one server
+  - Reject unknown visibility tiers and malformed asset content types when configuration is saved
+  - Key the decoded asset cache to the asset itself, closing a stale-bytes window around a save
+  - Keep unsaved page edits when switching pages in the dashboard
+  - Declare targetAbi 10.11.10.0 to match the Jellyfin packages the plugin is compiled against
