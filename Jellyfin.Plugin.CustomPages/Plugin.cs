@@ -44,7 +44,7 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
     /// <summary>
     /// Validates incoming configuration before persisting it. The dashboard enforces the same rules in
     /// the browser, but configuration can arrive from any API client, so reachable slugs must be unique
-    /// and assets must be valid Base64 under the size cap before they are accepted.
+    /// and assets must be valid Base64 under the size cap before they are allowed.
     /// </summary>
     /// <param name="configuration">The incoming configuration.</param>
     public override void UpdateConfiguration(BasePluginConfiguration configuration)
