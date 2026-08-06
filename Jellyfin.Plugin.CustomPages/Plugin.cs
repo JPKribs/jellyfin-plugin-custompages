@@ -92,7 +92,6 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
             EmbeddedResourcePath = $"{ns}.Configuration.custompages_assets.js"
         };
 
-        // Shared base CSS and JS compiled in from the JPKribs.Jellyfin.Base package.
         foreach (var page in GetSharedPages("custompages"))
         {
             yield return page;
