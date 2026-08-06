@@ -53,7 +53,8 @@ get_plugin_info() {
     local guid="409ef72d-6014-47fd-8928-ebad581bf81b"
 
     if [[ -f "$build_file" ]]; then
-        local extracted_name=$(grep '^name:' "$build_file" | cut -d':' -f2 | tr -d ' "')
+        # Take everything after the first colon and strip one layer of quotes, so a name with spaces survives.
+        local extracted_name=$(sed -n 's/^name:[[:space:]]*//p' "$build_file" | head -n 1 | sed -e 's/[[:space:]]*$//' -e 's/^"\(.*\)"$/\1/')
         local extracted_guid=$(grep '^guid:' "$build_file" | cut -d':' -f2 | tr -d ' "')
 
         [[ -n "$extracted_name" ]] && name="$extracted_name"
@@ -215,6 +216,9 @@ main() {
     # Bundle the plugin image AND a meta.json inside the package so the installed
     # plugin icon (/Plugins/{id}/{ver}/Image) is served straight from disk with
     # ZERO dependency on the server downloading imageUrl at install time.
+    # CRITICAL: meta.json needs "name". Jellyfin 12 groups discovered plugins by
+    # name, so every nameless manifest collapses into one empty-name entry and all
+    # but one of those plugins silently fails to load.
     # CRITICAL: meta.json "version" must be 4-part to match the assembly version
     # the web UI uses in the image URL (.NET pads to 4 parts), or GetPlugin()
     # returns null and the image 404s.
@@ -244,9 +248,12 @@ main() {
         cat > "$temp_dir/meta.json" <<EOF
 {
     "guid": "$PLUGIN_GUID",
+    "name": "$PLUGIN_NAME",
     "version": "$VERSION",
     "targetAbi": "$target_abi",
     "timestamp": "$meta_timestamp",
+    "status": "Active",
+    "autoUpdate": true,
     "imagePath": "Logo.png",
     "assemblies": [
 $assemblies_json
