@@ -69,7 +69,8 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
             EmbeddedResourcePath = $"{ns}.Configuration.custompages_pages.html",
             MenuSection = "server",
             DisplayName = "Custom Pages",
-            EnableInMainMenu = false
+            EnableInMainMenu = false,
+            MenuIcon = "web"
         };
 
         yield return new PluginPageInfo
