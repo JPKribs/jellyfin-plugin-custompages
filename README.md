@@ -109,15 +109,15 @@ These steps alone cannot prevent all issues so HTTPS, TLS, and Reverse Proxies o
 Releases use a four-part version, `JJ.JJ.F.B`, that matches the supported Jellyfin version with the plugin's own feature/bug count:
 
 ```
-10.11.1.0
-└───┘ └┬┘
-  │    └── 1 = Plugin feature release
-  │        0 = Plugin bug/patch release within that feature
-  │
-  └─── 10.11 = Jellyfin version this build was tested/released for
+12.0.1.0
+└──┘ └┬┘
+ │    └── 1 = Plugin feature release
+ │        0 = Plugin bug/patch release within that feature
+ │
+ └─── 12.0 = Jellyfin version this build was tested/released for
 ```
 
-Targets **Jellyfin 10.11.x** (`net9.0`, ABI `10.11.10.0`).
+Targets **Jellyfin 12.0.x** (`net10.0`, ABI `12.0.0.0`).
 
 ## Installation
 
