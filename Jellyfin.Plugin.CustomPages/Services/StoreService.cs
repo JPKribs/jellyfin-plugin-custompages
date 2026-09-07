@@ -482,8 +482,6 @@ public sealed class StoreService : IStoreService
     /// <returns>The headline.</returns>
     public static string Headline(string store, int added, int removed, string? label)
     {
-        var count = FormattableString.Invariant;
-
         if (added == 1 && removed == 0)
         {
             return (string.IsNullOrEmpty(label) ? "A record" : label) + " was added to " + store;
@@ -494,17 +492,20 @@ public sealed class StoreService : IStoreService
             return (string.IsNullOrEmpty(label) ? "A record" : label) + " was removed from " + store;
         }
 
+        var addedCount = added.ToString(CultureInfo.InvariantCulture);
+        var removedCount = removed.ToString(CultureInfo.InvariantCulture);
+
         if (removed == 0)
         {
-            return count($"{added} items added to {store}");
+            return addedCount + " items added to " + store;
         }
 
         if (added == 0)
         {
-            return count($"{removed} items removed from {store}");
+            return removedCount + " items removed from " + store;
         }
 
-        return count($"{added} items added and {removed} items removed from {store}");
+        return addedCount + " items added and " + removedCount + " items removed from " + store;
     }
 
     /// <summary>

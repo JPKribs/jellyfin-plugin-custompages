@@ -1,7 +1,7 @@
 ---
 name: "Custom Pages"
 guid: "409ef72d-6014-47fd-8928-ebad581bf81b"
-version: "10.11.3.2"
+version: "10.11.3.3"
 targetAbi: "10.11.10.0"
 framework: "net9.0"
 overview: "Author and serve authorization-gated HTML pages at /pages/{slug}."
@@ -14,21 +14,4 @@ imageUrl: "https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-custompages
 owner: "JPKribs"
 artifacts:
 - "Jellyfin.Plugin.CustomPages.dll"
-changelog:
-  features:
-  - Record stores, a named collection of JSON records any page can read and write through the injected pageStore helper, defined once for the plugin so two pages can share one set of records
-  - Each store carries its own read tier, read scope, and write tier, so who may see the whole store, who may see only their own rows, and who may add one are three separate decisions
-  - Optional retention per store, removing records once they reach a set age, with permanent retention as the default
-  - Optional activity log notice when a record is added or removed, naming the record by the label the page supplies
-  - Page access is now an Access selector on the signed in tier, offering all users or specific users
-  developer:
-  - A stores read tier is definitive. A caller below it reads nothing, and scope only narrows what a caller who already cleared the tier is shown
-  - Administrators read every record whatever scope says, matching how they are always admitted to a page restricted to specific users
-  - Changing a record needs both the read and the write tier, so a caller can never rewrite something the store would refuse to show them
-  - Store records live under the Jellyfin data directory rather than in the plugin configuration, since visitors write them and the configuration must not be rewritten on every submission
-  - Records are capped per store and per record, and the caps apply whatever the tiers, since they are the only bound on a store open to anonymous writes
-  - Writes are atomic, and a store whose file cannot be parsed answers as empty and refuses writes rather than overwriting it
-  - Activity log entries are rate limited per store, with additions and removals sharing one window and a batch reporting counts
-  - A label is capped and flattened before it reaches the activity log, so a page cannot write a line break into the feed
-  - Retention is applied on read as well as on a scheduled task, so an expired record is never served even between sweeps
-  - An allow list is now only accepted on the signed in tier, since administrators are admitted unconditionally and an anonymous page already serves everyone
+changelog: "Fix 3.2 build issues."
