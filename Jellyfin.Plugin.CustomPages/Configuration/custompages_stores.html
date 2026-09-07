@@ -1,0 +1,187 @@
+<div id="CustomPagesStoresPage" data-role="page"
+     class="page type-interior pluginConfigurationPage withTabs"
+     data-require="emby-input,emby-button,emby-checkbox"
+     data-controller="__plugin/custompages_stores.js">
+    <div data-role="content">
+        <div class="content-primary">
+            <form id="CustomPagesStoresForm">
+                <div class="verticalSection verticalSection-extrabottompadding">
+
+                    <!-- Page title -->
+                    <div class="sectionTitleContainer flex align-items-center">
+                        <h1 class="sectionTitle">Stores</h1>
+                    </div>
+
+                    <div class="fieldDescription">
+                        A store keeps records your pages write. Call one with
+                        <code>pageStore.read('name')</code> and <code>pageStore.write('name', data)</code>
+                        from any page with <strong>Allow system access</strong> turned on. Stores belong to
+                        the plugin rather than to one page, so a page that collects submissions and a page
+                        that reports on them can share the same records.
+                    </div>
+
+                    <!-- Store counts -->
+                    <div id="storeCounts" class="jpk-cards"></div>
+
+                    <!-- Store selector -->
+                    <div class="jpk-selector">
+                        <div class="selectContainer">
+                            <label class="selectLabel" for="selectStore">Store</label>
+                            <select id="selectStore" class="jpk-selector-dropdown"></select>
+                        </div>
+                        <div class="jpk-selector-actions">
+                            <button is="emby-button" type="button" id="btnNewStore" class="raised jpk-icon-btn jpk-button-submit" title="New store">
+                                <span class="material-icons" aria-hidden="true">add</span>
+                                <span>New</span>
+                            </button>
+                            <button is="emby-button" type="button" id="btnEnableStore" class="raised jpk-icon-btn" title="Toggle enabled">
+                                <span class="material-icons" aria-hidden="true">visibility</span>
+                                <span id="enableLabel">Enabled</span>
+                            </button>
+                            <button is="emby-button" type="button" id="btnClearStore" class="raised jpk-icon-btn jpk-button-destructive" title="Delete every record in this store">
+                                <span class="material-icons" aria-hidden="true">delete_sweep</span>
+                                <span>Clear</span>
+                            </button>
+                            <button is="emby-button" type="button" id="btnDeleteStore" class="raised jpk-icon-btn jpk-button-destructive" title="Delete store">
+                                <span class="material-icons" aria-hidden="true">delete</span>
+                                <span>Delete</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div id="storeEmpty" class="jpk-empty-section hidden">No stores yet. Click <strong>New</strong> to create one.</div>
+
+                    <!-- Store editor -->
+                    <div id="storeEditor" class="hidden">
+                        <div class="inputContainer">
+                            <label for="storeName">Name</label>
+                            <input is="emby-input" type="text" id="storeName" autocomplete="off" />
+                            <div class="fieldDescription jpk-url">URL: <a id="storeUrl" href="#" target="_blank" rel="noopener"></a></div>
+                        </div>
+
+                        <div class="selectContainer">
+                            <label class="selectLabel" for="storeRead">Read</label>
+                            <select id="storeRead" class="jpk-selector-dropdown">
+                                <option value="Admin">Admin</option>
+                                <option value="User">User</option>
+                                <option value="Anonymous">Anyone</option>
+                            </select>
+                            <div class="fieldDescription">
+                                The lowest tier that may read the store at all. A viewer below this reads
+                                nothing, whatever else is set here.
+                            </div>
+                        </div>
+
+                        <div class="selectContainer hidden" id="scopeRow">
+                            <label class="selectLabel" for="storeScope">Scope</label>
+                            <select id="storeScope" class="jpk-selector-dropdown">
+                                <option value="All">All records</option>
+                                <option value="Own">User records</option>
+                            </select>
+                            <div class="fieldDescription">
+                                How much of the store a viewer who cleared the read tier is shown.
+                                <strong>User records</strong> narrows each viewer to what they created.
+                                Administrators are shown every record either way.
+                            </div>
+                        </div>
+
+                        <div class="selectContainer">
+                            <label class="selectLabel" for="storeWrite">Write</label>
+                            <select id="storeWrite" class="jpk-selector-dropdown">
+                                <option value="Admin">Admin</option>
+                                <option value="User">User</option>
+                                <option value="Anonymous">Anyone</option>
+                            </select>
+                            <div class="fieldDescription">
+                                The lowest tier that may add a record. Changing somebody else's record
+                                needs the read tier as well.
+                            </div>
+                        </div>
+
+                        <div class="jpk-warn hidden" id="anonWriteWarning">
+                            Anyone who can reach this server can add records to this store without signing
+                            in. The record limit is the only thing bounding what they add.
+                        </div>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input type="checkbox" is="emby-checkbox" id="storeEditOwn" />
+                                <span class="checkboxLabel">Writers can edit and delete their own records</span>
+                            </label>
+                            <div class="fieldDescription">
+                                Leave this off when records carry a status you write, or the person who
+                                submitted a row can rewrite it. A viewer still has to clear the read tier
+                                as well, so this grants nothing on its own.
+                            </div>
+                        </div>
+
+                        <div class="inputContainer">
+                            <label for="storeMaxRecords">Record limit</label>
+                            <input is="emby-input" type="number" id="storeMaxRecords" min="1" max="100000" />
+                            <div class="fieldDescription">
+                                Writes past this are refused. No single record may exceed 64 KB.
+                            </div>
+                        </div>
+
+                        <div class="selectContainer">
+                            <label class="selectLabel" for="storeRetention">Retention</label>
+                            <select id="storeRetention" class="jpk-selector-dropdown">
+                                <option value="0">Keep permanently</option>
+                                <option value="1">1 day</option>
+                                <option value="7">7 days</option>
+                                <option value="30">30 days</option>
+                                <option value="90">90 days</option>
+                                <option value="180">180 days</option>
+                                <option value="365">365 days</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                            <div class="fieldDescription">
+                                Records are removed once they reach this age, measured from when they were
+                                created rather than last written.
+                            </div>
+                        </div>
+
+                        <div class="inputContainer hidden" id="retentionCustomRow">
+                            <label for="storeRetentionDays">Retention in days</label>
+                            <input is="emby-input" type="number" id="storeRetentionDays" min="1" max="3650" />
+                        </div>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input type="checkbox" is="emby-checkbox" id="storeNotify" />
+                                <span class="checkboxLabel">Notify administrators on a new record</span>
+                            </label>
+                            <div class="fieldDescription">
+                                Writes an entry to Jellyfin's activity log. Entries are rate limited to one
+                                a minute per store, so a burst of submissions cannot flood the feed.
+                            </div>
+                        </div>
+
+                        <div class="inputContainer">
+                            <span id="storeUsage" class="jpk-status-text"></span>
+                        </div>
+
+                        <div class="inputContainer">
+                            <button is="emby-button" type="button" id="btnCopySnippet" class="raised jpk-icon-btn">
+                                <span class="material-icons" aria-hidden="true">content_copy</span>
+                                <span>Copy snippet</span>
+                            </button>
+                        </div>
+
+                        <!-- Save -->
+                        <div class="inputContainer">
+                            <button is="emby-button" type="button" id="btnSaveStores" data-theme="b" class="raised jpk-button-submit block">
+                                <span>Save</span>
+                            </button>
+                            <span id="storeStatus" class="jpk-status-text"></span>
+                        </div>
+                    </div>
+
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <link rel="stylesheet" href="configurationpage?name=custompages_jpkribs_shared.css">
+</div>

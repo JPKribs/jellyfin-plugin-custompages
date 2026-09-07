@@ -234,6 +234,29 @@ public class PageServiceTests
     }
 
     [Fact]
+    public void AllowsUser_AdmitsAnAdministratorTheListDoesNotName()
+    {
+        // Administrators author these pages and can read any page's source from the dashboard anyway,
+        // so excluding one would be a restriction the dashboard could not actually keep. The picker
+        // does not offer them for the same reason.
+        var page = new CustomPage();
+        page.AllowedUserIds.Add(System.Guid.NewGuid().ToString());
+
+        Assert.True(PageService.AllowsUser(page, System.Guid.NewGuid(), isAdministrator: true));
+    }
+
+    [Fact]
+    public void AllowsUser_StillRefusesAnApiKeyEvenAsAdministrator()
+    {
+        // An API key carries no user, so there is no identity for an allow list to name and no
+        // administrator to admit. Guid.Empty must stay refused whatever the admin flag says.
+        var page = new CustomPage();
+        page.AllowedUserIds.Add(System.Guid.NewGuid().ToString());
+
+        Assert.False(PageService.AllowsUser(page, System.Guid.Empty, isAdministrator: true));
+    }
+
+    [Fact]
     public void AllowsUser_FailsClosedWhenNoEntryParses()
     {
         // A hand edited list of junk must lock everyone out rather than collapse to "no restriction".
@@ -568,5 +591,67 @@ public class PageServiceTests
         var asset = MakeAsset("empty.png", PageVisibility.Anonymous, dataBase64: string.Empty);
 
         Assert.Null(CreateService().GetAssetBytes(asset));
+    }
+    // MARK: pageStore injection
+
+    [Fact]
+    public void Render_SandboxedPage_DoesNotGetTheStoreHelper()
+    {
+        // The helper needs the Jellyfin origin and the viewer's token, and an opaque origin frame has
+        // neither, so a sandboxed page must not be handed a helper that could only fail.
+        var page = new CustomPage { SingleFile = true, Document = "<html><head></head><body></body></html>" };
+
+        var html = CreateService().Render(page);
+
+        Assert.DoesNotContain("pageStore", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Render_UnsandboxedPage_GetsTheStoreHelper()
+    {
+        var page = new CustomPage
+        {
+            SingleFile = true,
+            Unsandboxed = true,
+            Document = "<html><head></head><body></body></html>"
+        };
+
+        var html = CreateService().Render(page);
+
+        Assert.Contains("window.pageStore", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Render_PageWithRoutes_GetsBothHelpers()
+    {
+        // Routes already imply the page runs unsandboxed, so the store helper rides along with them.
+        var page = new CustomPage { SingleFile = true, Document = "<html><head></head><body></body></html>" };
+        page.ApiRoutes.Add(new PageApiRoute { Name = "grabber", Url = "http://localhost:1/" });
+
+        var html = CreateService().Render(page);
+
+        Assert.Contains("window.serverFetch", html, System.StringComparison.Ordinal);
+        Assert.Contains("window.pageStore", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InjectPageStore_LandsInsideHeadWhenPresent()
+    {
+        var doc = "<html><head></head><body><script>pageStore.read('x');</script></body></html>";
+
+        var injected = PageService.InjectPageStore(doc);
+
+        var helper = injected.IndexOf("window.pageStore", System.StringComparison.Ordinal);
+        var author = injected.IndexOf("pageStore.read('x')", System.StringComparison.Ordinal);
+        Assert.True(helper >= 0 && helper < author);
+    }
+
+    [Fact]
+    public void InjectPageStore_DocumentWithoutAHead_StillGetsTheHelper()
+    {
+        var injected = PageService.InjectPageStore("<p>fragment</p>");
+
+        Assert.Contains("window.pageStore", injected, System.StringComparison.Ordinal);
+        Assert.Contains("<p>fragment</p>", injected, System.StringComparison.Ordinal);
     }
 }

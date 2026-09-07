@@ -24,6 +24,10 @@ public class ConfigurationValidatorTests
             {
                 config.Assets.Add(asset);
             }
+            else if (item is PageStore store)
+            {
+                config.Stores.Add(store);
+            }
         }
 
         return config;
@@ -71,12 +75,21 @@ public class ConfigurationValidatorTests
         Assert.Throws<ArgumentException>(() => ConfigurationValidator.Validate(Config(page)));
     }
 
-    [Theory]
-    [InlineData(PageVisibility.User)]
-    [InlineData(PageVisibility.Admin)]
-    public void Validate_AcceptsAnAllowListOnAGatedPage(PageVisibility visibility)
+    [Fact]
+    public void Validate_RejectsAnAllowListOnAnAdminPage()
     {
-        var page = new CustomPage { Slug = "p", Visibility = visibility };
+        // Every viewer of an Admin page is an administrator, and administrators are admitted
+        // unconditionally, so the list would be ignored exactly as it is on an anonymous page.
+        var page = new CustomPage { Slug = "p", Visibility = PageVisibility.Admin };
+        page.AllowedUserIds.Add(Guid.NewGuid().ToString());
+
+        Assert.Throws<ArgumentException>(() => ConfigurationValidator.Validate(Config(page)));
+    }
+
+    [Fact]
+    public void Validate_AcceptsAnAllowListOnAUserPage()
+    {
+        var page = new CustomPage { Slug = "p", Visibility = PageVisibility.User };
         page.AllowedUserIds.Add(Guid.NewGuid().ToString());
 
         ConfigurationValidator.Validate(Config(page));
@@ -203,5 +216,86 @@ public class ConfigurationValidatorTests
         asset.ContentType = null!;
 
         Assert.Throws<ArgumentException>(() => ConfigurationValidator.Validate(Config(asset)));
+    }
+    // MARK: Stores
+
+    private static PageStore Store(string name = "downloads")
+        => new PageStore { Name = name };
+
+    [Fact]
+    public void Validate_ValidStore_Passes()
+    {
+        ConfigurationValidator.Validate(Config(Store()));
+    }
+
+    [Theory]
+    [InlineData("with space")]
+    [InlineData("../escape")]
+    [InlineData("")]
+    public void Validate_UnsafeStoreName_Throws(string name)
+    {
+        // The name becomes both a URL segment and a file name under the data directory.
+        Assert.Throws<ArgumentException>(() => ConfigurationValidator.Validate(Config(Store(name))));
+    }
+
+    [Fact]
+    public void Validate_DuplicateStoreNames_Throws()
+    {
+        Assert.Throws<ArgumentException>(() =>
+            ConfigurationValidator.Validate(Config(Store("downloads"), Store("DOWNLOADS"))));
+    }
+
+    [Fact]
+    public void Validate_UnknownStoreReadTier_Throws()
+    {
+        var store = Store();
+        store.ReadAccess = (PageVisibility)99;
+        Assert.Throws<ArgumentException>(() => ConfigurationValidator.Validate(Config(store)));
+    }
+
+    [Fact]
+    public void Validate_UnknownStoreWriteTier_Throws()
+    {
+        var store = Store();
+        store.WriteAccess = (PageVisibility)99;
+        Assert.Throws<ArgumentException>(() => ConfigurationValidator.Validate(Config(store)));
+    }
+
+    [Fact]
+    public void Validate_UnknownStoreReadScope_Throws()
+    {
+        var store = Store();
+        store.ReadScope = (StoreScope)99;
+        Assert.Throws<ArgumentException>(() => ConfigurationValidator.Validate(Config(store)));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    [InlineData(PageStore.RecordCeiling + 1)]
+    public void Validate_StoreRecordLimitOutOfRange_Throws(int max)
+    {
+        var store = Store();
+        store.MaxRecords = max;
+        Assert.Throws<ArgumentException>(() => ConfigurationValidator.Validate(Config(store)));
+    }
+
+    [Theory]
+    [InlineData(-1)]
+    [InlineData(PageStore.RetentionDayCeiling + 1)]
+    public void Validate_StoreRetentionOutOfRange_Throws(int days)
+    {
+        // A negative retention would expire every record the moment it was written.
+        var store = Store();
+        store.RetentionDays = days;
+        Assert.Throws<ArgumentException>(() => ConfigurationValidator.Validate(Config(store)));
+    }
+
+    [Fact]
+    public void Validate_ZeroRetentionMeansKeepForever()
+    {
+        var store = Store();
+        store.RetentionDays = 0;
+        ConfigurationValidator.Validate(Config(store));
     }
 }

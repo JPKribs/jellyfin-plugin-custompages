@@ -4,7 +4,8 @@ export default function (view) {
     var PLUGIN_ID = '409ef72d-6014-47fd-8928-ebad581bf81b';
     var TABS = [
         { href: 'configurationpage?name=custompages_pages', name: 'Pages' },
-        { href: 'configurationpage?name=custompages_assets', name: 'Assets' }
+        { href: 'configurationpage?name=custompages_assets', name: 'Assets' },
+        { href: 'configurationpage?name=custompages_stores', name: 'Stores' }
     ];
 
     var Shared = null;

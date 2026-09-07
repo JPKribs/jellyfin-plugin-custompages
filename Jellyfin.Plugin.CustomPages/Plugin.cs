@@ -141,6 +141,19 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
             EmbeddedResourcePath = $"{ns}.Configuration.custompages_assets.js"
         };
 
+        // Tab 3: Stores.
+        yield return new PluginPageInfo
+        {
+            Name = "custompages_stores",
+            EmbeddedResourcePath = $"{ns}.Configuration.custompages_stores.html"
+        };
+
+        yield return new PluginPageInfo
+        {
+            Name = "custompages_stores.js",
+            EmbeddedResourcePath = $"{ns}.Configuration.custompages_stores.js"
+        };
+
         // Shared base CSS and JS compiled in from the JPKribs.Jellyfin.Base package.
         foreach (var page in GetSharedPages("custompages"))
         {

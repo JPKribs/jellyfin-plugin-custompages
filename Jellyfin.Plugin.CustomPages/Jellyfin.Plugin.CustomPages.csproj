@@ -29,6 +29,8 @@
     <EmbeddedResource Include="Configuration\custompages_pages.js" />
     <EmbeddedResource Include="Configuration\custompages_assets.html" />
     <EmbeddedResource Include="Configuration\custompages_assets.js" />
+    <EmbeddedResource Include="Configuration\custompages_stores.html" />
+    <EmbeddedResource Include="Configuration\custompages_stores.js" />
     <!-- Served-page templates (rendered by PageService) -->
     <EmbeddedResource Include="Templates\custompages_wrapper.html" />
     <EmbeddedResource Include="Templates\custompages_inner.html" />

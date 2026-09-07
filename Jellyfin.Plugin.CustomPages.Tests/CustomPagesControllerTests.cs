@@ -26,6 +26,7 @@ public class CustomPagesControllerTests
     private static (CustomPagesController Controller, IPageService Pages) Create(Guid callerId, bool isApiKey = false)
     {
         var pages = Substitute.For<IPageService>();
+        var stores = Substitute.For<IStoreService>();
         var authorization = Substitute.For<IAuthorizationContext>();
         authorization.GetAuthorizationInfo(Arg.Any<HttpRequest>())
             .Returns(Task.FromResult(new AuthorizationInfo
@@ -35,7 +36,7 @@ public class CustomPagesControllerTests
             }));
 
         var httpClientFactory = Substitute.For<System.Net.Http.IHttpClientFactory>();
-        var controller = new CustomPagesController(pages, authorization, httpClientFactory)
+        var controller = new CustomPagesController(pages, stores, authorization, httpClientFactory)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

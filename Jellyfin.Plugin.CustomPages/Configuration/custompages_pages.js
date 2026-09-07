@@ -4,7 +4,8 @@ export default function (view) {
     var PLUGIN_ID = '409ef72d-6014-47fd-8928-ebad581bf81b';
     var TABS = [
         { href: 'configurationpage?name=custompages_pages', name: 'Pages' },
-        { href: 'configurationpage?name=custompages_assets', name: 'Assets' }
+        { href: 'configurationpage?name=custompages_assets', name: 'Assets' },
+        { href: 'configurationpage?name=custompages_stores', name: 'Stores' }
     ];
 
     var Shared = null;
@@ -123,19 +124,21 @@ export default function (view) {
         loadSource();
     }
 
-    // An allow list only means something on a tier that already asks who the viewer is, so the whole
-    // control disappears on an anonymous page rather than sitting there implying a restriction the
-    // server would refuse to save.
+    // An allow list only means something on the User tier. Anyone already serves everybody, and every
+    // viewer of an Admin page is an administrator, who is admitted unconditionally. The control
+    // disappears on both rather than implying a restriction the server would refuse to save.
     function applyAccess() {
-        var gated = el('pageVisibility').value !== 'Anonymous';
-        var specific = gated && el('pageAccess').value === 'specific';
-        Shared.setVisible('accessRow', gated);
+        var restrictable = el('pageVisibility').value === 'User';
+        var specific = restrictable && el('pageAccess').value === 'specific';
+        Shared.setVisible('accessRow', restrictable);
         Shared.setVisible('allowedUsersRow', specific);
     }
 
     function mountUserPicker() {
         if (userPicker) return;
-        userPicker = createUserMultiSelector({ showSelectAll: true });
+        // Administrators are excluded because they always have access. Offering one would let an
+        // administrator be unchecked in a list the server ignores for them anyway.
+        userPicker = createUserMultiSelector({ showSelectAll: true, adminFilter: 'exclude' });
         el('allowedUsers').appendChild(userPicker.element);
     }
 
@@ -258,7 +261,7 @@ export default function (view) {
     // An empty list is the server's "everyone at this tier", so a page is only restricted while the
     // mode is specific and the picker actually holds someone.
     function readAllowedUsers() {
-        if (el('pageVisibility').value === 'Anonymous') return [];
+        if (el('pageVisibility').value !== 'User') return [];
         if (el('pageAccess').value !== 'specific') return [];
         return userPicker ? userPicker.getValue() : [];
     }
@@ -275,7 +278,7 @@ export default function (view) {
 
         // Saving "only the users I pick" with nobody picked would store an empty list, which the
         // server reads as every user at the tier. Stop rather than quietly widen the page.
-        if (el('pageVisibility').value !== 'Anonymous'
+        if (el('pageVisibility').value === 'User'
             && el('pageAccess').value === 'specific'
             && !p.AllowedUserIds.length) {
             Shared.setStatus('pageStatus', 'Pick at least one user, or switch back to All users.', true);

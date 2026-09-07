@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.CustomPages.Configuration;
 using Jellyfin.Plugin.CustomPages.Models;
@@ -26,6 +27,7 @@ public static partial class ConfigurationValidator
         ArgumentNullException.ThrowIfNull(config);
         ValidatePages(config.Pages);
         ValidateAssets(config.Assets);
+        ValidateStores(config.Stores);
     }
 
     private static void ValidatePages(IEnumerable<CustomPage> pages)
@@ -44,14 +46,15 @@ public static partial class ConfigurationValidator
             var allowed = page.AllowedUserIds;
             if (allowed is not null && allowed.Count > 0)
             {
-                // An allow list on a tier that already serves everyone is not a weaker restriction, it
-                // is no restriction at all. A page carrying something worth restricting would be
-                // published to the world while the dashboard showed a tidy list of users beside it, so
-                // refuse the combination rather than silently ignore the list.
-                if (!page.Visibility.RequiresAuth())
+                // An allow list only means something on the User tier. On Anonymous the page already
+                // serves everyone, and on Admin every viewer is an administrator and administrators are
+                // admitted unconditionally, so the list would be ignored at serve time while the
+                // dashboard showed a tidy set of users beside it. Refuse the combination rather than
+                // let the two disagree.
+                if (page.Visibility != PageVisibility.User)
                 {
                     throw new ArgumentException(
-                        "A page restricted to specific users must require sign in: " + page.Slug);
+                        "Only a page served to signed in users can be restricted to specific users: " + page.Slug);
                 }
 
                 foreach (var entry in allowed)
@@ -158,6 +161,65 @@ public static partial class ConfigurationValidator
             if (bytes.Length > MaxAssetBytes)
             {
                 throw new ArgumentException("Asset exceeds the 5 MB limit: " + asset.Name);
+            }
+        }
+    }
+
+    private static void ValidateStores(IEnumerable<PageStore> stores)
+    {
+        if (stores is null)
+        {
+            return;
+        }
+
+        var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var store in stores)
+        {
+            // The name is both a URL segment and the store's file name under the data directory, so it
+            // is held to the same safe set as a slug rather than allowed to carry separators.
+            if (!StoreService.IsValidStoreName(store.Name))
+            {
+                throw new ArgumentException("Invalid store name: " + store.Name);
+            }
+
+            if (!seen.Add(store.Name))
+            {
+                throw new ArgumentException("Duplicate store name: " + store.Name);
+            }
+
+            // An out of range tier is refused for the same reason a page's is. It matches no tier the
+            // endpoints check, yet it compares as outranking every tier when access is resolved.
+            if (!Enum.IsDefined(store.ReadAccess))
+            {
+                throw new ArgumentException("Store has an unknown read tier: " + store.Name);
+            }
+
+            if (!Enum.IsDefined(store.WriteAccess))
+            {
+                throw new ArgumentException("Store has an unknown write tier: " + store.Name);
+            }
+
+            if (!Enum.IsDefined(store.ReadScope))
+            {
+                throw new ArgumentException("Store has an unknown read scope: " + store.Name);
+            }
+
+            if (store.MaxRecords < 1 || store.MaxRecords > PageStore.RecordCeiling)
+            {
+                throw new ArgumentException(
+                    "Store record limit must be between 1 and "
+                    + PageStore.RecordCeiling.ToString(CultureInfo.InvariantCulture)
+                    + ": " + store.Name);
+            }
+
+            // Zero is the documented "keep forever". A negative retention would expire every record
+            // the moment it was written, which is a data loss bug wearing a configuration value.
+            if (store.RetentionDays < 0 || store.RetentionDays > PageStore.RetentionDayCeiling)
+            {
+                throw new ArgumentException(
+                    "Store retention must be between 0 and "
+                    + PageStore.RetentionDayCeiling.ToString(CultureInfo.InvariantCulture)
+                    + " days: " + store.Name);
             }
         }
     }

@@ -104,6 +104,15 @@ public partial class PageService : IPageService
             inner = InjectServerFetch(inner, page.Slug);
         }
 
+        // The store helper needs the Jellyfin origin and the viewer's token, neither of which an opaque
+        // origin frame has, so it is only injected where it could actually work. It is not gated on the
+        // page declaring anything, because a store's own tiers decide access on every call and a per
+        // page list would look like a permission without being one.
+        if (RunsUnsandboxed(page))
+        {
+            inner = InjectPageStore(inner);
+        }
+
         var assets = _configuration()?.Assets;
         if (assets is not null)
         {
@@ -226,18 +235,24 @@ public partial class PageService : IPageService
 
     /// <summary>
     /// Reports whether a user may view a page, on top of the tier check the endpoint already made.
-    /// An empty allow list admits everyone the tier admits, and a non-empty one admits only its members.
+    /// An empty allow list admits everyone the tier admits, and a non-empty one admits only its members
+    /// plus every administrator.
     /// </summary>
     /// <remarks>
-    /// This fails closed on purpose. A list that holds only unparseable entries admits nobody rather
-    /// than collapsing to the empty list and readmitting every user, which is the direction a hand
-    /// edited configuration is most likely to break in. <see cref="Guid.Empty"/> is never a member,
+    /// Administrators are admitted unconditionally. They author these pages and can read any page's
+    /// source from the dashboard regardless, so excluding one from a list would be a restriction the
+    /// dashboard could not actually keep. That is why the picker does not offer them.
+    ///
+    /// This otherwise fails closed on purpose. A list that holds only unparseable entries admits nobody
+    /// rather than collapsing to the empty list and readmitting every user, which is the direction a
+    /// hand edited configuration is most likely to break in. <see cref="Guid.Empty"/> is never a member,
     /// so an API key caller, which carries no user, is refused by any restricted page.
     /// </remarks>
     /// <param name="page">The page being requested.</param>
     /// <param name="userId">The calling user's ID.</param>
+    /// <param name="isAdministrator">Whether the caller holds the administrator permission.</param>
     /// <returns><c>true</c> when the user may view the page.</returns>
-    public static bool AllowsUser(CustomPage page, Guid userId)
+    public static bool AllowsUser(CustomPage page, Guid userId, bool isAdministrator = false)
     {
         ArgumentNullException.ThrowIfNull(page);
 
@@ -250,6 +265,11 @@ public partial class PageService : IPageService
         if (userId == Guid.Empty)
         {
             return false;
+        }
+
+        if (isAdministrator)
+        {
+            return true;
         }
 
         foreach (var entry in allowed)
@@ -362,24 +382,71 @@ public partial class PageService : IPageService
             + "for(var i=0;i<s.length;i++){if(s[i]&&s[i].AccessToken){h[\"Authorization\"]=\"MediaBrowser Token=\\\"\"+s[i].AccessToken+\"\\\"\";break;}}}}catch(e){}"
             + "init.headers=h;return fetch(base+encodeURIComponent(name),init);};})();</script>";
 
-        // Prefer to land the helper right after the opening head so it runs before any author script.
-        // Fall back to the start of the body, then to the front of the document, so a fragment or a
-        // hand written document without a head still gets it.
+        return InsertPrelude(document, prelude);
+    }
+
+    // Lands an injected script as early as possible so it is defined before any author script. Prefers
+    // just inside the opening head, falls back to the start of the body, and finally to the front of the
+    // document, so a fragment or a hand written document without a head still gets it.
+    private static string InsertPrelude(string document, string prelude)
+    {
         var headIndex = document.IndexOf("<head>", StringComparison.OrdinalIgnoreCase);
         if (headIndex >= 0)
         {
-            var insertAt = headIndex + "<head>".Length;
-            return document.Insert(insertAt, prelude);
+            return document.Insert(headIndex + "<head>".Length, prelude);
         }
 
         var bodyIndex = document.IndexOf("<body>", StringComparison.OrdinalIgnoreCase);
         if (bodyIndex >= 0)
         {
-            var insertAt = bodyIndex + "<body>".Length;
-            return document.Insert(insertAt, prelude);
+            return document.Insert(bodyIndex + "<body>".Length, prelude);
         }
 
         return prelude + document;
+    }
+
+    /// <summary>
+    /// Injects the <c>pageStore</c> helper into an unsandboxed page, so author script can read and write
+    /// a record store without assembling URLs or handling the viewer's token itself.
+    /// </summary>
+    /// <remarks>
+    /// The helper is a convenience, never a grant. Every call it makes is authorized server side against
+    /// the store's own read and write tiers, so a page holding the helper reaches exactly the stores its
+    /// viewer was already entitled to and nothing more.
+    ///
+    /// <c>write</c> takes its third argument either as a bare record ID or as an options object carrying
+    /// <c>id</c> and <c>label</c>. The label is the record's primary element, the one thing a person
+    /// would call it, and it is what names the record in the activity log on the way in and again on the
+    /// way out. Passing a plain string still works, so a page written against the earlier shape is not
+    /// broken by the addition.
+    /// </remarks>
+    /// <param name="document">The inner page document.</param>
+    /// <returns>The document with the helper injected.</returns>
+    public static string InjectPageStore(string document)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var prelude =
+            "<script>(function(){var base=\"/pages/store/\";"
+            + "function auth(h){try{var raw=localStorage.getItem(\"jellyfin_credentials\");if(raw){"
+            + "var s=(JSON.parse(raw)||{}).Servers||[];for(var i=0;i<s.length;i++){if(s[i]&&s[i].AccessToken){"
+            + "h[\"Authorization\"]=\"MediaBrowser Token=\\\"\"+s[i].AccessToken+\"\\\"\";break;}}}}catch(e){}return h;}"
+            + "function call(url,body){var init={method:body===undefined?\"GET\":\"POST\",headers:auth({})};"
+            + "if(body!==undefined){init.headers[\"Content-Type\"]=\"application/json\";init.body=JSON.stringify(body);}"
+            + "return fetch(url,init).then(function(r){if(!r.ok){var e=new Error(\"pageStore: \"+r.status);"
+            + "e.status=r.status;throw e;}return r.status===204?null:r.json();});}"
+            + "window.pageStore={"
+            + "read:function(name,id){var u=base+encodeURIComponent(name)+\"/read\";"
+            + "if(id)return call(u+\"?id=\"+encodeURIComponent(id));"
+            + "return call(u).then(function(r){return (r&&r.records)||[];});},"
+            + "readAll:function(name){return call(base+encodeURIComponent(name)+\"/read\");},"
+            + "write:function(name,data,opts){var o=(typeof opts===\"string\")?{id:opts}:(opts||{});"
+            + "return call(base+encodeURIComponent(name)+\"/write\","
+            + "{id:o.id||null,label:o.label||null,data:data===undefined?null:data});},"
+            + "remove:function(name,id){return call(base+encodeURIComponent(name)+\"/delete\",{id:id});}"
+            + "};})();</script>";
+
+        return InsertPrelude(document, prelude);
     }
 
     private string BuildInnerDocument(CustomPage page)
