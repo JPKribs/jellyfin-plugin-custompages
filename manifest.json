@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "10.11.3.3",
+        "changelog": "Fix 3.2 build issues.",
+        "targetAbi": "10.11.10.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.3.3/jellyfin-plugin-custompages-10.11.3.3.zip",
+        "checksum": "6e1debd1e82ef18c3a14adc3582c1f40",
+        "timestamp": "2026-09-07T05:32:11Z"
+      },
+      {
         "version": "10.11.3.1",
         "changelog": "## Developer\r\n- Server routes moved under the Allow system access toggle, so a page needs one permission instead of two\r\n- Shortened the configuration page help text",
         "targetAbi": "10.11.10.0",
