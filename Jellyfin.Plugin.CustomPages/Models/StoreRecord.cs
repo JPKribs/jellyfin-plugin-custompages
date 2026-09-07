@@ -27,8 +27,8 @@ public class StoreRecord
 
     /// <summary>
     /// Gets or sets the record's primary element, the one thing a person would call it. Supplied by the
-    /// page and used to name the record in the activity log, so an administrator reads "Big Buck Bunny
-    /// was added to downloads" rather than a bare record count. Optional, and never interpreted.
+    /// page and used to name the record in the activity log, so an administrator reads the label rather
+    /// than a bare record count. Optional, and never interpreted.
     /// </summary>
     public string? Label { get; set; }
 
