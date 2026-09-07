@@ -9,9 +9,13 @@ export default function (view) {
 
     var Shared = null;
     var setTabs = null;
+    var SECRET_KEPT = '__JPK_SECRET_KEPT__';
+    var createUserMultiSelector = null;
     var _sharedPromise = import('/web/configurationpage?name=custompages_jpkribs_shared.js').then(function (mod) {
         Shared = mod.createShared(view, PLUGIN_ID);
         setTabs = mod.setTabs;
+        if (mod.SECRET_KEPT) SECRET_KEPT = mod.SECRET_KEPT;
+        createUserMultiSelector = mod.createUserMultiSelector;
     });
 
     function slugify(value) {
@@ -37,6 +41,8 @@ export default function (view) {
     var currentPane = 'html';
     var editorSingle = false;
     var editorEnabled = true;
+    var userPicker = null;
+    var routeRows = [];
     var _bound = false;
 
     function el(id) { return view.querySelector('#' + id); }
@@ -117,6 +123,22 @@ export default function (view) {
         loadSource();
     }
 
+    // An allow list only means something on a tier that already asks who the viewer is, so the whole
+    // control disappears on an anonymous page rather than sitting there implying a restriction the
+    // server would refuse to save.
+    function applyAccess() {
+        var gated = el('pageVisibility').value !== 'Anonymous';
+        var specific = gated && el('pageAccess').value === 'specific';
+        Shared.setVisible('accessRow', gated);
+        Shared.setVisible('allowedUsersRow', specific);
+    }
+
+    function mountUserPicker() {
+        if (userPicker) return;
+        userPicker = createUserMultiSelector({ showSelectAll: true });
+        el('allowedUsers').appendChild(userPicker.element);
+    }
+
     function loadEditor() {
         var p = pages[currentIndex];
         if (!p) return;
@@ -127,8 +149,19 @@ export default function (view) {
         editorEnabled = p.Enabled !== false;
         setPublishVisual(editorEnabled);
 
+        var allowed = p.AllowedUserIds || [];
+        el('pageAccess').value = allowed.length ? 'specific' : 'all';
+        if (userPicker) userPicker.setValue(allowed);
+        applyAccess();
+
+        var routes = p.ApiRoutes || [];
+        el('pageRoutesEnabled').checked = routes.length > 0;
+        renderRoutes(routes);
+        applyRoutes();
+
         editorSingle = !!p.SingleFile;
         el('pageSingleFile').checked = editorSingle;
+        el('pageUnsandboxed').checked = !!p.Unsandboxed;
         currentPane = 'html';
         el('selectSource').value = 'html';
         applyMode();
@@ -148,8 +181,88 @@ export default function (view) {
         p.Slug = slugify(el('pageSlug').value);
         p.Title = el('pageTitle').value.trim();
         p.Visibility = el('pageVisibility').value;
+        p.AllowedUserIds = readAllowedUsers();
+        p.ApiRoutes = readRoutes();
         p.SingleFile = editorSingle;
+        p.Unsandboxed = el('pageUnsandboxed').checked;
         p.Enabled = editorEnabled;
+    }
+
+    function makeRouteRow(route) {
+        route = route || { Name: '', Url: '', Username: '', Password: '' };
+        // Deliberately not jpk-field-row. form.css gives that class a full field gap as an important
+        // margin, which stacks a large space between every route. The list container supplies the gap.
+        var row = document.createElement('div');
+        row.style.display = 'flex';
+        row.style.gap = '0.5rem';
+        row.style.alignItems = 'center';
+
+        function field(placeholder, value, type) {
+            var wrap = document.createElement('div');
+            wrap.className = 'jpk-field';
+            var inp = document.createElement('input');
+            inp.setAttribute('is', 'emby-input');
+            inp.type = type || 'text';
+            inp.placeholder = placeholder;
+            inp.value = value || '';
+            inp.autocomplete = 'off';
+            wrap.appendChild(inp);
+            row.appendChild(wrap);
+            return inp;
+        }
+
+        var nameEl = field('name', route.Name);
+        var urlEl = field('http://host:port/path', route.Url);
+        var userEl = field('username (optional)', route.Username);
+        // Never render the stored credential. The sentinel round-trips untouched and the server keeps
+        // whatever it already has, so the real value is never sent to a browser.
+        var passEl = field('password (optional)', route.Password ? SECRET_KEPT : '', 'password');
+
+        var removeWrap = document.createElement('div');
+        removeWrap.className = 'jpk-field jpk-field-fixed';
+        var remove = document.createElement('button');
+        remove.setAttribute('is', 'emby-button');
+        remove.type = 'button';
+        remove.className = 'raised jpk-icon-btn jpk-button-destructive';
+        remove.innerHTML = '<span class="material-icons" aria-hidden="true">delete</span>';
+        remove.addEventListener('click', function () {
+            var i = routeRows.indexOf(entry);
+            if (i >= 0) routeRows.splice(i, 1);
+            row.remove();
+        });
+        removeWrap.appendChild(remove);
+        row.appendChild(removeWrap);
+
+        var entry = { row: row, read: function () {
+            return { Name: nameEl.value.trim(), Url: urlEl.value.trim(), Username: userEl.value, Password: passEl.value };
+        } };
+        routeRows.push(entry);
+        el('routesList').appendChild(row);
+    }
+
+    function renderRoutes(routes) {
+        routeRows = [];
+        el('routesList').innerHTML = '';
+        (routes || []).forEach(makeRouteRow);
+    }
+
+    function applyRoutes() {
+        Shared.setVisible('routesRow', el('pageRoutesEnabled').checked);
+    }
+
+    function readRoutes() {
+        if (!el('pageRoutesEnabled').checked) return [];
+        return routeRows
+            .map(function (e) { return e.read(); })
+            .filter(function (r) { return r.Name || r.Url; });
+    }
+
+    // An empty list is the server's "everyone at this tier", so a page is only restricted while the
+    // mode is specific and the picker actually holds someone.
+    function readAllowedUsers() {
+        if (el('pageVisibility').value === 'Anonymous') return [];
+        if (el('pageAccess').value !== 'specific') return [];
+        return userPicker ? userPicker.getValue() : [];
     }
 
     function save() {
@@ -159,6 +272,15 @@ export default function (view) {
 
         if (!p.Slug) {
             Shared.setStatus('pageStatus', 'A slug is required.', true);
+            return;
+        }
+
+        // Saving "only the users I pick" with nobody picked would store an empty list, which the
+        // server reads as every user at the tier. Stop rather than quietly widen the page.
+        if (el('pageVisibility').value !== 'Anonymous'
+            && el('pageAccess').value === 'specific'
+            && !p.AllowedUserIds.length) {
+            Shared.setStatus('pageStatus', 'Pick at least one user, or switch back to All users.', true);
             return;
         }
 
@@ -195,7 +317,7 @@ export default function (view) {
 
     function addPage() {
         keepCurrentEdits();
-        pages.push({ Slug: '', Title: '', Visibility: 'Anonymous', Html: '', Css: '', Js: '', Document: '', SingleFile: false, Enabled: true });
+        pages.push({ Slug: '', Title: '', Visibility: 'Anonymous', Html: '', Css: '', Js: '', Document: '', SingleFile: false, Unsandboxed: false, AllowedUserIds: [], ApiRoutes: [], Enabled: true });
         currentIndex = pages.length - 1;
         currentPane = 'html';
         editorSingle = false;
@@ -237,6 +359,10 @@ export default function (view) {
             editorEnabled = !editorEnabled;
             setPublishVisual(editorEnabled);
         });
+        el('pageVisibility').addEventListener('change', applyAccess);
+        el('pageAccess').addEventListener('change', applyAccess);
+        el('pageRoutesEnabled').addEventListener('change', applyRoutes);
+        el('btnAddRoute').addEventListener('click', function () { makeRouteRow(); });
         el('pageSlug').addEventListener('input', updateUrlPreview);
     }
 
@@ -252,6 +378,7 @@ export default function (view) {
     view.addEventListener('viewshow', function () {
         _sharedPromise.then(function () {
             setTabs('custompages', 0, TABS);
+            mountUserPicker();
             if (!_bound) { bind(); _bound = true; }
             load();
         });

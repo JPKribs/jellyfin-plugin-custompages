@@ -19,6 +19,54 @@ A page is reachable at `/pages/{slug}`, handled by `CustomPagesController`. When
 
 Pages may be framed by the Jellyfin origin itself, so you can embed one into another custom page or into a dashboard that lives on the same server. Third-party sites cannot frame them.
 
+### Allow system access
+
+Each page has an **Allow system access** toggle, off by default. Leave it off and the page keeps the isolation described above. Turn it on and the plugin serves the page without the `sandbox` attribute, so the page runs on your Jellyfin origin and its scripts can call the Jellyfin API, read the viewer's session, and reach anything else the web client can reach on that origin. That is what makes a page useful as a small control panel or a dashboard that talks to the server.
+
+Understand the trade before you use it. An unsandboxed page has the same reach as the Jellyfin web client itself, so any script it runs can act as whoever is viewing it. A public or user tier page that pulls in a third party script hands that script the viewer's session. Only turn this on for pages whose source you wrote and control, and prefer to pin any external library you do use to a copy you host yourself.
+
+The toggle drops the whole `sandbox` attribute rather than adding `allow-same-origin` to it. A frame that holds `allow-same-origin` and `allow-scripts` at once can reach into the wrapper and strip its own sandbox anyway, so a partial sandbox would only look like a boundary without being one.
+
+Everything else about serving is unchanged. Your content is still HTML encoded into the wrapper's `srcdoc` attribute, still gated by the same visibility tier, and still served under the same Content-Security-Policy.
+
+### Allow local resource calls
+
+A page can be given named **routes** the server calls on its behalf. Turn on **Allow local resource
+calls**, add a route with a name and an absolute target URL, and optionally a username and password.
+
+Inside the page, the plugin injects a helper:
+
+```js
+serverFetch('name', { method: 'POST', headers: { ... }, body: '...' })
+```
+
+That reaches `/pages/{slug}/api/{name}` on the Jellyfin origin, and the server forwards it to the
+route's target, adding the stored credentials. It returns a normal `fetch` promise, so the target's
+status, body, and response headers all come back to your script unchanged.
+
+This exists because a browser usually cannot call another machine on your network directly. That call
+is cross origin, most services send no CORS headers, and on an HTTPS page a plain HTTP call is blocked
+as mixed content. Routing through the server sidesteps all three, with no reverse proxy to configure.
+
+Requirements and behaviour:
+
+* Defining a route also runs the page without the sandbox. The helper reads the viewer's token from
+  same origin storage and calls the route on the Jellyfin origin, and neither works from the sandbox's
+  opaque origin, so a sandboxed page with routes could only fail silently. **Allow system access**
+  remains a separate toggle for a page that wants that access without defining any route.
+* A route reaches exactly the audience of its page. The tier is enforced first, then the page's allowed
+  user list, and only then is anything forwarded.
+* The target URL is fixed in configuration and never comes from the caller, so this is not an open
+  proxy. A page can only reach what you wired up for it. Only absolute `http` and `https` targets are
+  accepted.
+* Your request headers are forwarded to the target, so a session or CSRF token a target hands back can
+  be echoed on the next call. The viewer's Jellyfin credentials are stripped and never forwarded.
+* Route passwords are encrypted at rest and never sent to a browser. The configuration page shows a
+  placeholder and posts it back unchanged unless you type a replacement.
+
+The plugin has no knowledge of any particular service. What a route talks to, and what your page sends
+it, is entirely yours.
+
 ### Images and assets
 
 Upload images on the **Assets** tab. Each image is stored as `Base64-encoded` in the plugin configuration. Reference one from your page's HTML or CSS using the relative path **`asset/{name}`**. For example:
@@ -70,14 +118,40 @@ Each page declares who may view it, enforced by Jellyfin's authorization policie
 
 Because Jellyfin authenticates with a token rather than a browser session, protected pages are delivered through a small authentication shell. Visiting `/pages/{slug}` creates a loader that re-fetches the content using your signed-in token, then renders it. Anonymous pages are served directly. If you open a protected page while signed out, you will be prompted to sign in. Opening a page with an underprivileged user will inform the user they are not authorized to view this page.
 
+### Restricting a page to specific users
+
+A gated page defaults to **All users**, meaning everyone its tier already admits. Switch **Who can
+view** to **Only the users I pick** and choose accounts, and the page is served to those accounts
+and nobody else.
+
+The check runs on the content endpoint, after Jellyfin has authenticated the request and after the
+tier check, and before the page body is composed. A viewer the list does not name gets a 403 and the
+sign in shell shows them the not authorized card. They never receive the page's HTML, CSS, or
+JavaScript, so anything the page's source contains is only ever transmitted to an account you picked.
+
+Three details worth knowing:
+
+* The list is only accepted on a tier that requires signing in. Saving one against an **Anyone** page
+  is refused, because an allow list there would be ignored at serve time while the dashboard implied
+  the page was restricted.
+* An empty list means all users at the tier. The dashboard will not let you save **Only the users I
+  pick** with nobody picked, so the two states cannot be confused.
+* An API key authenticates a caller without identifying a user, so a restricted page refuses API key
+  requests. If a stored list is somehow unreadable, it admits nobody rather than everybody.
+
+This narrows who receives a page. It does not hide the page's source from the people who do receive
+it, since a browser has to be given the source to render it. Anything in a page is readable by every
+account you grant access to.
+
 ## Security
 
 **I personally advise only exposing these pages to known parties via local networks or VPNs to minimize your footprint for malicious actors.** Pages are handled with several protections:
 
 * **Administrators only** - Pages can be authored only by administrators.
-* **Sandboxed rendering.** Page content runs inside a `sandbox`ed iframe with an opaque origin (no `allow-same-origin`). Author scripts therefore **cannot** read the Jellyfin origin's access token, cookies, or local storage, and cannot call the Jellyfin API as the viewer. This sandbox, not the Content-Security-Policy, is the boundary that protects your session.
-* **Authorization on every request.** The `/user` and `/admin` content endpoints are gated by Jellyfin's own policies. The shell's choice of endpoint cannot bypass them and each endpoint also verifies the page's declared tier.
+* **Sandboxed rendering.** Page content runs inside a `sandbox`ed iframe with an opaque origin (no `allow-same-origin`). Author scripts therefore **cannot** read the Jellyfin origin's access token, cookies, or local storage, and cannot call the Jellyfin API as the viewer. This sandbox, not the Content-Security-Policy, is the boundary that protects your session. A page that opts in to [Allow system access](#allow-system-access) gives that boundary up on purpose, which is why the toggle is off by default and per page.
+* **Authorization on every request.** The `/user` and `/admin` content endpoints are gated by Jellyfin's own policies. The shell's choice of endpoint cannot bypass them and each endpoint also verifies the page's declared tier, then applies the page's [per-user allow list](#restricting-a-page-to-specific-users) before rendering anything.
 * **Asset tiers.** Only assets marked **Anyone** are reachable at `/pages/asset/{name}`. Gated assets are never URL-addressable and are embedded only into pages of an equal or higher visibility tier, so their bytes travel exclusively inside authorized responses.
+* **Server side routes.** A page's [named routes](#allow-local-resource-calls) forward only to targets fixed in configuration, gated to that page's audience before anything is sent, with the viewer's Jellyfin credentials stripped from the forwarded request and route passwords encrypted at rest.
 * **Hardening headers.** Served pages set `Content-Security-Policy`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, and `X-Robots-Tag: noindex`. Slugs are restricted to `[a-z0-9_-]`.
 * **Popups escape the sandbox.** `allow-popups-to-escape-sandbox` is set so that a link to an external site opens as a normal page instead of a crippled sandboxed one. The trade-off is that author JavaScript can open and drive an unsandboxed window, which is the widest hole in the sandbox.
 

@@ -68,6 +68,26 @@
                             </select>
                         </div>
 
+                        <!-- Page access -->
+                        <div class="selectContainer hidden" id="accessRow">
+                            <label class="selectLabel" for="pageAccess">Who can view</label>
+                            <select id="pageAccess" class="jpk-selector-dropdown">
+                                <option value="all">All users</option>
+                                <option value="specific">Only the users I pick</option>
+                            </select>
+                        </div>
+
+                        <!-- Deliberately not an inputContainer. Base's form.css gives every input
+                             inside one width:100% !important, which would stretch each of the picker's
+                             checkboxes across the whole row. -->
+                        <div class="hidden" id="allowedUsersRow">
+                            <div id="allowedUsers"></div>
+                            <div class="fieldDescription">
+                                Only these accounts receive the page. Everyone else is turned away before any
+                                of its content is rendered.
+                            </div>
+                        </div>
+
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
                                 <input type="checkbox" is="emby-checkbox" id="pageSingleFile" />
@@ -75,6 +95,19 @@
                             </label>
                             <div class="fieldDescription">
                                 Handle the page as a single file instead of three component files.
+                            </div>
+                        </div>
+
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input type="checkbox" is="emby-checkbox" id="pageUnsandboxed" />
+                                <span class="checkboxLabel">Allow system access</span>
+                            </label>
+                            <div class="fieldDescription">
+                                Run the page without the sandbox so its scripts can reach the Jellyfin API and
+                                anything else on this server's origin. The page then has the same access as the
+                                web client, including the signed in viewer's session, so only turn this on for
+                                pages you wrote and control.
                             </div>
                         </div>
 
@@ -90,6 +123,34 @@
                         <div class="inputContainer">
                             <textarea id="pageSource" class="jpk-code" spellcheck="false" aria-label="Page source"></textarea>
                             <div class="fieldDescription" id="sourceHint"></div>
+                        </div>
+
+                        <!-- Local resource routes -->
+                        <!-- Routes live inside the checkbox container so form.css contributes one field
+                             gap for the whole block instead of one per child. Inner spacing is padding,
+                             which the container's margin reset does not touch. -->
+                        <div class="checkboxContainer checkboxContainer-withDescription">
+                            <label class="emby-checkbox-label">
+                                <input type="checkbox" is="emby-checkbox" id="pageRoutesEnabled" />
+                                <span class="checkboxLabel">Allow local resource calls</span>
+                            </label>
+                            <div class="fieldDescription">
+                                Give this page named routes the server calls on its behalf. In the page,
+                                <code>serverFetch('name', options)</code> reaches
+                                <code>/pages/slug/api/name</code>, and the server forwards it to the target
+                                you set here. Credentials stay on the server. Turning this on also runs the
+                                page without the sandbox, which it needs to reach its routes.
+                            </div>
+
+                            <div class="hidden" id="routesRow" style="display:flex;flex-direction:column;gap:0.5rem;padding-top:0.75rem">
+                                <div id="routesList" style="display:flex;flex-direction:column;gap:0.5rem"></div>
+                                <div>
+                                    <button is="emby-button" type="button" id="btnAddRoute" class="raised jpk-icon-btn">
+                                        <span class="material-icons" aria-hidden="true">add</span>
+                                        <span>Add route</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Save -->

@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using Jellyfin.Plugin.CustomPages.Configuration;
 using Jellyfin.Plugin.CustomPages.Models;
 using Jellyfin.Plugin.CustomPages.Services;
+using Jellyfin.Plugin.CustomPages.Utilities;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Model.Plugins;
@@ -22,6 +25,8 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
     /// <param name="applicationPaths">The application paths.</param>
     /// <param name="xmlSerializer">The XML serializer.</param>
     /// <param name="logger">The logger.</param>
+    private readonly Lazy<SecretProtector> _secrets;
+
     public Plugin(
         IApplicationPaths applicationPaths,
         IXmlSerializer xmlSerializer,
@@ -29,8 +34,12 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         : base(applicationPaths, xmlSerializer)
     {
         ArgumentNullException.ThrowIfNull(logger);
+        _secrets = new Lazy<SecretProtector>(() => CreateSecretProtector(applicationPaths, logger));
         logger.LogInformation("Custom Pages plugin initialized");
     }
+
+    /// <summary>Gets the protector used to read route credentials back at call time.</summary>
+    public SecretProtector Secrets => _secrets.Value;
 
     /// <inheritdoc />
     public override string Name => "Custom Pages";
@@ -52,9 +61,50 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         if (configuration is PluginConfiguration config)
         {
             ConfigurationValidator.Validate(config);
+            ProtectRouteSecrets(config);
         }
 
         base.UpdateConfiguration(configuration);
+    }
+
+    /// <summary>
+    /// Encrypts route credentials before they are written, and keeps the stored one when the config page
+    /// posts back the sentinel rather than a replacement. The real credential therefore never has to be
+    /// sent to a browser and is never written to disk in the clear.
+    /// </summary>
+    /// <param name="config">The incoming configuration.</param>
+    private void ProtectRouteSecrets(PluginConfiguration config)
+    {
+        foreach (var page in config.Pages)
+        {
+            if (page.ApiRoutes is null || page.ApiRoutes.Count == 0)
+            {
+                continue;
+            }
+
+            var storedPage = Configuration.Pages.FirstOrDefault(p =>
+                string.Equals(p.Slug, page.Slug, StringComparison.OrdinalIgnoreCase));
+
+            foreach (var route in page.ApiRoutes)
+            {
+                var stored = storedPage?.ApiRoutes?.FirstOrDefault(r =>
+                    string.Equals(r.Name, route.Name, StringComparison.OrdinalIgnoreCase));
+
+                // ResolveIncoming hands back the stored value untouched when the field carried the
+                // sentinel, and that value is plaintext for anything saved before encryption existed.
+                // Protect no-ops on an already encrypted or empty value, so wrapping the result migrates
+                // a legacy secret on the next save instead of leaving it in the clear forever.
+                var kept = _secrets.Value.ResolveIncoming(route.Password, stored?.Password);
+                route.Password = _secrets.Value.Protect(kept);
+            }
+        }
+    }
+
+    private static SecretProtector CreateSecretProtector(IApplicationPaths paths, ILogger logger)
+    {
+        var keyDirectory = Path.Join(paths.PluginConfigurationsPath, "Jellyfin.Plugin.CustomPages.Keys");
+        var provider = StableSecretProtection.Build(keyDirectory, logger);
+        return new SecretProtector("Jellyfin.Plugin.CustomPages.Secrets.v1", logger, provider);
     }
 
     /// <inheritdoc />

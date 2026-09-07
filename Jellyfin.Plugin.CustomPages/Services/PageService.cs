@@ -17,6 +17,13 @@ namespace Jellyfin.Plugin.CustomPages.Services;
 /// </summary>
 public partial class PageService : IPageService
 {
+    // The iframe attribute applied to every page that has not opted out. allow-same-origin is
+    // deliberately absent, which is what holds the frame on an opaque origin and away from the
+    // viewer's Jellyfin session. The leading space belongs to the attribute so the opt out can
+    // substitute an empty string.
+    private const string SandboxAttribute =
+        " sandbox=\"allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox\"";
+
     private readonly IServerApplicationPaths _paths;
     private readonly Func<PluginConfiguration?> _configuration;
 
@@ -68,16 +75,22 @@ public partial class PageService : IPageService
     }
 
     /// <summary>
-    /// Renders a page for serving: the author's content runs inside a sandboxed, opaque-origin iframe
-    /// so it cannot read the Jellyfin origin's token, cookies, or storage.
+    /// Renders a page for serving. The author's content runs inside a sandboxed, opaque origin iframe
+    /// so it cannot read the Jellyfin origin's token, cookies, or storage, unless the page opts out.
     /// </summary>
     /// <remarks>
-    /// SECURITY INVARIANT. This wrapper is the only barrier between author content and the viewer's
-    /// Jellyfin session. The auth shell document.writes this output into a document that is same origin
-    /// with Jellyfin and whose CSP allows inline script, so author markup must never reach the top level
-    /// document in live form. It may only appear HTML encoded inside the sandboxed iframe's srcdoc
-    /// attribute. Never serve author content without this wrapper and never add allow-same-origin to
-    /// the sandbox. Either change turns page authorship into viewer token theft.
+    /// SECURITY INVARIANT. Author markup must never reach the top level document in live form. The auth
+    /// shell document.writes this output into a document that is same origin with Jellyfin and whose CSP
+    /// allows inline script, so author content may only ever appear HTML encoded inside the iframe's
+    /// srcdoc attribute. That encoding holds for every page, opted out or not, so never serve author
+    /// content without this wrapper.
+    ///
+    /// The sandbox attribute is the second barrier and it is the one <see cref="CustomPage.Unsandboxed"/>
+    /// removes. An unsandboxed page runs on the Jellyfin origin, so its script can read the viewer's
+    /// access token out of local storage and call the server API as that viewer. It is meant only for
+    /// pages whose source the administrator wrote and controls. The opt out drops the attribute outright
+    /// rather than adding allow-same-origin to it, because a frame holding allow-same-origin and
+    /// allow-scripts together can reach into the parent document and strip its own sandbox anyway.
     /// </remarks>
     /// <param name="page">The page to render.</param>
     /// <returns>The full HTML document to serve.</returns>
@@ -86,6 +99,11 @@ public partial class PageService : IPageService
         ArgumentNullException.ThrowIfNull(page);
 
         var inner = BuildInnerDocument(page);
+        if (page.ApiRoutes is { Count: > 0 })
+        {
+            inner = InjectServerFetch(inner, page.Slug);
+        }
+
         var assets = _configuration()?.Assets;
         if (assets is not null)
         {
@@ -95,6 +113,7 @@ public partial class PageService : IPageService
         return TemplateLoader.Fill("custompages_wrapper", new Dictionary<string, string>
         {
             ["TITLE"] = WebUtility.HtmlEncode(page.Title),
+            ["SANDBOX"] = RunsUnsandboxed(page) ? string.Empty : SandboxAttribute,
             ["SRCDOC"] = WebUtility.HtmlEncode(inner)
         });
     }
@@ -206,6 +225,45 @@ public partial class PageService : IPageService
         => !string.IsNullOrEmpty(slug) && SlugPattern().IsMatch(slug);
 
     /// <summary>
+    /// Reports whether a user may view a page, on top of the tier check the endpoint already made.
+    /// An empty allow list admits everyone the tier admits, and a non-empty one admits only its members.
+    /// </summary>
+    /// <remarks>
+    /// This fails closed on purpose. A list that holds only unparseable entries admits nobody rather
+    /// than collapsing to the empty list and readmitting every user, which is the direction a hand
+    /// edited configuration is most likely to break in. <see cref="Guid.Empty"/> is never a member,
+    /// so an API key caller, which carries no user, is refused by any restricted page.
+    /// </remarks>
+    /// <param name="page">The page being requested.</param>
+    /// <param name="userId">The calling user's ID.</param>
+    /// <returns><c>true</c> when the user may view the page.</returns>
+    public static bool AllowsUser(CustomPage page, Guid userId)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+
+        var allowed = page.AllowedUserIds;
+        if (allowed is null || allowed.Count == 0)
+        {
+            return true;
+        }
+
+        if (userId == Guid.Empty)
+        {
+            return false;
+        }
+
+        foreach (var entry in allowed)
+        {
+            if (Guid.TryParse(entry, out var parsed) && parsed == userId)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>
     /// Finds a hosted asset by name, case-insensitively. Rejects names outside the safe character set.
     /// </summary>
     /// <param name="name">The asset name.</param>
@@ -261,6 +319,68 @@ public partial class PageService : IPageService
     /// <returns><c>true</c> when the name matches <c>[a-z0-9._-]+</c> and is not a dot-only name.</returns>
     public static bool IsValidAssetName(string? name)
         => !string.IsNullOrEmpty(name) && name != "." && name != ".." && AssetNamePattern().IsMatch(name);
+
+    /// <summary>
+    /// Reports whether a page is served without the isolating sandbox, either because it asked for
+    /// system access or because it defines server side routes.
+    /// </summary>
+    /// <remarks>
+    /// Routes imply it rather than requiring the administrator to tick a second box. The injected helper
+    /// reads the viewer's token from same origin storage and calls the route on the Jellyfin origin, and
+    /// neither is possible from an opaque origin frame, so a sandboxed page with routes could only ever
+    /// fail silently.
+    /// </remarks>
+    /// <param name="page">The page being rendered.</param>
+    /// <returns><c>true</c> when the sandbox attribute is omitted.</returns>
+    public static bool RunsUnsandboxed(CustomPage page)
+    {
+        ArgumentNullException.ThrowIfNull(page);
+        return page.Unsandboxed || page.ApiRoutes is { Count: > 0 };
+    }
+
+    /// <summary>
+    /// Injects the <c>serverFetch(name, init)</c> helper into a page that defines server side routes, so
+    /// author script can call a named route without knowing the page slug or handling the viewer's token.
+    /// </summary>
+    /// <remarks>
+    /// The helper reads the viewer's Jellyfin token from same origin storage and calls the route on the
+    /// Jellyfin origin, so the page must run with <see cref="CustomPage.Unsandboxed"/> access for it to
+    /// reach the server. The script is inserted as early as possible so it is defined before any author
+    /// script that uses it.
+    /// </remarks>
+    /// <param name="document">The inner page document.</param>
+    /// <param name="slug">The page slug, baked into the route base.</param>
+    /// <returns>The document with the helper injected.</returns>
+    public static string InjectServerFetch(string document, string slug)
+    {
+        ArgumentNullException.ThrowIfNull(document);
+
+        var prelude =
+            "<script>(function(){var base=\"/pages/\"+\"" + EscapeJsString(slug) + "\"+\"/api/\";"
+            + "window.serverFetch=function(name,init){init=init||{};var h=init.headers||{};"
+            + "try{var raw=localStorage.getItem(\"jellyfin_credentials\");if(raw){var s=(JSON.parse(raw)||{}).Servers||[];"
+            + "for(var i=0;i<s.length;i++){if(s[i]&&s[i].AccessToken){h[\"Authorization\"]=\"MediaBrowser Token=\\\"\"+s[i].AccessToken+\"\\\"\";break;}}}}catch(e){}"
+            + "init.headers=h;return fetch(base+encodeURIComponent(name),init);};})();</script>";
+
+        // Prefer to land the helper right after the opening head so it runs before any author script.
+        // Fall back to the start of the body, then to the front of the document, so a fragment or a
+        // hand written document without a head still gets it.
+        var headIndex = document.IndexOf("<head>", StringComparison.OrdinalIgnoreCase);
+        if (headIndex >= 0)
+        {
+            var insertAt = headIndex + "<head>".Length;
+            return document.Insert(insertAt, prelude);
+        }
+
+        var bodyIndex = document.IndexOf("<body>", StringComparison.OrdinalIgnoreCase);
+        if (bodyIndex >= 0)
+        {
+            var insertAt = bodyIndex + "<body>".Length;
+            return document.Insert(insertAt, prelude);
+        }
+
+        return prelude + document;
+    }
 
     private string BuildInnerDocument(CustomPage page)
     {

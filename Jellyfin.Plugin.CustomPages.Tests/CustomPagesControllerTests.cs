@@ -1,9 +1,11 @@
 using System;
 using System.Linq;
 using System.Reflection;
+using System.Threading.Tasks;
 using Jellyfin.Plugin.CustomPages.Api;
 using Jellyfin.Plugin.CustomPages.Models;
 using Jellyfin.Plugin.CustomPages.Services;
+using MediaBrowser.Controller.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -19,9 +21,21 @@ namespace Jellyfin.Plugin.CustomPages.Tests;
 public class CustomPagesControllerTests
 {
     private static (CustomPagesController Controller, IPageService Pages) Create()
+        => Create(Guid.NewGuid());
+
+    private static (CustomPagesController Controller, IPageService Pages) Create(Guid callerId, bool isApiKey = false)
     {
         var pages = Substitute.For<IPageService>();
-        var controller = new CustomPagesController(pages)
+        var authorization = Substitute.For<IAuthorizationContext>();
+        authorization.GetAuthorizationInfo(Arg.Any<HttpRequest>())
+            .Returns(Task.FromResult(new AuthorizationInfo
+            {
+                User = callerId == Guid.Empty ? null : new Jellyfin.Database.Implementations.Entities.User("caller", "Default", "Default") { Id = callerId },
+                IsApiKey = isApiKey
+            }));
+
+        var httpClientFactory = Substitute.For<System.Net.Http.IHttpClientFactory>();
+        var controller = new CustomPagesController(pages, authorization, httpClientFactory)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -75,7 +89,7 @@ public class CustomPagesControllerTests
     /// its embedder's policy, so any divergence makes the same page behave differently by tier.
     /// </summary>
     [Fact]
-    public void Csp_IsIdenticalForAnonymousAndProtectedPaths()
+    public async Task Csp_IsIdenticalForAnonymousAndProtectedPaths()
     {
         var (anonController, anonPages) = Create();
         anonPages.Find("a").Returns(Page(PageVisibility.Anonymous, "a"));
@@ -90,7 +104,7 @@ public class CustomPagesControllerTests
         var (userController, userPages) = Create();
         userPages.Find("c").Returns(Page(PageVisibility.User, "c"));
         userPages.Render(Arg.Any<CustomPage>()).Returns("<html></html>");
-        userController.UserContent("c");
+        await userController.UserContent("c");
 
         var anonCsp = anonController.Response.Headers["Content-Security-Policy"].ToString();
         Assert.Equal(anonCsp, shellController.Response.Headers["Content-Security-Policy"].ToString());
@@ -179,35 +193,103 @@ public class CustomPagesControllerTests
     [Theory]
     [InlineData(PageVisibility.Anonymous)]
     [InlineData(PageVisibility.Admin)]
-    public void UserContent_RefusesPagesThatAreNotUserTier(PageVisibility visibility)
+    public async Task UserContent_RefusesPagesThatAreNotUserTier(PageVisibility visibility)
     {
         var (controller, pages) = Create();
         pages.Find("p").Returns(Page(visibility));
 
-        Assert.IsType<NotFoundResult>(controller.UserContent("p"));
+        Assert.IsType<NotFoundResult>(await controller.UserContent("p"));
         pages.DidNotReceive().Render(Arg.Any<CustomPage>());
     }
 
     [Theory]
     [InlineData(PageVisibility.Anonymous)]
     [InlineData(PageVisibility.User)]
-    public void AdminContent_RefusesPagesThatAreNotAdminTier(PageVisibility visibility)
+    public async Task AdminContent_RefusesPagesThatAreNotAdminTier(PageVisibility visibility)
     {
         var (controller, pages) = Create();
         pages.Find("p").Returns(Page(visibility));
 
-        Assert.IsType<NotFoundResult>(controller.AdminContent("p"));
+        Assert.IsType<NotFoundResult>(await controller.AdminContent("p"));
         pages.DidNotReceive().Render(Arg.Any<CustomPage>());
     }
 
     [Fact]
-    public void ContentEndpoints_ReturnNotFoundForUnknownSlug()
+    public async Task ContentEndpoints_ReturnNotFoundForUnknownSlug()
     {
         var (controller, pages) = Create();
         pages.Find(Arg.Any<string>()).Returns((CustomPage?)null);
 
-        Assert.IsType<NotFoundResult>(controller.UserContent("nope"));
-        Assert.IsType<NotFoundResult>(controller.AdminContent("nope"));
+        Assert.IsType<NotFoundResult>(await controller.UserContent("nope"));
+        Assert.IsType<NotFoundResult>(await controller.AdminContent("nope"));
+    }
+
+    // MARK: Per-user access (security invariant)
+
+    [Fact]
+    public async Task UserContent_ServesAPageThatNamesTheCaller()
+    {
+        var caller = Guid.NewGuid();
+        var (controller, pages) = Create(caller);
+        var page = Page(PageVisibility.User);
+        page.AllowedUserIds.Add(caller.ToString());
+        pages.Find("p").Returns(page);
+        pages.Render(Arg.Any<CustomPage>()).Returns("<html></html>");
+
+        Assert.IsType<ContentResult>(await controller.UserContent("p"));
+    }
+
+    [Fact]
+    public async Task UserContent_RefusesACallerTheAllowListDoesNotName()
+    {
+        var (controller, pages) = Create(Guid.NewGuid());
+        var page = Page(PageVisibility.User);
+        page.AllowedUserIds.Add(Guid.NewGuid().ToString());
+        pages.Find("p").Returns(page);
+
+        var result = Assert.IsType<StatusCodeResult>(await controller.UserContent("p"));
+        Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
+
+        // The refusal has to happen before the body is composed, or the restriction is cosmetic.
+        pages.DidNotReceive().Render(Arg.Any<CustomPage>());
+    }
+
+    [Fact]
+    public async Task UserContent_RefusesAnApiKeyCallerOnARestrictedPage()
+    {
+        var caller = Guid.NewGuid();
+        var (controller, pages) = Create(caller, isApiKey: true);
+        var page = Page(PageVisibility.User);
+        page.AllowedUserIds.Add(caller.ToString());
+        pages.Find("p").Returns(page);
+
+        var result = Assert.IsType<StatusCodeResult>(await controller.UserContent("p"));
+        Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
+        pages.DidNotReceive().Render(Arg.Any<CustomPage>());
+    }
+
+    [Fact]
+    public async Task AdminContent_RefusesAnAdminTheAllowListDoesNotName()
+    {
+        var (controller, pages) = Create(Guid.NewGuid());
+        var page = Page(PageVisibility.Admin);
+        page.AllowedUserIds.Add(Guid.NewGuid().ToString());
+        pages.Find("p").Returns(page);
+
+        var result = Assert.IsType<StatusCodeResult>(await controller.AdminContent("p"));
+        Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
+        pages.DidNotReceive().Render(Arg.Any<CustomPage>());
+    }
+
+    [Fact]
+    public async Task ContentEndpoints_SkipTheLookupWhenNoAllowListIsSet()
+    {
+        var (controller, pages) = Create(Guid.Empty);
+        var page = Page(PageVisibility.User);
+        pages.Find("p").Returns(page);
+        pages.Render(Arg.Any<CustomPage>()).Returns("<html></html>");
+
+        Assert.IsType<ContentResult>(await controller.UserContent("p"));
     }
 
     // MARK: Asset endpoint

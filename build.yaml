@@ -1,7 +1,7 @@
 ---
 name: "Custom Pages"
 guid: "409ef72d-6014-47fd-8928-ebad581bf81b"
-version: "10.11.2.3"
+version: "10.11.3.0"
 targetAbi: "10.11.10.0"
 framework: "net9.0"
 overview: "Author and serve authorization-gated HTML pages at /pages/{slug}."
@@ -15,5 +15,17 @@ owner: "JPKribs"
 artifacts:
 - "Jellyfin.Plugin.CustomPages.dll"
 changelog:
+  features:
+  - Allow local resource calls, so a page can define named server side routes and call them with serverFetch while the server forwards each to its configured target
+  - Optional per page "Allow system access" toggle that runs a page without the sandbox, so its scripts can call the Jellyfin API and reach other resources on this origin
+  - Pages on a signed in tier can now be restricted to named users, defaulting to all users at that tier
   developer:
+  - Defining a route also runs its page unsandboxed, since the helper cannot reach the route from an opaque origin
+  - A route credential stored before encryption existed is upgraded on the next save rather than left in the clear
+  - Route credentials are encrypted at rest and never sent to a browser, and the configuration page posts back a sentinel so an untouched field keeps the stored value
+  - Forwarded requests carry the caller's headers minus a deny list, so the viewer's Jellyfin session is never handed to a route target
+  - Route targets must be absolute http or https URLs fixed in configuration, so a page cannot turn a route into an open proxy
+  - A restricted page is refused before its body is rendered, so content never reaches a viewer the list does not name
+  - An allow list is refused on an anonymous page at save time, and fails closed at serve time if the stored list is unusable
+  - Pages stay sandboxed by default, and an unsandboxed page still reaches the browser HTML encoded inside the wrapper's srcdoc
   - Bump base to 2026.07.31

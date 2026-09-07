@@ -84,10 +84,10 @@ public class PageServiceTests
     {
         var html = CreateService().Render(new CustomPage { Title = "t", Html = "<p>hi</p>" });
 
-        Assert.Contains("<iframe", html, System.StringComparison.Ordinal);
-        Assert.Contains("sandbox=", html, System.StringComparison.Ordinal);
+        Assert.Contains("<iframe sandbox=", html, System.StringComparison.Ordinal);
         Assert.Contains("srcdoc=", html, System.StringComparison.Ordinal);
         Assert.DoesNotContain("allow-same-origin", html, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("{{SANDBOX}}", html, System.StringComparison.Ordinal);
     }
 
     [Fact]
@@ -107,6 +107,141 @@ public class PageServiceTests
         // They are present only in HTML-encoded form (inside the srcdoc / title).
         Assert.Contains("&lt;script&gt;alert(1)&lt;/script&gt;", html, System.StringComparison.Ordinal);
         Assert.Contains("&lt;b&gt;body&lt;/b&gt;", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Render_Unsandboxed_DropsTheSandboxAttribute()
+    {
+        var page = new CustomPage { Title = "t", Html = "<p>hi</p>", Unsandboxed = true };
+
+        var html = CreateService().Render(page);
+
+        Assert.Contains("<iframe srcdoc=", html, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("sandbox=", html, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("{{SANDBOX}}", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Render_Unsandboxed_StillEncodesAuthorContentIntoSrcdoc()
+    {
+        // Dropping the sandbox must not also drop the encoding that keeps author markup out of the
+        // top level document, which is what the auth shell writes this response into.
+        var page = new CustomPage
+        {
+            Title = "<script>alert(1)</script>",
+            Html = "<b>body</b>",
+            Unsandboxed = true
+        };
+
+        var html = CreateService().Render(page);
+
+        Assert.DoesNotContain("<script>alert(1)</script>", html, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("<b>body</b>", html, System.StringComparison.Ordinal);
+        Assert.Contains("&lt;script&gt;alert(1)&lt;/script&gt;", html, System.StringComparison.Ordinal);
+        Assert.Contains("&lt;b&gt;body&lt;/b&gt;", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Render_APageWithRoutesIsServedUnsandboxedWithoutAskingForSystemAccess()
+    {
+        // The helper cannot read the token or call the route from an opaque origin, so a sandboxed page
+        // with routes could only fail silently. Defining a route is the opt in.
+        var page = new CustomPage { Title = "t", Html = "<p>hi</p>", Unsandboxed = false };
+        page.ApiRoutes.Add(new PageApiRoute { Name = "backend", Url = "http://x/y" });
+
+        Assert.True(PageService.RunsUnsandboxed(page));
+        Assert.DoesNotContain("sandbox=", CreateService().Render(page), System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Render_APageWithNeitherStaysSandboxed()
+    {
+        var page = new CustomPage { Title = "t", Html = "<p>hi</p>" };
+
+        Assert.False(PageService.RunsUnsandboxed(page));
+        Assert.Contains("<iframe sandbox=", CreateService().Render(page), System.StringComparison.Ordinal);
+    }
+
+    // MARK: serverFetch injection
+
+    [Fact]
+    public void Render_InjectsServerFetch_WhenThePageDefinesRoutes()
+    {
+        var page = new CustomPage { Title = "t", Html = "<p>hi</p>" };
+        page.ApiRoutes.Add(new PageApiRoute { Name = "backend", Url = "http://x/y" });
+
+        var html = CreateService().Render(page);
+
+        // The helper is present, HTML encoded inside the srcdoc, and carries this page's slug.
+        Assert.Contains("serverFetch", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Render_OmitsServerFetch_WhenNoRoutesAreDefined()
+    {
+        var html = CreateService().Render(new CustomPage { Title = "t", Html = "<p>hi</p>" });
+
+        Assert.DoesNotContain("serverFetch", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InjectServerFetch_LandsInsideHeadWhenPresent()
+    {
+        var doc = "<!DOCTYPE html><html><head><title>x</title></head><body>hi</body></html>";
+
+        var injected = PageService.InjectServerFetch(doc, "download");
+
+        var head = injected.IndexOf("<head>", System.StringComparison.Ordinal);
+        var helper = injected.IndexOf("serverFetch", System.StringComparison.Ordinal);
+        var title = injected.IndexOf("<title>", System.StringComparison.Ordinal);
+        Assert.True(head < helper && helper < title);
+    }
+
+    // MARK: Allow list membership
+
+    [Fact]
+    public void AllowsUser_EmptyListAdmitsEveryone()
+        => Assert.True(PageService.AllowsUser(new CustomPage(), System.Guid.NewGuid()));
+
+    [Fact]
+    public void AllowsUser_AdmitsANamedUserRegardlessOfGuidCasing()
+    {
+        var user = System.Guid.NewGuid();
+        var page = new CustomPage();
+        page.AllowedUserIds.Add(user.ToString().ToUpperInvariant());
+
+        Assert.True(PageService.AllowsUser(page, user));
+    }
+
+    [Fact]
+    public void AllowsUser_RefusesAUserTheListDoesNotName()
+    {
+        var page = new CustomPage();
+        page.AllowedUserIds.Add(System.Guid.NewGuid().ToString());
+
+        Assert.False(PageService.AllowsUser(page, System.Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void AllowsUser_RefusesEmptyGuidAgainstARestrictedPage()
+    {
+        var page = new CustomPage();
+        page.AllowedUserIds.Add(System.Guid.Empty.ToString());
+
+        // Guid.Empty is what an unidentified caller reports, so it must never satisfy a restriction,
+        // even one that literally spells out the empty GUID.
+        Assert.False(PageService.AllowsUser(page, System.Guid.Empty));
+    }
+
+    [Fact]
+    public void AllowsUser_FailsClosedWhenNoEntryParses()
+    {
+        // A hand edited list of junk must lock everyone out rather than collapse to "no restriction".
+        var page = new CustomPage();
+        page.AllowedUserIds.Add("nonsense");
+        page.AllowedUserIds.Add(string.Empty);
+
+        Assert.False(PageService.AllowsUser(page, System.Guid.NewGuid()));
     }
 
     // MARK: Composed vs single-file rendering

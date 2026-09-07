@@ -41,6 +41,28 @@ public static partial class ConfigurationValidator
                 throw new ArgumentException("Page has an unknown visibility tier: " + page.Slug);
             }
 
+            var allowed = page.AllowedUserIds;
+            if (allowed is not null && allowed.Count > 0)
+            {
+                // An allow list on a tier that already serves everyone is not a weaker restriction, it
+                // is no restriction at all. A page carrying something worth restricting would be
+                // published to the world while the dashboard showed a tidy list of users beside it, so
+                // refuse the combination rather than silently ignore the list.
+                if (!page.Visibility.RequiresAuth())
+                {
+                    throw new ArgumentException(
+                        "A page restricted to specific users must require sign in: " + page.Slug);
+                }
+
+                foreach (var entry in allowed)
+                {
+                    if (!Guid.TryParse(entry, out _))
+                    {
+                        throw new ArgumentException("Page has an invalid allowed user ID: " + page.Slug);
+                    }
+                }
+            }
+
             // Pages with empty or invalid slugs are unreachable drafts (Find rejects them and the
             // dashboard slugifies on save), so only reachable slugs are held to uniqueness.
             if (!PageService.IsValidSlug(page.Slug))
@@ -51,6 +73,40 @@ public static partial class ConfigurationValidator
             if (!seen.Add(page.Slug))
             {
                 throw new ArgumentException("Duplicate page slug: " + page.Slug);
+            }
+
+            ValidateApiRoutes(page);
+        }
+    }
+
+    private static void ValidateApiRoutes(CustomPage page)
+    {
+        if (page.ApiRoutes is null || page.ApiRoutes.Count == 0)
+        {
+            return;
+        }
+
+        var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var route in page.ApiRoutes)
+        {
+            // The route name becomes a URL path segment and the serverFetch argument, so it is held to
+            // the same safe set as a slug rather than allowed to carry path separators or spaces.
+            if (!PageService.IsValidSlug(route.Name))
+            {
+                throw new ArgumentException("Invalid route name on page " + page.Slug + ": " + route.Name);
+            }
+
+            if (!names.Add(route.Name))
+            {
+                throw new ArgumentException("Duplicate route name on page " + page.Slug + ": " + route.Name);
+            }
+
+            // A fixed absolute http(s) target is what keeps this from being an open proxy. Reject anything
+            // else rather than forward a caller to a scheme or a relative target it could exploit.
+            if (!Uri.TryCreate(route.Url, UriKind.Absolute, out var uri)
+                || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                throw new ArgumentException("Route " + route.Name + " on page " + page.Slug + " needs an absolute http or https URL.");
             }
         }
     }

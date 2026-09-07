@@ -58,6 +58,47 @@ public class ConfigurationValidatorTests
             new CustomPage { Slug = string.Empty },
             new CustomPage { Slug = "alpha" }));
 
+    // MARK: Per-user access
+
+    [Fact]
+    public void Validate_RejectsAnAllowListOnAnAnonymousPage()
+    {
+        // The list would be silently ignored at serve time, so the dashboard could show a page as
+        // restricted to two people while the server handed it to the whole internet.
+        var page = new CustomPage { Slug = "p", Visibility = PageVisibility.Anonymous };
+        page.AllowedUserIds.Add(Guid.NewGuid().ToString());
+
+        Assert.Throws<ArgumentException>(() => ConfigurationValidator.Validate(Config(page)));
+    }
+
+    [Theory]
+    [InlineData(PageVisibility.User)]
+    [InlineData(PageVisibility.Admin)]
+    public void Validate_AcceptsAnAllowListOnAGatedPage(PageVisibility visibility)
+    {
+        var page = new CustomPage { Slug = "p", Visibility = visibility };
+        page.AllowedUserIds.Add(Guid.NewGuid().ToString());
+
+        ConfigurationValidator.Validate(Config(page));
+    }
+
+    [Fact]
+    public void Validate_RejectsAnAllowListEntryThatIsNotAGuid()
+    {
+        var page = new CustomPage { Slug = "p", Visibility = PageVisibility.User };
+        page.AllowedUserIds.Add("not-a-guid");
+
+        Assert.Throws<ArgumentException>(() => ConfigurationValidator.Validate(Config(page)));
+    }
+
+    [Fact]
+    public void Validate_AcceptsAnEmptyAllowListOnAnyTier()
+    {
+        ConfigurationValidator.Validate(Config(
+            new CustomPage { Slug = "a", Visibility = PageVisibility.Anonymous },
+            new CustomPage { Slug = "b", Visibility = PageVisibility.User }));
+    }
+
     // MARK: Assets
 
     [Fact]
