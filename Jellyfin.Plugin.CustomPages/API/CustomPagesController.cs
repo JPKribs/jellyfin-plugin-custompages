@@ -244,6 +244,9 @@ public class CustomPagesController : ControllerBase
     /// ordering is the whole guarantee for a page whose content is worth restricting: the bytes are
     /// only ever composed for a request that already passed both gates. A failure to resolve the
     /// caller is treated as no user, which a restricted page refuses.
+    ///
+    /// An administrator passes the list unconditionally, which is why the dashboard picker does not
+    /// offer them. An API key still does not, since it carries no user an allow list could name.
     /// </remarks>
     /// <param name="page">The page being requested.</param>
     /// <returns><c>true</c> when the caller may view the page.</returns>
@@ -341,9 +344,9 @@ public class CustomPagesController : ControllerBase
     /// </summary>
     /// <remarks>
     /// Stores are addressed by name rather than through a page, so which page is calling has no bearing
-    /// on what comes back. The store's own tiers decide everything, which is what lets a page that
-    /// collects submissions and a page that reports on them work against the same records without one
-    /// of them silently widening the other's audience.
+    /// on what comes back. The store's own read tier and read scope decide everything, which is what
+    /// lets a page that collects submissions and a page that reports on them work against the same
+    /// records without one of them silently widening the other's audience.
     /// </remarks>
     /// <param name="name">The store name.</param>
     /// <param name="id">An optional single record ID to fetch instead of the whole store.</param>
@@ -576,8 +579,9 @@ public class CustomPagesController : ControllerBase
     /// different from how the page endpoints treat one. A Jellyfin API key is issued by an
     /// administrator and already carries administrator reach, and a store's whole point is that
     /// something outside the browser can pick work up and write results back. Carrying no user means it
-    /// can never own a record or benefit from the own-record grants, so an API key sees a store exactly
-    /// as an administrator does and nothing narrower is silently widened for it.
+    /// can never own a record, so the Own read scope and the edit-own grant never apply to it. An API
+    /// key therefore sees a store exactly as an administrator does, and nothing narrower is silently
+    /// widened for it.
     /// </remarks>
     /// <returns>The resolved caller.</returns>
     private async Task<StoreCaller> ResolveStoreCallerAsync()

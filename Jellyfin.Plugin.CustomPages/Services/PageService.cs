@@ -411,8 +411,8 @@ public partial class PageService : IPageService
     /// </summary>
     /// <remarks>
     /// The helper is a convenience, never a grant. Every call it makes is authorized server side against
-    /// the store's own read and write tiers, so a page holding the helper reaches exactly the stores its
-    /// viewer was already entitled to and nothing more.
+    /// the store's own read tier, read scope, and write tier, so a page holding the helper reaches
+    /// exactly the records its viewer was already entitled to and nothing more.
     ///
     /// <c>write</c> takes its third argument either as a bare record ID or as an options object carrying
     /// <c>id</c> and <c>label</c>. The label is the record's primary element, the one thing a person
