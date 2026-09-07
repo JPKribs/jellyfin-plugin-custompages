@@ -154,14 +154,12 @@ export default function (view) {
         if (userPicker) userPicker.setValue(allowed);
         applyAccess();
 
-        var routes = p.ApiRoutes || [];
-        el('pageRoutesEnabled').checked = routes.length > 0;
-        renderRoutes(routes);
-        applyRoutes();
+        renderRoutes(p.ApiRoutes || []);
 
         editorSingle = !!p.SingleFile;
         el('pageSingleFile').checked = editorSingle;
         el('pageUnsandboxed').checked = !!p.Unsandboxed;
+        applyRoutes();
         currentPane = 'html';
         el('selectSource').value = 'html';
         applyMode();
@@ -247,11 +245,11 @@ export default function (view) {
     }
 
     function applyRoutes() {
-        Shared.setVisible('routesRow', el('pageRoutesEnabled').checked);
+        Shared.setVisible('routesRow', el('pageUnsandboxed').checked);
     }
 
     function readRoutes() {
-        if (!el('pageRoutesEnabled').checked) return [];
+        if (!el('pageUnsandboxed').checked) return [];
         return routeRows
             .map(function (e) { return e.read(); })
             .filter(function (r) { return r.Name || r.Url; });
@@ -361,7 +359,7 @@ export default function (view) {
         });
         el('pageVisibility').addEventListener('change', applyAccess);
         el('pageAccess').addEventListener('change', applyAccess);
-        el('pageRoutesEnabled').addEventListener('change', applyRoutes);
+        el('pageUnsandboxed').addEventListener('change', applyRoutes);
         el('btnAddRoute').addEventListener('click', function () { makeRouteRow(); });
         el('pageSlug').addEventListener('input', updateUrlPreview);
     }

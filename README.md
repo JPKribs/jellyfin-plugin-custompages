@@ -50,10 +50,11 @@ as mixed content. Routing through the server sidesteps all three, with no revers
 
 Requirements and behaviour:
 
-* Defining a route also runs the page without the sandbox. The helper reads the viewer's token from
-  same origin storage and calls the route on the Jellyfin origin, and neither works from the sandbox's
-  opaque origin, so a sandboxed page with routes could only fail silently. **Allow system access**
-  remains a separate toggle for a page that wants that access without defining any route.
+* Routes live under **Allow system access**, which is the single permission a page needs. The helper
+  reads the viewer's token from same origin storage and calls the route on the Jellyfin origin, and
+  neither works from the sandbox's opaque origin, so routes and the unsandboxed page are one decision.
+  A page may turn that toggle on and define no routes at all, which simply gives its scripts same
+  origin access to Jellyfin's own API.
 * A route reaches exactly the audience of its page. The tier is enforced first, then the page's allowed
   user list, and only then is anything forwarded.
 * The target URL is fixed in configuration and never comes from the caller, so this is not an open
