@@ -22,10 +22,10 @@ changelog:
   - Optional activity log notice when a record is added or removed, naming the record by the label the page supplies
   - Page access is now an Access selector on the signed in tier, offering all users or specific users
   developer:
-  - A store's read tier is definitive: a caller below it reads nothing, and scope only narrows what a caller who already cleared the tier is shown
+  - A stores read tier is definitive. A caller below it reads nothing, and scope only narrows what a caller who already cleared the tier is shown
   - Administrators read every record whatever scope says, matching how they are always admitted to a page restricted to specific users
   - Changing a record needs both the read and the write tier, so a caller can never rewrite something the store would refuse to show them
-  - Store records live under Jellyfin's data directory rather than in the plugin configuration, since visitors write them and the configuration must not be rewritten on every submission
+  - Store records live under the Jellyfin data directory rather than in the plugin configuration, since visitors write them and the configuration must not be rewritten on every submission
   - Records are capped per store and per record, and the caps apply whatever the tiers, since they are the only bound on a store open to anonymous writes
   - Writes are atomic, and a store whose file cannot be parsed answers as empty and refuses writes rather than overwriting it
   - Activity log entries are rate limited per store, with additions and removals sharing one window and a batch reporting counts
