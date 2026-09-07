@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "10.11.3.1",
+        "changelog": "## Developer\r\n- Server routes moved under the Allow system access toggle, so a page needs one permission instead of two\r\n- Shortened the configuration page help text",
+        "targetAbi": "10.11.10.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v10.11.3.1/jellyfin-plugin-custompages-10.11.3.1.zip",
+        "checksum": "8d7f7fc120fd4836e9b85f243c2a0625",
+        "timestamp": "2026-09-07T02:17:14Z"
+      },
+      {
         "version": "10.11.3.0",
         "changelog": "## Features\r\n- Allow local resource calls, so a page can define named server side routes and call them with serverFetch while the server forwards each to its configured target\r\n- Optional per page Allow system access toggle that runs a page without the sandbox, so its scripts can call the Jellyfin API and reach other resources on this origin\r\n- Pages on a signed in tier can now be restricted to named users, defaulting to all users at that tier\r\n\r\n## Developer\r\n- Defining a route also runs its page unsandboxed, since the helper cannot reach the route from an opaque origin\r\n- A route credential stored before encryption existed is upgraded on the next save rather than left in the clear\r\n- Route credentials are encrypted at rest and never sent to a browser, and the configuration page posts back a sentinel so an untouched field keeps the stored value\r\n- Forwarded requests carry the caller's headers minus a deny list, so the viewer's Jellyfin session is never handed to a route target\r\n- Route targets must be absolute http or https URLs fixed in configuration, so a page cannot turn a route into an open proxy\r\n- A restricted page is refused before its body is rendered, so content never reaches a viewer the list does not name\r\n- An allow list is refused on an anonymous page at save time, and fails closed at serve time if the stored list is unusable\r\n- Pages stay sandboxed by default, and an unsandboxed page still reaches the browser HTML encoded inside the wrapper's srcdoc\r\n- Bump base to 2026.07.31",
         "targetAbi": "10.11.10.0",
