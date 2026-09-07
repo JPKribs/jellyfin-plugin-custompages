@@ -264,18 +264,6 @@ export default function (view) {
         });
     }
 
-    function copySnippet() {
-        var name = slugify(el('storeName').value);
-        if (!name) return;
-        var snippet = "pageStore.write('" + name + "', { url: value })\n"
-            + "  .then(function (record) { console.log(record.id); });\n\n"
-            + "pageStore.read('" + name + "')\n"
-            + "  .then(function (records) { console.log(records); });";
-        Shared.copyToClipboard(snippet).then(function () {
-            Shared.setStatus('storeStatus', 'Snippet copied.', false);
-        });
-    }
-
     function loadCounts() {
         var live = stores.filter(function (s) { return s.Name; });
         return Promise.all(live.map(function (s) {
@@ -308,7 +296,6 @@ export default function (view) {
         });
         el('btnClearStore').addEventListener('click', clearRecords);
         el('btnDeleteStore').addEventListener('click', deleteStore);
-        el('btnCopySnippet').addEventListener('click', copySnippet);
         el('btnSaveStores').addEventListener('click', save);
         el('storeRead').addEventListener('change', applyWarnings);
         el('storeWrite').addEventListener('change', applyWarnings);
