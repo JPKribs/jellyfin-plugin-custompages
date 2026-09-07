@@ -150,11 +150,12 @@
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
                                 <input type="checkbox" is="emby-checkbox" id="storeNotify" />
-                                <span class="checkboxLabel">Notify administrators on a new record</span>
+                                <span class="checkboxLabel">Notify administrators when records are added or removed</span>
                             </label>
                             <div class="fieldDescription">
-                                Writes an entry to Jellyfin's activity log. Entries are rate limited to one
-                                a minute per store, so a burst of submissions cannot flood the feed.
+                                Writes an entry to Jellyfin's activity log. Entries are rate limited to
+                                one a minute per store, and a batch reports counts, so a burst cannot
+                                flood the feed. Pass a label when writing to name the record.
                             </div>
                         </div>
 

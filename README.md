@@ -74,10 +74,10 @@ A page can keep records on the server. Add a **store** on the **Stores** tab, gi
 page with **Allow system access** turned on can read and write it:
 
 ```js
-pageStore.write('downloads', { url: value })
+pageStore.write('queue', { url: value })
   .then(function (record) { console.log(record.id); });
 
-pageStore.read('downloads')
+pageStore.read('queue')
   .then(function (records) { console.log(records); });
 ```
 
@@ -129,25 +129,25 @@ add records to it without signing in, and the record limit is the only thing bou
 #### A worked example
 
 To collect URLs from your users and track what happened to each one, make a store with **Read** set to
-**Users**, **Scope** set to **User records**, and **Write** set to **Users**.
+**User**, **Scope** set to **User records**, and **Write** set to **User**.
 
-A Users tier page submits and shows the submitter their own queue:
+A **User** tier page submits and shows the submitter their own queue:
 
 ```js
-pageStore.write('downloads', { url: input.value, status: 'queued' });
-pageStore.read('downloads').then(render);
+pageStore.write('queue', { url: input.value, status: 'queued' }, { label: input.value });
+pageStore.read('queue').then(render);
 ```
 
-An Administrators tier page sees every submission and writes the outcome back onto one:
+An **Admin** tier page sees every submission and writes the outcome back onto one:
 
 ```js
-pageStore.read('downloads').then(render);
-pageStore.write('downloads', { url: row.data.url, status: 'downloaded' }, row.id);
+pageStore.read('queue').then(render);
+pageStore.write('queue', { url: row.data.url, status: 'done' }, { id: row.id });
 ```
 
 The submitter watches their own row change status without ever seeing anyone else's, and cannot set
-the status themselves. The administrator page needs no separate store, because Scope stops narrowing at
-the administrator. Whatever is actually doing the downloading can be a
+the status themselves. The admin page needs no separate store, because Scope stops narrowing at the
+administrator. Whatever actually does the work can be a
 [server side route](#allow-local-resource-calls) the admin page calls, or something outside Jellyfin
 holding an API key.
 
@@ -171,8 +171,8 @@ Each returns a promise, and rejects with an `Error` carrying a `status` when the
 
 The same endpoints are reachable directly at `/pages/store/{name}/read`, `/write`, and `/delete` for
 anything calling from outside a page. A Jellyfin API key is treated as the administrator tier with no
-user identity, so a downloader or a script can pick work up and write results back, and can never own
-a record or benefit from the own-record settings.
+user identity, so a script or a background worker can pick work up and write results back, and can
+never own a record or benefit from the own-record settings.
 
 #### Retention
 
@@ -188,24 +188,24 @@ room against the record limit.
 
 #### Notifying administrators
 
-Turn on **Notify administrators on a new record** and records arriving and leaving write entries to
+Turn on **Notify administrators when records are added or removed** and both write entries to
 Jellyfin's activity log, where the dashboard already surfaces plugin events.
 
 Pass a **label** when you write and the entry names the record instead of counting it:
 
 ```js
-pageStore.write('downloads', { url: value, status: 'queued' }, { label: 'Holiday photos' });
+pageStore.write('queue', { url: value, status: 'queued' }, { label: 'Holiday photos' });
 ```
 
-That reads as `Holiday photos was added to downloads`, and the same label comes back as
-`Holiday photos was removed from downloads` when the record is deleted, so the page only supplies it
+That reads as `Holiday photos was added to queue`, and the same label comes back as
+`Holiday photos was removed from queue` when the record is deleted, so the page only supplies it
 once. An update carrying no label keeps the one the record already has, since writing a status onto a
-record is not renaming it. Without a label the entry falls back to `A record was added to downloads`.
+record is not renaming it. Without a label the entry falls back to `A record was added to queue`.
 
 Entries are rate limited to one a minute per store, and additions and removals share that window, so
 what an administrator gets is one line saying what happened rather than two racing each other. A batch
-reports counts, because it has no single thing to name: `4 items added to downloads`, `3 items removed
-from downloads`, or `4 items added and 3 items removed from downloads`. The label is capped and
+reports counts, because it has no single thing to name: `4 items added to queue`, `3 items removed
+from queue`, or `4 items added and 3 items removed from queue`. The label is capped and
 flattened before it reaches the feed, so a page cannot write a line break into it.
 
 #### Limits and storage
@@ -219,7 +219,7 @@ Records are kept as one JSON file per store under Jellyfin's data directory, at
 `data/custompages/stores/{name}.json`. They are data rather than settings, so unlike pages and assets
 they do **not** live in the plugin configuration and a configuration backup will not bring them back.
 Removing a store from the dashboard leaves its file alone, so recreating a store with the same name
-picks the old records back up. Use **Clear records** when you actually want them gone.
+picks the old records back up. Use **Clear** when you actually want them gone.
 
 If a store's file is ever unreadable, the store answers as empty and refuses every write rather than
 overwriting whatever the file holds. Repair or remove the file and restart Jellyfin.
@@ -241,7 +241,7 @@ Because your page renders at `/pages/{slug}`, that relative path resolves to `/p
 Like pages, every asset has a visibility tier:
 
 * **Anyone** — Served publicly at `/pages/asset/{name}`. Anyone who can reach your server can fetch the image, even signed out and even if no page references it.
-* **Signed-in users / Administrators** — Never served by URL. Browsers fetch images without your Jellyfin token, so a gated asset cannot be delivered to an `<img>` tag directly. Instead, when a page of an equal or higher tier renders, its `asset/{name}` references are replaced with inline `data:` URIs, so the image bytes only ever travel inside a response the viewer was already authorized to receive. A lower-tier page referencing a gated asset shows a broken image rather than leaking it.
+* **User / Admin** — Never served by URL. Browsers fetch images without your Jellyfin token, so a gated asset cannot be delivered to an `<img>` tag directly. Instead, when a page of an equal or higher tier renders, its `asset/{name}` references are replaced with inline `data:` URIs, so the image bytes only ever travel inside a response the viewer was already authorized to receive. A lower-tier page referencing a gated asset shows a broken image rather than leaking it.
 
 #### Referencing a gated asset
 
@@ -269,9 +269,9 @@ One caveat on public assets: they are cached by browsers and by any shared cache
 
 Each page declares who may view it, enforced by Jellyfin's authorization policies:
 
+* **Admin** — Administrators only.
+* **User** — Any authenticated Jellyfin account.
 * **Anyone** — Public. Reachable by typing `/pages/{slug}`, even while signed out.
-* **Signed-in users** — Any authenticated Jellyfin account.
-* **Administrators** — Administrators only.
 
 Because Jellyfin authenticates with a token rather than a browser session, protected pages are delivered through a small authentication shell. Visiting `/pages/{slug}` creates a loader that re-fetches the content using your signed-in token, then renders it. Anonymous pages are served directly. If you open a protected page while signed out, you will be prompted to sign in. Opening a page with an underprivileged user will inform the user they are not authorized to view this page.
 
@@ -310,7 +310,7 @@ account you grant access to.
 * **Authorization on every request.** The `/user` and `/admin` content endpoints are gated by Jellyfin's own policies. The shell's choice of endpoint cannot bypass them and each endpoint also verifies the page's declared tier, then applies the page's [per-user allow list](#restricting-a-page-to-specific-users) before rendering anything.
 * **Asset tiers.** Only assets marked **Anyone** are reachable at `/pages/asset/{name}`. Gated assets are never URL-addressable and are embedded only into pages of an equal or higher visibility tier, so their bytes travel exclusively inside authorized responses.
 * **Server side routes.** A page's [named routes](#allow-local-resource-calls) forward only to targets fixed in configuration, gated to that page's audience before anything is sent, with the viewer's Jellyfin credentials stripped from the forwarded request and route passwords encrypted at rest.
-* **Store tiers.** A [store](#storing-data) is gated by its own read and write tiers on every call, resolved server side from the caller's credentials rather than from the page that called. Record and payload caps bound every store, and a store open to anonymous writes is opt in and marked as such in the dashboard.
+* **Store tiers.** A [store](#storing-data) is gated by its own read tier, read scope, and write tier on every call, resolved server side from the caller's credentials rather than from the page that called. The read tier is definitive, changing a record needs both tiers, and record and payload caps bound every store. A store open to anonymous writes is opt in and marked as such in the dashboard.
 * **Hardening headers.** Served pages set `Content-Security-Policy`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, and `X-Robots-Tag: noindex`. Slugs are restricted to `[a-z0-9_-]`.
 * **Popups escape the sandbox.** `allow-popups-to-escape-sandbox` is set so that a link to an external site opens as a normal page instead of a crippled sandboxed one. The trade-off is that author JavaScript can open and drive an unsandboxed window, which is the widest hole in the sandbox.
 

@@ -61,7 +61,7 @@ public class StoreRetentionTask : PluginScheduledTask
     /// <inheritdoc />
     public override IEnumerable<TaskTriggerInfo> GetDefaultTriggers()
     {
-        // Retention is expressed in days, so an hourly pass is far finer than the policy it enforces
+        // Retention is expressed in days, so a six hourly pass is far finer than the policy it enforces
         // and keeps the task cheap. The sweep on read means nothing expired is ever served in between.
         yield return EveryInterval(TimeSpan.FromHours(6));
     }
