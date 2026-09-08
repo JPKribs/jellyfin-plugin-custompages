@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "12.0.0.1",
+        "changelog": "## Developer\r\n- Rebuilt for Jellyfin 12.0 on .NET 10, with the target ABI raised to 12.0.0.0\r\n- CI builds, tests, and CodeQL now run on .NET 10",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v12.0.0.1/jellyfin-plugin-custompages-12.0.0.1.zip",
+        "checksum": "24bfe207095bab1b86a0e5fe78864286",
+        "timestamp": "2026-09-08T02:50:49Z"
+      },
+      {
         "version": "10.11.3.3",
         "changelog": "Fix 3.2 build issues.",
         "targetAbi": "10.11.10.0",
