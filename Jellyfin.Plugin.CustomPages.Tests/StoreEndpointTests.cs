@@ -64,7 +64,8 @@ public class StoreEndpointTests
         }
 
         var controller = new CustomPagesController(
-            pages, stores, authorization, Substitute.For<System.Net.Http.IHttpClientFactory>())
+            pages, stores, authorization, Substitute.For<System.Net.Http.IHttpClientFactory>(),
+            Substitute.For<MediaBrowser.Controller.IServerApplicationPaths>())
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };

@@ -1,3 +1,5 @@
+import { createConfigPage, confirmDialog, createUserMultiSelector, SECRET_KEPT } from './configurationpage?name=custompages_jpkribs_shared.js';
+
 export default function (view) {
     'use strict';
 
@@ -8,16 +10,14 @@ export default function (view) {
         { href: 'configurationpage?name=custompages_stores', name: 'Stores' }
     ];
 
-    var Shared = null;
-    var setTabs = null;
-    var SECRET_KEPT = '__JPK_SECRET_KEPT__';
-    var createUserMultiSelector = null;
-    var _sharedPromise = import('/web/configurationpage?name=custompages_jpkribs_shared.js').then(function (mod) {
-        Shared = mod.createShared(view, PLUGIN_ID);
-        setTabs = mod.setTabs;
-        if (mod.SECRET_KEPT) SECRET_KEPT = mod.SECRET_KEPT;
-        createUserMultiSelector = mod.createUserMultiSelector;
-    });
+    var Shared = createConfigPage(view, {
+        pluginId: PLUGIN_ID,
+        tabsKey: 'custompages',
+        tabIndex: 0,
+        tabs: TABS,
+        bind: bind,
+        load: load
+    }).shared;
 
     function slugify(value) {
         return String(value || '')
@@ -44,7 +44,6 @@ export default function (view) {
     var editorEnabled = true;
     var userPicker = null;
     var routeRows = [];
-    var _bound = false;
 
     function el(id) { return view.querySelector('#' + id); }
 
@@ -66,11 +65,12 @@ export default function (view) {
             else if (v === 'Admin') c.admin++;
             else c.pub++;
         });
-        el('pageCounts').innerHTML =
-            '<div class="jpk-card blue"><span class="jpk-card-count">' + c.pub + '</span><span class="jpk-card-label">Public</span></div>' +
-            '<div class="jpk-card green"><span class="jpk-card-count">' + c.user + '</span><span class="jpk-card-label">User</span></div>' +
-            '<div class="jpk-card purple"><span class="jpk-card-count">' + c.admin + '</span><span class="jpk-card-label">Admin</span></div>' +
-            '<div class="jpk-card gray"><span class="jpk-card-count">' + c.unpublished + '</span><span class="jpk-card-label">Unpublished</span></div>';
+        Shared.renderCards('pageCounts', [
+            { count: c.pub, label: 'Public', color: 'blue' },
+            { count: c.user, label: 'User', color: 'green' },
+            { count: c.admin, label: 'Admin', color: 'purple' },
+            { count: c.unpublished, label: 'Unpublished', color: 'gray' }
+        ]);
     }
 
     function renderSelect() {
@@ -330,14 +330,16 @@ export default function (view) {
         var p = pages[currentIndex];
         if (!p) return;
         var label = p.Slug || 'this page';
-        if (!window.confirm('Delete /pages/' + label + '? This cannot be undone.')) return;
-
-        pages.splice(currentIndex, 1);
-        currentIndex = -1;
-        persistPages('Deleted.', 'Delete failed.');
+        confirmDialog('Delete /pages/' + label + '? This cannot be undone.', { title: 'Delete page', confirmText: 'Delete', destructive: true }).then(function (ok) {
+            if (!ok) return;
+            pages.splice(currentIndex, 1);
+            currentIndex = -1;
+            persistPages('Deleted.', 'Delete failed.');
+        });
     }
 
     function bind() {
+        mountUserPicker();
         el('selectPage').addEventListener('change', function () {
             keepCurrentEdits();
             currentIndex = parseInt(this.value, 10);
@@ -375,13 +377,4 @@ export default function (view) {
             renderSelect();
         });
     }
-
-    view.addEventListener('viewshow', function () {
-        _sharedPromise.then(function () {
-            setTabs('custompages', 0, TABS);
-            mountUserPicker();
-            if (!_bound) { bind(); _bound = true; }
-            load();
-        });
-    });
 }

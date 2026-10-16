@@ -44,7 +44,7 @@ public class RouteSecretTests : IDisposable
         GC.SuppressFinalize(this);
     }
 
-    // Mirrors the resolution Plugin.UpdateConfiguration applies to every route password.
+    // Mirrors the resolution Plugin.OnConfigurationSaving applies to every route password.
     private string Resolve(string? incoming, string? stored)
         => _secrets.Protect(_secrets.ResolveIncoming(incoming, stored));
 

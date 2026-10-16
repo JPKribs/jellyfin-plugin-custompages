@@ -1,8 +1,6 @@
 using Jellyfin.Plugin.CustomPages.Configuration;
 using Jellyfin.Plugin.CustomPages.Models;
 using Jellyfin.Plugin.CustomPages.Services;
-using MediaBrowser.Controller;
-using NSubstitute;
 using Xunit;
 
 namespace Jellyfin.Plugin.CustomPages.Tests;
@@ -13,10 +11,10 @@ namespace Jellyfin.Plugin.CustomPages.Tests;
 public class PageServiceTests
 {
     private static PageService CreateService()
-        => new PageService(Substitute.For<IServerApplicationPaths>());
+        => new PageService(() => null);
 
     private static PageService CreateService(PluginConfiguration configuration)
-        => new PageService(Substitute.For<IServerApplicationPaths>(), () => configuration);
+        => new PageService(() => configuration);
 
     private static PluginConfiguration ConfigWith(params object[] items)
     {
@@ -516,7 +514,7 @@ public class PageServiceTests
 
     [Fact]
     public void Find_ReturnsNullWhenConfigurationUnavailable()
-        => Assert.Null(new PageService(Substitute.For<IServerApplicationPaths>(), () => null).Find("alpha"));
+        => Assert.Null(new PageService(() => null).Find("alpha"));
 
     [Fact]
     public void FindAsset_ResolvesByNameCaseInsensitively()

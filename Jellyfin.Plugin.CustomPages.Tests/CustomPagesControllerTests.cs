@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Jellyfin.Plugin.CustomPages.Api;
 using Jellyfin.Plugin.CustomPages.Models;
 using Jellyfin.Plugin.CustomPages.Services;
+using MediaBrowser.Controller;
 using MediaBrowser.Controller.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -36,7 +37,7 @@ public class CustomPagesControllerTests
             }));
 
         var httpClientFactory = Substitute.For<System.Net.Http.IHttpClientFactory>();
-        var controller = new CustomPagesController(pages, stores, authorization, httpClientFactory)
+        var controller = new CustomPagesController(pages, stores, authorization, httpClientFactory, Substitute.For<IServerApplicationPaths>())
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
@@ -356,8 +357,8 @@ public class CustomPagesControllerTests
     [Fact]
     public void Favicon_ReturnsNotFoundWhenUnavailable()
     {
-        var (controller, pages) = Create();
-        pages.GetFavicon().Returns(((byte[], string)?)null);
+        // A substitute's web path is empty, so no favicon can be located.
+        var (controller, _) = Create();
 
         Assert.IsType<NotFoundResult>(controller.Favicon());
     }

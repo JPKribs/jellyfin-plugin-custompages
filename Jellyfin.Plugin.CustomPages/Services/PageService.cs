@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
-using System.Text;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.CustomPages.Configuration;
 using Jellyfin.Plugin.CustomPages.Models;
 using JPKribs.Jellyfin.Base;
-using MediaBrowser.Controller;
 
 namespace Jellyfin.Plugin.CustomPages.Services;
 
@@ -24,7 +22,6 @@ public partial class PageService : IPageService
     private const string SandboxAttribute =
         " sandbox=\"allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox\"";
 
-    private readonly IServerApplicationPaths _paths;
     private readonly Func<PluginConfiguration?> _configuration;
 
     // Decoded asset bytes, keyed by the asset instance rather than by name. Jellyfin replaces the whole
@@ -37,9 +34,8 @@ public partial class PageService : IPageService
     /// <summary>
     /// Initializes a new instance of the <see cref="PageService"/> class.
     /// </summary>
-    /// <param name="paths">The server application paths, used to locate the web client favicon.</param>
-    public PageService(IServerApplicationPaths paths)
-        : this(paths, static () => Plugin.Instance?.ReadConfiguration(static config => config))
+    public PageService()
+        : this(static () => Plugin.Instance?.ReadConfiguration(static config => config))
     {
     }
 
@@ -47,16 +43,11 @@ public partial class PageService : IPageService
     /// Initializes a new instance of the <see cref="PageService"/> class with an explicit configuration
     /// source, so the resolution and rendering paths can be exercised without a running plugin instance.
     /// </summary>
-    /// <param name="paths">The server application paths, used to locate the web client favicon.</param>
     /// <param name="configuration">Returns the current configuration, or <c>null</c> when unavailable.</param>
-    public PageService(IServerApplicationPaths paths, Func<PluginConfiguration?> configuration)
+    public PageService(Func<PluginConfiguration?> configuration)
     {
-        _paths = paths;
         _configuration = configuration;
     }
-
-    /// <inheritdoc />
-    public (byte[] Bytes, string ContentType)? GetFavicon() => FaviconResolver.Resolve(_paths);
 
     /// <summary>
     /// Finds an enabled page by slug, case-insensitively. Rejects slugs outside the safe character set.
@@ -195,19 +186,11 @@ public partial class PageService : IPageService
         var tier = visibility.EndpointTier();
         var content = TemplateLoader.Fill("custompages_shell", new Dictionary<string, string>
         {
-            ["SLUG"] = EscapeJsString(slug),
-            ["TIER"] = EscapeJsString(tier)
+            ["SLUG"] = StringUtilities.EscapeJsString(slug),
+            ["TIER"] = StringUtilities.EscapeJsString(tier)
         });
 
-        return TemplateLoader.Fill("status", new Dictionary<string, string>(StringComparer.Ordinal)
-        {
-            ["TITLE"] = "Loading…",
-            ["HEADING"] = "Loading…",
-            ["MESSAGE"] = string.Empty,
-            ["SPINNER"] = "<div class=\"jpk-spinner\" role=\"status\" aria-label=\"Loading\"></div>",
-            ["BUTTON"] = string.Empty,
-            ["CONTENT"] = content
-        });
+        return StatusPage.Render("Loading…", string.Empty, buttonText: null, showSpinner: true, content: content);
     }
 
     /// <summary>
@@ -376,7 +359,7 @@ public partial class PageService : IPageService
         ArgumentNullException.ThrowIfNull(document);
 
         var prelude =
-            "<script>(function(){var base=\"/pages/\"+\"" + EscapeJsString(slug) + "\"+\"/api/\";"
+            "<script>(function(){var base=\"/pages/\"+\"" + StringUtilities.EscapeJsString(slug) + "\"+\"/api/\";"
             + "window.serverFetch=function(name,init){init=init||{};var h=init.headers||{};"
             + "try{var raw=localStorage.getItem(\"jellyfin_credentials\");if(raw){var s=(JSON.parse(raw)||{}).Servers||[];"
             + "for(var i=0;i<s.length;i++){if(s[i]&&s[i].AccessToken){h[\"Authorization\"]=\"MediaBrowser Token=\\\"\"+s[i].AccessToken+\"\\\"\";break;}}}}catch(e){}"
@@ -463,27 +446,6 @@ public partial class PageService : IPageService
             ["BODY"] = page.Html ?? string.Empty,
             ["JS"] = page.Js ?? string.Empty
         });
-    }
-
-    private static string EscapeJsString(string value)
-    {
-        var sb = new StringBuilder(value.Length);
-        foreach (var c in value)
-        {
-            switch (c)
-            {
-                case '\\': sb.Append("\\\\"); break;
-                case '\'': sb.Append("\\'"); break;
-                case '"': sb.Append("\\\""); break;
-                case '<': sb.Append("\\x3C"); break;
-                case '>': sb.Append("\\x3E"); break;
-                case '\r': sb.Append("\\r"); break;
-                case '\n': sb.Append("\\n"); break;
-                default: sb.Append(c); break;
-            }
-        }
-
-        return sb.ToString();
     }
 
     [GeneratedRegex("^[a-z0-9_-]+$", RegexOptions.IgnoreCase)]

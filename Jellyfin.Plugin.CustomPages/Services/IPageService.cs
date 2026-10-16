@@ -10,12 +10,6 @@ namespace Jellyfin.Plugin.CustomPages.Services;
 public interface IPageService
 {
     /// <summary>
-    /// Resolves the web client's favicon so served pages can reuse the server's real icon.
-    /// </summary>
-    /// <returns>The favicon bytes and content type, or <c>null</c> when none could be located.</returns>
-    (byte[] Bytes, string ContentType)? GetFavicon();
-
-    /// <summary>
     /// Finds an enabled page by slug, case-insensitively.
     /// </summary>
     /// <param name="slug">The page slug.</param>

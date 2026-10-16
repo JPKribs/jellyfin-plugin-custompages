@@ -1,11 +1,9 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Jellyfin.Plugin.CustomPages.Configuration;
 using Jellyfin.Plugin.CustomPages.Models;
 using Jellyfin.Plugin.CustomPages.Services;
-using Jellyfin.Plugin.CustomPages.Utilities;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Common.Configuration;
 using MediaBrowser.Model.Plugins;
@@ -20,13 +18,19 @@ namespace Jellyfin.Plugin.CustomPages;
 public class Plugin : PluginBase<Plugin, PluginConfiguration>
 {
     /// <summary>
+    /// The name the route credential keys are derived from: the key folder, the Data Protection
+    /// application name, and the purpose. Changing it makes every stored credential unreadable.
+    /// </summary>
+    public const string SecretsName = "Jellyfin.Plugin.CustomPages";
+
+    private readonly Lazy<SecretProtector> _secrets;
+
+    /// <summary>
     /// Initializes a new instance of the <see cref="Plugin"/> class.
     /// </summary>
     /// <param name="applicationPaths">The application paths.</param>
     /// <param name="xmlSerializer">The XML serializer.</param>
     /// <param name="logger">The logger.</param>
-    private readonly Lazy<SecretProtector> _secrets;
-
     public Plugin(
         IApplicationPaths applicationPaths,
         IXmlSerializer xmlSerializer,
@@ -34,7 +38,7 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         : base(applicationPaths, xmlSerializer)
     {
         ArgumentNullException.ThrowIfNull(logger);
-        _secrets = new Lazy<SecretProtector>(() => CreateSecretProtector(applicationPaths, logger));
+        _secrets = new Lazy<SecretProtector>(() => StableSecretProtection.CreateProtector(applicationPaths, SecretsName, logger));
         logger.LogInformation("Custom Pages plugin initialized");
     }
 
@@ -55,16 +59,15 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
     /// the browser, but configuration can arrive from any API client, so reachable slugs must be unique
     /// and assets must be valid Base64 under the size cap before they are allowed.
     /// </summary>
-    /// <param name="configuration">The incoming configuration.</param>
-    public override void UpdateConfiguration(BasePluginConfiguration configuration)
+    /// <param name="incoming">The incoming configuration.</param>
+    /// <param name="stored">The configuration currently in effect.</param>
+    protected override void OnConfigurationSaving(PluginConfiguration incoming, PluginConfiguration stored)
     {
-        if (configuration is PluginConfiguration config)
-        {
-            ConfigurationValidator.Validate(config);
-            ProtectRouteSecrets(config);
-        }
+        ArgumentNullException.ThrowIfNull(incoming);
+        ArgumentNullException.ThrowIfNull(stored);
 
-        base.UpdateConfiguration(configuration);
+        ConfigurationValidator.Validate(incoming);
+        ProtectRouteSecrets(incoming, stored);
     }
 
     /// <summary>
@@ -73,7 +76,8 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
     /// sent to a browser and is never written to disk in the clear.
     /// </summary>
     /// <param name="config">The incoming configuration.</param>
-    private void ProtectRouteSecrets(PluginConfiguration config)
+    /// <param name="storedConfig">The configuration currently in effect.</param>
+    private void ProtectRouteSecrets(PluginConfiguration config, PluginConfiguration storedConfig)
     {
         foreach (var page in config.Pages)
         {
@@ -82,7 +86,7 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
                 continue;
             }
 
-            var storedPage = Configuration.Pages.FirstOrDefault(p =>
+            var storedPage = storedConfig.Pages.FirstOrDefault(p =>
                 string.Equals(p.Slug, page.Slug, StringComparison.OrdinalIgnoreCase));
 
             foreach (var route in page.ApiRoutes)
@@ -98,13 +102,6 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
                 route.Password = _secrets.Value.Protect(kept);
             }
         }
-    }
-
-    private static SecretProtector CreateSecretProtector(IApplicationPaths paths, ILogger logger)
-    {
-        var keyDirectory = Path.Join(paths.PluginConfigurationsPath, "Jellyfin.Plugin.CustomPages.Keys");
-        var provider = StableSecretProtection.Build(keyDirectory, logger);
-        return new SecretProtector("Jellyfin.Plugin.CustomPages.Secrets.v1", logger, provider);
     }
 
     /// <inheritdoc />

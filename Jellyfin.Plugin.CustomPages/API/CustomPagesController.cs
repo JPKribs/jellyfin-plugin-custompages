@@ -13,6 +13,8 @@ using Jellyfin.Data;
 using Jellyfin.Database.Implementations.Enums;
 using Jellyfin.Plugin.CustomPages.Models;
 using Jellyfin.Plugin.CustomPages.Services;
+using JPKribs.Jellyfin.Base;
+using MediaBrowser.Controller;
 using MediaBrowser.Controller.Net;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -64,6 +66,7 @@ public class CustomPagesController : ControllerBase
     private readonly IStoreService _stores;
     private readonly IAuthorizationContext _authorization;
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IServerApplicationPaths _paths;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="CustomPagesController"/> class.
@@ -72,16 +75,19 @@ public class CustomPagesController : ControllerBase
     /// <param name="stores">The record store service.</param>
     /// <param name="authorization">Resolves the calling user, for pages restricted to named users.</param>
     /// <param name="httpClientFactory">The HTTP client factory, used to forward server side routes.</param>
+    /// <param name="paths">The server application paths, used to locate the web client favicon.</param>
     public CustomPagesController(
         IPageService pages,
         IStoreService stores,
         IAuthorizationContext authorization,
-        IHttpClientFactory httpClientFactory)
+        IHttpClientFactory httpClientFactory,
+        IServerApplicationPaths paths)
     {
         _pages = pages;
         _stores = stores;
         _authorization = authorization;
         _httpClientFactory = httpClientFactory;
+        _paths = paths;
     }
 
     /// <summary>
@@ -122,17 +128,7 @@ public class CustomPagesController : ControllerBase
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public ActionResult Favicon()
-    {
-        var favicon = _pages.GetFavicon();
-        if (favicon is null)
-        {
-            return NotFound();
-        }
-
-        Response.Headers["Cache-Control"] = "public, max-age=86400";
-        return File(favicon.Value.Bytes, favicon.Value.ContentType);
-    }
+    public IActionResult Favicon() => PublicPage.Favicon(_paths, Response);
 
     /// <summary>
     /// Serves a hosted anonymous image asset by name. Referenced from pages as <c>asset/{name}</c>.
@@ -746,13 +742,12 @@ public class CustomPagesController : ControllerBase
     /// </summary>
     private void Harden()
     {
+        // Referrer-Policy, Cache-Control: no-store, and X-Robots-Tag come from the shared standalone page set.
+        PublicPage.ApplyHardeningHeaders(Response);
         Response.Headers["Content-Security-Policy"] = PageCsp;
-        Response.Headers["Cache-Control"] = "no-store";
-        Response.Headers["Referrer-Policy"] = "no-referrer";
         Response.Headers["X-Content-Type-Options"] = "nosniff";
 
         // Legacy counterpart to frame-ancestors 'self'; browsers that honour both prefer the CSP.
         Response.Headers["X-Frame-Options"] = "SAMEORIGIN";
-        Response.Headers["X-Robots-Tag"] = "noindex, nofollow";
     }
 }

@@ -1,3 +1,5 @@
+import { createConfigPage, confirmDialog } from './configurationpage?name=custompages_jpkribs_shared.js';
+
 export default function (view) {
     'use strict';
 
@@ -8,14 +10,14 @@ export default function (view) {
         { href: 'configurationpage?name=custompages_stores', name: 'Stores' }
     ];
 
-    var Shared = null;
-    var setTabs = null;
-    var confirmDialog = null;
-    var _sharedPromise = import('/web/configurationpage?name=custompages_jpkribs_shared.js').then(function (mod) {
-        Shared = mod.createShared(view, PLUGIN_ID);
-        setTabs = mod.setTabs;
-        confirmDialog = mod.confirmDialog;
-    });
+    var Shared = createConfigPage(view, {
+        pluginId: PLUGIN_ID,
+        tabsKey: 'custompages',
+        tabIndex: 2,
+        tabs: TABS,
+        bind: bind,
+        load: load
+    }).shared;
 
     var VISIBILITIES = ['Anonymous', 'User', 'Admin'];
     var SCOPES = ['All', 'Own'];
@@ -29,7 +31,6 @@ export default function (view) {
     // Record counts keyed by the name a store had when it was last saved. A renamed but unsaved store
     // has no server side counterpart, so it reports nothing rather than the previous name's count.
     var counts = {};
-    var _bound = false;
 
     function el(id) { return view.querySelector('#' + id); }
 
@@ -323,12 +324,4 @@ export default function (view) {
             return loadCounts();
         });
     }
-
-    view.addEventListener('viewshow', function () {
-        _sharedPromise.then(function () {
-            setTabs('custompages', 2, TABS);
-            if (!_bound) { bind(); _bound = true; }
-            load();
-        });
-    });
 }

@@ -1,3 +1,5 @@
+import { createConfigPage, confirmDialog } from './configurationpage?name=custompages_jpkribs_shared.js';
+
 export default function (view) {
     'use strict';
 
@@ -8,12 +10,14 @@ export default function (view) {
         { href: 'configurationpage?name=custompages_stores', name: 'Stores' }
     ];
 
-    var Shared = null;
-    var setTabs = null;
-    var _sharedPromise = import('/web/configurationpage?name=custompages_jpkribs_shared.js').then(function (mod) {
-        Shared = mod.createShared(view, PLUGIN_ID);
-        setTabs = mod.setTabs;
-    });
+    var Shared = createConfigPage(view, {
+        pluginId: PLUGIN_ID,
+        tabsKey: 'custompages',
+        tabIndex: 1,
+        tabs: TABS,
+        bind: bind,
+        load: load
+    }).shared;
 
     var MAX_ASSET_BYTES = 5 * 1024 * 1024;
     var VISIBILITIES = ['Anonymous', 'User', 'Admin'];
@@ -21,7 +25,6 @@ export default function (view) {
 
     var config = null;
     var assets = [];
-    var _bound = false;
 
     function el(id) { return view.querySelector('#' + id); }
 
@@ -88,24 +91,17 @@ export default function (view) {
 
     function copyAssetRef(name) {
         var ref = 'asset/' + name;
-        var done = function () { Shared.setStatus('assetStatus', 'Copied ' + ref, false); };
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(ref).then(done).catch(done);
-        } else {
-            var tmp = document.createElement('textarea');
-            tmp.value = ref;
-            view.appendChild(tmp);
-            tmp.select();
-            try { document.execCommand('copy'); } catch (e) { /* ignore */ }
-            view.removeChild(tmp);
-            done();
-        }
+        Shared.copyToClipboard(ref).then(function () {
+            Shared.setStatus('assetStatus', 'Copied ' + ref, false);
+        });
     }
 
     function deleteAsset(name) {
-        if (!window.confirm('Delete image "' + name + '"? Pages referencing it will break.')) return;
-        assets = assets.filter(function (a) { return a.Name !== name; });
-        persistAssets('Deleted.');
+        confirmDialog('Delete image "' + name + '"? Pages referencing it will break.', { title: 'Delete image', confirmText: 'Delete', destructive: true }).then(function (ok) {
+            if (!ok) return;
+            assets = assets.filter(function (a) { return a.Name !== name; });
+            persistAssets('Deleted.');
+        });
     }
 
     function base64Bytes(b64) {
@@ -124,10 +120,11 @@ export default function (view) {
             bytes += base64Bytes(a.DataBase64);
         });
         var size = Shared.formatSize(bytes);
-        el('assetCounts').innerHTML =
-            '<div class="jpk-card blue"><span class="jpk-card-count">' + images + '</span><span class="jpk-card-label">Images</span></div>' +
-            '<div class="jpk-card green"><span class="jpk-card-count">' + other + '</span><span class="jpk-card-label">Other</span></div>' +
-            '<div class="jpk-card gray"><span class="jpk-card-count">' + size + '</span><span class="jpk-card-label">Size</span></div>';
+        Shared.renderCards('assetCounts', [
+            { count: images, label: 'Images', color: 'blue' },
+            { count: other, label: 'Other', color: 'green' },
+            { count: size, label: 'Size', color: 'gray' }
+        ]);
     }
 
     function renderAssets() {
@@ -191,12 +188,4 @@ export default function (view) {
             renderAssets();
         });
     }
-
-    view.addEventListener('viewshow', function () {
-        _sharedPromise.then(function () {
-            setTabs('custompages', 1, TABS);
-            if (!_bound) { bind(); _bound = true; }
-            load();
-        });
-    });
 }
