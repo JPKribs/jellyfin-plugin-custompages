@@ -4,6 +4,10 @@
 
 Each page has an **Allow system access** toggle, off by default. Leave it off and the page keeps the isolation described in [How Pages Are Served](Authoring.md#how-pages-are-served). Turn it on and the plugin serves the page without the `sandbox` attribute, so the page runs on your Jellyfin origin and its scripts can call the Jellyfin API, read the viewer's session, and reach anything else the web client can reach on that origin. That is what makes a page useful as a small control panel or a dashboard that talks to the server.
 
+The toggle and its route list in the page editor:
+
+![Allow system access](screenshots/System%20Access.png)
+
 !!! warning "Understand the trade before you use it"
     An unsandboxed page has the same reach as the Jellyfin web client itself, so any script it runs can act as whoever is viewing it. A public or user tier page that pulls in a third party script hands that script the viewer's session. Only turn this on for pages whose source you wrote and control, and prefer to pin any external library you do use to a copy you host yourself.
 

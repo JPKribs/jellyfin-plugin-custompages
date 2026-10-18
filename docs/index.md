@@ -8,7 +8,15 @@ Custom Pages is a simple Jellyfin plugin that publishes custom pages on your ser
 
 Each page has a slug, title, visibility tier, and its content. You write the content as separate HTML, CSS, and JavaScript, or as one complete HTML document. See [Authoring](Authoring.md).
 
+The **Pages** tab counts your pages by tier and picks the one to edit:
+
+![Pages tab](screenshots/Pages.png)
+
 A page is reachable at `/pages/{slug}`. The plugin embeds your page inside a sandboxed `<iframe>`, so it can run scripts, submit forms, and open links in new tabs, but cannot reach Jellyfin, its access token, cookies, or storage. See [Authoring](Authoring.md#how-pages-are-served) and [Security](Security.md).
+
+A published page as a signed in user sees it:
+
+![House Rules page](screenshots/House%20Rules%20Page.png)
 
 Every page declares who may view it: administrators only, any signed in account, or anyone. A user tier page can be narrowed further to specific accounts. See [Visibility](Visibility.md) and [Restricting Access](RestrictingAccess.md).
 

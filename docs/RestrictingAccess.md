@@ -2,6 +2,10 @@
 
 A **User** page defaults to **Access: All Users**, meaning every signed in account. Switch **Access** to **Specific Users**, pick accounts, and the page is served to those accounts and nobody else.
 
+A page limited to two accounts:
+
+![Specific users picker](screenshots/Restricted%20Page.png)
+
 The check runs on the content endpoint, after Jellyfin has authenticated the request and after the tier check, and before the page body is composed. A viewer the list does not name gets a 403 and the sign in shell shows them the not authorized card. They never receive the page's HTML, CSS, or JavaScript, so anything the page's source contains is only ever transmitted to an account you picked.
 
 ## Details Worth Knowing

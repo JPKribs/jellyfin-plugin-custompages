@@ -7,6 +7,10 @@ Each page has a slug, title, visibility tier, and its content. Content can be wr
 * **Separate files**: Write the HTML body, CSS, and JavaScript independently. On serve they are merged into one document and presented to the user.
 * **Single file**: Provide one complete HTML document that is served exactly as written. CSS and JS can be included in their respective elements.
 
+The page editor with the HTML pane of a separate files page open:
+
+![Page editor](screenshots/Page%20Editor.png)
+
 Pages live in the plugin's configuration, so they are captured by your normal Jellyfin config backups.
 
 ## How Pages Are Served

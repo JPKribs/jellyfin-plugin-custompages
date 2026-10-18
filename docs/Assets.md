@@ -10,6 +10,10 @@ Upload images on the **Assets** tab. Each image is stored as `Base64-encoded` in
 background: url('asset/logo.png')
 ```
 
+Each uploaded asset gets a card with its path and visibility:
+
+![Assets tab](screenshots/Assets.png)
+
 Because your page renders at `/pages/{slug}`, that relative path resolves to `/pages/asset/{name}` automatically, regardless of the base Jellyfin URL or subfolder.
 
 ## Asset Visibility
