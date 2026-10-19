@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "12.2.1.1",
+        "changelog": "\n## Security\n- Server side routes now pass back only safe response headers from their target, so a target can no longer set cookies, CORS, or framing rules on the Jellyfin address.\n- Protected pages now sign in only with this server's saved credentials, and never try tokens saved for other servers.\n- The serverFetch and pageStore helpers now send only this server's saved credentials, never a token saved for another server.\n- Protected pages can no longer read the viewer's saved tokens from the page.\n- Server side route responses that a browser would render as a page, such as HTML, XML or SVG, are now sandboxed, so they cannot run script on the Jellyfin address when opened directly.\n- A route password left untouched is no longer sent to a different host when the route's address changes.\n\n## Fixed\n- A server side route whose target is down or slow now answers 502 or 504 instead of failing with a server error.\n- Server side routes now cap request bodies at 4 MB and target responses at 16 MB.\n- Renaming a page or a route no longer silently erases the route's saved password.\n- When a page save is refused, the Pages tab now shows the reason instead of a generic error.\n- The serverFetch and pageStore helpers now work on servers configured with a base URL.\n- Stores are written as compact JSON and capped at 64 MB of records in total.\n- The store settings now warn that with Scope set to All records, anyone who can read and write may change any record.\n- Clearing a store now writes an activity log entry when the store notifies administrators.\n- A gated image whose name is the start of another image's name no longer corrupts the other image on the page.\n- The store retention task can now be cancelled.\n- The plugin summary now matches across the catalog and the dashboard.\n\n## Developer\n- Updated JPKribs.Jellyfin.Base to 2026.10.19.",
+        "targetAbi": "12.0.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v12.2.1.1/jellyfin-plugin-custompages-12.2.1.1.zip",
+        "checksum": "651924d030c61844c395bc86b33b6477",
+        "timestamp": "2026-10-19T20:15:58Z"
+      },
+      {
         "version": "12.2.1.0",
         "changelog": "\n## Developer\n- Updated JPKribs.Jellyfin.Base to 2026.10.16.",
         "targetAbi": "12.0.0.0",
