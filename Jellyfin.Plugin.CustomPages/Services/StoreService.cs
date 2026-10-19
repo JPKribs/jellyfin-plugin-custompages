@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using Jellyfin.Plugin.CustomPages.Configuration;
 using Jellyfin.Plugin.CustomPages.Models;
 using JPKribs.Jellyfin.Base;
@@ -34,13 +35,22 @@ public sealed class StoreService : IStoreService
     /// <summary>The largest payload a single record may carry, measured as serialized UTF-8 bytes.</summary>
     public const int MaxRecordBytes = 64 * 1024;
 
+    /// <summary>
+    /// The most payload one store may hold in total, measured the same way as <see cref="MaxRecordBytes"/>.
+    /// Every write rewrites the store's file, so this bounds what a single write costs as well as what
+    /// the store takes on disk, however high the record limit is set.
+    /// </summary>
+    public const long MaxStoreBytes = 64L * 1024 * 1024;
+
     /// <summary>The longest label kept on a record, since it is shown to administrators in the activity log.</summary>
     public const int MaxLabelLength = 200;
 
+    // Files are written compact, since every write rewrites the whole store and indentation only adds
+    // to that. Reading does not care about whitespace, so files written indented by earlier versions
+    // still load and are simply rewritten compact on the next write.
     private static readonly JsonSerializerOptions StoreJson = new()
     {
-        PropertyNameCaseInsensitive = true,
-        WriteIndented = true
+        PropertyNameCaseInsensitive = true
     };
 
     // The cap is measured against compact JSON so it means the same thing as the request body limit the
@@ -158,7 +168,8 @@ public sealed class StoreService : IStoreService
             return (StoreWriteResult.NotFound, null);
         }
 
-        if (Oversized(data))
+        var size = MeasureBytes(data);
+        if (size > MaxRecordBytes)
         {
             return (StoreWriteResult.TooLarge, null);
         }
@@ -167,11 +178,16 @@ public sealed class StoreService : IStoreService
         {
             Prepare(store, state);
 
-            // The cap is checked inside the gate so a burst of concurrent submissions cannot each see
-            // room and then overshoot it together.
+            // The caps are checked inside the gate so a burst of concurrent submissions cannot each see
+            // room and then overshoot them together.
             if (state.Records.Count >= EffectiveMaxRecords(store))
             {
                 return (StoreWriteResult.Full, null);
+            }
+
+            if (state.PayloadBytes + size > MaxStoreBytes)
+            {
+                return (StoreWriteResult.OverBudget, null);
             }
 
             var now = _time.GetUtcNow().UtcDateTime;
@@ -192,6 +208,8 @@ public sealed class StoreService : IStoreService
                 return (StoreWriteResult.Failed, null);
             }
 
+            state.PayloadBytes += size;
+
             Notify(store, state, NoticeKind.Added, record.Label, now);
             return (StoreWriteResult.Ok, record.Clone());
         }
@@ -208,7 +226,8 @@ public sealed class StoreService : IStoreService
             return (StoreWriteResult.NotFound, null);
         }
 
-        if (Oversized(data))
+        var size = MeasureBytes(data);
+        if (size > MaxRecordBytes)
         {
             return (StoreWriteResult.TooLarge, null);
         }
@@ -221,6 +240,14 @@ public sealed class StoreService : IStoreService
             if (record is null)
             {
                 return (StoreWriteResult.NotFound, null);
+            }
+
+            // Only growth is refused, so a store already past the budget can still have its records
+            // trimmed back down.
+            var previousSize = MeasureBytes(record.Data);
+            if (size > previousSize && state.PayloadBytes - previousSize + size > MaxStoreBytes)
+            {
+                return (StoreWriteResult.OverBudget, null);
             }
 
             // Only the payload and the update stamp move. The owner in particular is never reassigned,
@@ -247,6 +274,7 @@ public sealed class StoreService : IStoreService
                 return (StoreWriteResult.Failed, null);
             }
 
+            state.PayloadBytes += size - previousSize;
             return (StoreWriteResult.Ok, record.Clone());
         }
     }
@@ -278,6 +306,8 @@ public sealed class StoreService : IStoreService
                 state.Records.Add(record);
                 return false;
             }
+
+            state.PayloadBytes -= MeasureBytes(record.Data);
 
             // The label was supplied when the record was written, so a removal names the same thing the
             // addition did without the page having to send it again.
@@ -311,6 +341,19 @@ public sealed class StoreService : IStoreService
             {
                 state.Records = removed;
                 return 0;
+            }
+
+            state.PayloadBytes = 0;
+
+            // A clear is a removal like any other, so a store that announces removals announces this
+            // one too. It is reported on its own rather than folded into the rate limited window, since
+            // it is a single administrator action and the most consequential change a store can see.
+            if (store.NotifyOnWrite && _activity is not null)
+            {
+                _activity.Log(
+                    ClearHeadline(store.Name, removed.Count),
+                    "CustomPages.StoreClear",
+                    "An administrator cleared the store from the dashboard. It now holds 0 records.");
             }
 
             return removed.Count;
@@ -358,12 +401,16 @@ public sealed class StoreService : IStoreService
     /// Applies every store's retention policy, for the scheduled task. A store nobody reads or writes
     /// would otherwise keep its records past their retention, since the sweep on access never runs.
     /// </summary>
+    /// <param name="cancellationToken">Stops the sweep between stores when cancelled. A store already
+    /// being swept is finished first, so no store is ever left half trimmed.</param>
     /// <returns>The number of records removed across all stores.</returns>
-    public int SweepAll()
+    /// <exception cref="OperationCanceledException">When the sweep is cancelled.</exception>
+    public int SweepAll(CancellationToken cancellationToken = default)
     {
         var removed = 0;
         foreach (var store in _configuration()?.Stores ?? new List<PageStore>())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var state = StateFor(store);
             if (state is null)
             {
@@ -412,6 +459,7 @@ public sealed class StoreService : IStoreService
         var removed = state.Records.RemoveAll(r => ExpiresAt(r.CreatedUtc, store.RetentionDays) <= now);
         if (removed > 0)
         {
+            state.PayloadBytes = MeasureAll(state.Records);
             Persist(state);
             _logger.LogInformation(
                 "Custom Pages: removed {Count} expired records from store {Store}", removed, store.Name);
@@ -509,6 +557,16 @@ public sealed class StoreService : IStoreService
     }
 
     /// <summary>
+    /// Builds the activity log headline for a store being cleared.
+    /// </summary>
+    /// <param name="store">The store name.</param>
+    /// <param name="removed">How many records the clear removed.</param>
+    /// <returns>The headline.</returns>
+    public static string ClearHeadline(string store, int removed)
+        => (removed == 1 ? "1 record was" : removed.ToString(CultureInfo.InvariantCulture) + " records were")
+            + " cleared from " + store;
+
+    /// <summary>
     /// Normalizes a caller supplied label. It is shown to administrators in the activity log, so control
     /// characters are flattened and the length is capped rather than letting a page write a wall of text
     /// or a line break into the feed.
@@ -550,14 +608,20 @@ public sealed class StoreService : IStoreService
             && parsed == owner.Value;
     }
 
-    private static bool Oversized(JsonNode? data)
+    // The compact serialized size of a payload, which is what both the record cap and the store budget
+    // are measured in.
+    private static long MeasureBytes(JsonNode? data)
+        => data is null ? 0 : JsonSerializer.SerializeToUtf8Bytes(data, MeasureJson).Length;
+
+    private static long MeasureAll(List<StoreRecord> records)
     {
-        if (data is null)
+        long total = 0;
+        foreach (var record in records)
         {
-            return false;
+            total += MeasureBytes(record.Data);
         }
 
-        return JsonSerializer.SerializeToUtf8Bytes(data, MeasureJson).Length > MaxRecordBytes;
+        return total;
     }
 
     private StoreState? StateFor(PageStore store)
@@ -585,6 +649,7 @@ public sealed class StoreService : IStoreService
                 using var stream = File.OpenRead(state.File);
                 var loaded = JsonSerializer.Deserialize<List<StoreRecord>>(stream, StoreJson);
                 state.Records = loaded ?? new List<StoreRecord>();
+                state.PayloadBytes = MeasureAll(state.Records);
             }
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException or NotSupportedException)
@@ -642,6 +707,10 @@ public sealed class StoreService : IStoreService
         public List<StoreRecord> Records { get; set; } = new();
 
         public bool Loaded { get; set; }
+
+        // The summed payload size of Records, kept in step with every change so the store budget can be
+        // checked without re-measuring every record on each write.
+        public long PayloadBytes { get; set; }
 
         // Cleared when the backing file exists but could not be parsed. Writing then would destroy
         // whatever it holds, so every write is refused until the file is fixed or removed.

@@ -296,16 +296,33 @@ export default function (view) {
         persistPages('Saved.', 'Save failed.');
     }
 
+    // Jellyfin answers a refused configuration save with a generic error, so the server is asked first
+    // whether it would accept this one and why not. That is how a reason such as a renamed route whose
+    // password cannot be carried over reaches the administrator. The check is advisory: if it cannot
+    // be reached the save goes ahead, and the server still enforces the same rules on the save itself.
+    function checkConfig(candidate) {
+        return Shared.apiRequest('pages/config/check', 'POST', candidate)
+            .catch(function () { return null; });
+    }
+
     function persistPages(okMessage, errMessage) {
+        var refused = null;
         return Shared.getConfig().then(function (fresh) {
             fresh.Pages = pages;
-            config = fresh;
-            return Shared.saveConfig(fresh);
+            return checkConfig(fresh).then(function (result) {
+                if (result && result.ok === false) {
+                    refused = result.message || errMessage;
+                    throw new Error(refused);
+                }
+
+                config = fresh;
+                return Shared.saveConfig(fresh);
+            });
         }).then(function () {
             renderSelect();
             Shared.setStatus('pageStatus', okMessage, false);
         }).catch(function () {
-            Shared.setStatus('pageStatus', errMessage, true);
+            Shared.setStatus('pageStatus', refused || errMessage, true, refused ? { timeout: 0 } : undefined);
         });
     }
 

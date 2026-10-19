@@ -52,7 +52,7 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
     public override Guid Id => Guid.Parse("409ef72d-6014-47fd-8928-ebad581bf81b");
 
     /// <inheritdoc />
-    public override string Description => "Author and serve authorization-gated pages at /pages/{slug}.";
+    public override string Description => "Author and serve authorization-gated HTML pages at /pages/{slug}.";
 
     /// <summary>
     /// Validates incoming configuration before persisting it. The dashboard enforces the same rules in
@@ -78,31 +78,7 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
     /// <param name="config">The incoming configuration.</param>
     /// <param name="storedConfig">The configuration currently in effect.</param>
     private void ProtectRouteSecrets(PluginConfiguration config, PluginConfiguration storedConfig)
-    {
-        foreach (var page in config.Pages)
-        {
-            if (page.ApiRoutes is null || page.ApiRoutes.Count == 0)
-            {
-                continue;
-            }
-
-            var storedPage = storedConfig.Pages.FirstOrDefault(p =>
-                string.Equals(p.Slug, page.Slug, StringComparison.OrdinalIgnoreCase));
-
-            foreach (var route in page.ApiRoutes)
-            {
-                var stored = storedPage?.ApiRoutes?.FirstOrDefault(r =>
-                    string.Equals(r.Name, route.Name, StringComparison.OrdinalIgnoreCase));
-
-                // ResolveIncoming hands back the stored value untouched when the field carried the
-                // sentinel, and that value is plaintext for anything saved before encryption existed.
-                // Protect no-ops on an already encrypted or empty value, so wrapping the result migrates
-                // a legacy secret on the next save instead of leaving it in the clear forever.
-                var kept = _secrets.Value.ResolveIncoming(route.Password, stored?.Password);
-                route.Password = _secrets.Value.Protect(kept);
-            }
-        }
-    }
+        => RouteSecrets.Protect(config, storedConfig, _secrets.Value);
 
     /// <inheritdoc />
     public override IEnumerable<PluginPageInfo> GetPages()

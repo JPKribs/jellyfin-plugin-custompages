@@ -100,6 +100,15 @@ export default function (view) {
         // record, so scope has nothing left to narrow. The control disappears rather than sitting there
         // implying a restriction that would not apply to anyone who can read.
         Shared.setVisible('scopeRow', el('storeRead').value !== 'Admin');
+
+        // With an All records scope, modify access follows read and write alone: anybody who clears both
+        // tiers may change or delete any record, and the edit-own toggle never comes into it. That is
+        // the existing behaviour stores rely on, so it is surfaced here rather than changed. It only
+        // matters when someone other than an administrator clears both tiers.
+        var read = el('storeRead').value;
+        var write = el('storeWrite').value;
+        Shared.setVisible('scopeAllWriteWarning',
+            editorEnabled && read !== 'Admin' && write !== 'Admin' && el('storeScope').value === 'All');
     }
 
     function updateUrl() {
@@ -300,6 +309,7 @@ export default function (view) {
         el('btnSaveStores').addEventListener('click', save);
         el('storeRead').addEventListener('change', applyWarnings);
         el('storeWrite').addEventListener('change', applyWarnings);
+        el('storeScope').addEventListener('change', applyWarnings);
         el('storeRetention').addEventListener('change', applyWarnings);
         el('storeName').addEventListener('input', updateUrl);
         el('storeMaxRecords').addEventListener('input', updateUsage);

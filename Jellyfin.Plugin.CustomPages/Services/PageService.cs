@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -21,6 +22,31 @@ public partial class PageService : IPageService
     // substitute an empty string.
     private const string SandboxAttribute =
         " sandbox=\"allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox\"";
+
+    // Defines page (the URL the page was served at) and root (the server's base path, empty unless one
+    // is configured), shared by the injected helpers. The page document is an about:srcdoc frame, so its
+    // own location says nothing useful; its base URL is the served page's, which is also how the shell
+    // finds the base path. The CSP's base-uri 'none' keeps a <base> tag from moving it.
+    private const string RootLookup =
+        "var page=new URL(document.baseURI),root=page.pathname.split(\"/pages/\")[0];";
+
+    // Defines token(), shared by the injected helpers: a promise of this server's saved access token,
+    // or null. A client signed in to several servers stores one entry each, and sending another
+    // server's token here would hand this server a credential for somewhere else. So the entry is
+    // matched by this server's ID, read once from the anonymous public info endpoint, or by an address
+    // on exactly this origin, and never by position. The lookup is cached on the window so both helpers
+    // and every call share one request.
+    private const string TokenLookup =
+        "function token(){if(!window.__customPagesToken){window.__customPagesToken=fetch(root+\"/System/Info/Public\")"
+        + ".then(function(r){return r.ok?r.json():null;}).catch(function(){return null;}).then(function(info){"
+        + "function id(v){return String(v||\"\").replace(/-/g,\"\").toLowerCase();}"
+        + "var want=id(info&&info.Id),here=page.origin.toLowerCase(),s=[];"
+        + "try{var raw=localStorage.getItem(\"jellyfin_credentials\");if(raw){s=(JSON.parse(raw)||{}).Servers||[];}}catch(e){}"
+        + "for(var i=0;i<s.length;i++){var v=s[i];if(!v||!v.AccessToken){continue;}"
+        + "if(want&&id(v.Id)===want){return v.AccessToken;}"
+        + "var a=[v.ManualAddress,v.LocalAddress,v.RemoteAddress];"
+        + "for(var j=0;j<a.length;j++){try{if(a[j]&&new URL(String(a[j])).origin.toLowerCase()===here){return v.AccessToken;}}catch(e){}}}"
+        + "return null;});}return window.__customPagesToken;}";
 
     private readonly Func<PluginConfiguration?> _configuration;
 
@@ -142,6 +168,7 @@ public partial class PageService : IPageService
             return document;
         }
 
+        var dataUris = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         foreach (var asset in assets)
         {
             if (!Enum.IsDefined(asset.Visibility)
@@ -149,30 +176,39 @@ public partial class PageService : IPageService
                 || !pageVisibility.Covers(asset.Visibility)
                 || !IsValidAssetName(asset.Name)
                 || asset.ContentType is null
-                || !asset.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+                || !asset.ContentType.StartsWith("image/", StringComparison.OrdinalIgnoreCase)
+                || string.IsNullOrEmpty(asset.DataBase64)
+                || !Base64.IsValid(asset.DataBase64))
             {
                 continue;
             }
 
-            byte[] bytes;
-            try
-            {
-                bytes = Convert.FromBase64String(asset.DataBase64);
-            }
-            catch (FormatException)
-            {
-                continue;
-            }
-            catch (ArgumentNullException)
-            {
-                continue;
-            }
-
-            var dataUri = "data:" + asset.ContentType + ";base64," + Convert.ToBase64String(bytes);
-            document = document.Replace("asset/" + asset.Name, dataUri, StringComparison.OrdinalIgnoreCase);
+            // The stored Base64 is already what a data: URI carries, so it is validated without being
+            // decoded and used as is. A name a hand edited configuration repeats keeps its first asset.
+            dataUris.TryAdd(asset.Name, "data:" + asset.ContentType + ";base64," + asset.DataBase64);
         }
 
-        return document;
+        if (dataUris.Count == 0)
+        {
+            return document;
+        }
+
+        // One pass over the document for every name at once, so a data: URI already substituted is never
+        // scanned again (Base64 can contain "asset/"), and each reference has to end where the name ends:
+        // asset/logo must not rewrite the front of asset/logo.png, while a full stop that merely ends a
+        // sentence still counts as the end. Longest names go first so the alternation tries the most
+        // specific one before a name that is its prefix.
+        var names = dataUris.Keys
+            .OrderByDescending(n => n.Length)
+            .Select(Regex.Escape);
+        var pattern = "asset/(" + string.Join('|', names) + ")(?!\\.?[a-z0-9_-])";
+
+        return Regex.Replace(
+            document,
+            pattern,
+            match => dataUris[match.Groups[1].Value],
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant,
+            TimeSpan.FromSeconds(2));
     }
 
     /// <summary>
@@ -359,11 +395,11 @@ public partial class PageService : IPageService
         ArgumentNullException.ThrowIfNull(document);
 
         var prelude =
-            "<script>(function(){var base=\"/pages/\"+\"" + StringUtilities.EscapeJsString(slug) + "\"+\"/api/\";"
+            "<script>(function(){" + RootLookup + "var base=root+\"/pages/\"+\"" + StringUtilities.EscapeJsString(slug) + "\"+\"/api/\";"
+            + TokenLookup
             + "window.serverFetch=function(name,init){init=init||{};var h=init.headers||{};"
-            + "try{var raw=localStorage.getItem(\"jellyfin_credentials\");if(raw){var s=(JSON.parse(raw)||{}).Servers||[];"
-            + "for(var i=0;i<s.length;i++){if(s[i]&&s[i].AccessToken){h[\"Authorization\"]=\"MediaBrowser Token=\\\"\"+s[i].AccessToken+\"\\\"\";break;}}}}catch(e){}"
-            + "init.headers=h;return fetch(base+encodeURIComponent(name),init);};})();</script>";
+            + "return token().then(function(t){if(t){h[\"Authorization\"]=\"MediaBrowser Token=\\\"\"+t+\"\\\"\";}"
+            + "init.headers=h;return fetch(base+encodeURIComponent(name),init);});};})();</script>";
 
         return InsertPrelude(document, prelude);
     }
@@ -410,13 +446,12 @@ public partial class PageService : IPageService
         ArgumentNullException.ThrowIfNull(document);
 
         var prelude =
-            "<script>(function(){var base=\"/pages/store/\";"
-            + "function auth(h){try{var raw=localStorage.getItem(\"jellyfin_credentials\");if(raw){"
-            + "var s=(JSON.parse(raw)||{}).Servers||[];for(var i=0;i<s.length;i++){if(s[i]&&s[i].AccessToken){"
-            + "h[\"Authorization\"]=\"MediaBrowser Token=\\\"\"+s[i].AccessToken+\"\\\"\";break;}}}}catch(e){}return h;}"
-            + "function call(url,body){var init={method:body===undefined?\"GET\":\"POST\",headers:auth({})};"
+            "<script>(function(){" + RootLookup + "var base=root+\"/pages/store/\";"
+            + TokenLookup
+            + "function call(url,body){return token().then(function(t){var init={method:body===undefined?\"GET\":\"POST\",headers:{}};"
+            + "if(t){init.headers[\"Authorization\"]=\"MediaBrowser Token=\\\"\"+t+\"\\\"\";}"
             + "if(body!==undefined){init.headers[\"Content-Type\"]=\"application/json\";init.body=JSON.stringify(body);}"
-            + "return fetch(url,init).then(function(r){if(!r.ok){var e=new Error(\"pageStore: \"+r.status);"
+            + "return fetch(url,init);}).then(function(r){if(!r.ok){var e=new Error(\"pageStore: \"+r.status);"
             + "e.status=r.status;throw e;}return r.status===204?null:r.json();});}"
             + "window.pageStore={"
             + "read:function(name,id){var u=base+encodeURIComponent(name)+\"/read\";"

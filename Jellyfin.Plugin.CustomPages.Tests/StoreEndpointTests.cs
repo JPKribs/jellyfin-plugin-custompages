@@ -327,6 +327,29 @@ public class StoreEndpointTests
         Assert.Equal(409, StatusOf(await controller.StoreWrite("downloads", CancellationToken.None)));
     }
 
+    [Fact]
+    public async Task Write_StoreOverItsSizeBudget_IsInsufficientStorage()
+    {
+        var (controller, stores) = Create(Credential.User);
+        stores.Find("downloads").Returns(Store());
+        stores.Create(Arg.Any<PageStore>(), Arg.Any<System.Text.Json.Nodes.JsonNode?>(), Arg.Any<string?>(), Arg.Any<Guid>())
+            .Returns((StoreWriteResult.OverBudget, (StoreRecord?)null));
+        SetBody(controller, "{\"data\":{\"url\":\"x\"}}");
+
+        Assert.Equal(507, StatusOf(await controller.StoreWrite("downloads", CancellationToken.None)));
+    }
+
+    [Fact]
+    public async Task Write_DeclaredOversizedBody_IsRefusedUnread()
+    {
+        var (controller, stores) = Create(Credential.User);
+        stores.Find("downloads").Returns(Store());
+        SetBody(controller, "{}");
+        controller.Request.ContentLength = StoreService.MaxRecordBytes + 8192;
+
+        Assert.Equal(413, StatusOf(await controller.StoreWrite("downloads", CancellationToken.None)));
+    }
+
     // MARK: Delete
 
     [Fact]

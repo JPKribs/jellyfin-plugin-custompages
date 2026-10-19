@@ -508,8 +508,8 @@ public class StoreServiceTests : IDisposable
         service.Create(store, Data("a"), null, Alice);
 
         // ActivityLogger is fire and forget, so let the continuation run before asserting.
-        await Task.Delay(50).ConfigureAwait(false);
-        await _activityManager.Received(1).CreateAsync(Arg.Any<ActivityLog>()).ConfigureAwait(false);
+        await Task.Delay(50);
+        await _activityManager.Received(1).CreateAsync(Arg.Any<ActivityLog>());
     }
 
     [Fact]
@@ -527,8 +527,8 @@ public class StoreServiceTests : IDisposable
             service.Create(store, Data("a"), null, Alice);
         }
 
-        await Task.Delay(50).ConfigureAwait(false);
-        await _activityManager.Received(1).CreateAsync(Arg.Any<ActivityLog>()).ConfigureAwait(false);
+        await Task.Delay(50);
+        await _activityManager.Received(1).CreateAsync(Arg.Any<ActivityLog>());
     }
 
     [Fact]
@@ -543,8 +543,8 @@ public class StoreServiceTests : IDisposable
         _clock.Advance(StoreService.NotifyInterval + TimeSpan.FromSeconds(1));
         service.Create(store, Data("b"), null, Alice);
 
-        await Task.Delay(50).ConfigureAwait(false);
-        await _activityManager.Received(2).CreateAsync(Arg.Any<ActivityLog>()).ConfigureAwait(false);
+        await Task.Delay(50);
+        await _activityManager.Received(2).CreateAsync(Arg.Any<ActivityLog>());
     }
 
     // MARK: Activity log headlines
@@ -640,8 +640,8 @@ public class StoreServiceTests : IDisposable
         _clock.Advance(StoreService.NotifyInterval + TimeSpan.FromSeconds(1));
         service.Delete(store, created!.Id, null);
 
-        await Task.Delay(50).ConfigureAwait(false);
-        await _activityManager.Received(2).CreateAsync(Arg.Any<ActivityLog>()).ConfigureAwait(false);
+        await Task.Delay(50);
+        await _activityManager.Received(2).CreateAsync(Arg.Any<ActivityLog>());
     }
 
     [Fact]
@@ -657,7 +657,238 @@ public class StoreServiceTests : IDisposable
         service.Create(store, Data("b"), "two", Alice);
         service.Delete(store, first!.Id, null);
 
-        await Task.Delay(50).ConfigureAwait(false);
-        await _activityManager.Received(1).CreateAsync(Arg.Any<ActivityLog>()).ConfigureAwait(false);
+        await Task.Delay(50);
+        await _activityManager.Received(1).CreateAsync(Arg.Any<ActivityLog>());
+    }
+
+    // MARK: File format
+
+    private string StoreFile(string name = "downloads")
+        => Path.Combine(_dataPath, "custompages", "stores", name + ".json");
+
+    [Fact]
+    public void Persist_WritesCompactJson()
+    {
+        // Every write rewrites the whole file, so indentation is pure overhead on each mutation.
+        var store = Define();
+        Create().Create(store, JsonNode.Parse("{\"nested\":{\"a\":[1,2]}}"), null, Alice);
+
+        var text = File.ReadAllText(StoreFile());
+
+        Assert.DoesNotContain("\n", text, StringComparison.Ordinal);
+        Assert.DoesNotContain("  ", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Load_ReadsAnIndentedFileFromAnEarlierVersion()
+    {
+        var store = Define();
+        Directory.CreateDirectory(Path.GetDirectoryName(StoreFile())!);
+        File.WriteAllText(StoreFile(), """
+            [
+              {
+                "Id": "4752bb755ed34da79b118484d480288c",
+                "CreatedUtc": "2026-01-01T00:00:00Z",
+                "UpdatedUtc": "2026-01-01T00:00:00Z",
+                "UserId": "11111111-1111-1111-1111-111111111111",
+                "Label": "legacy",
+                "Data": {
+                  "url": "a"
+                }
+              }
+            ]
+            """);
+
+        var service = Create();
+        var records = service.Read(store, null);
+
+        Assert.Single(records);
+        Assert.Equal("legacy", records[0].Label);
+        Assert.Equal("a", records[0].Data!["url"]!.GetValue<string>());
+
+        // The next write carries the legacy record over into the compact form.
+        service.Create(store, Data("b"), null, Alice);
+        Assert.Equal(2, Create().Read(store, null).Count);
+        Assert.DoesNotContain("\n", File.ReadAllText(StoreFile()), StringComparison.Ordinal);
+    }
+
+    // MARK: Total size budget
+
+    // Writes a store file already holding just over the budget, so the budget can be exercised without
+    // making thousands of writes that each rewrite the whole file.
+    private PageStore DefineNearlyFull(out string firstId)
+    {
+        var store = Define(max: PageStore.RecordCeiling);
+        var chunk = new string('x', 60 * 1024);
+        var count = (int)(StoreService.MaxStoreBytes / (chunk.Length + 8)) + 1;
+        var records = new System.Text.StringBuilder("[");
+        firstId = "r0";
+        for (var i = 0; i < count; i++)
+        {
+            if (i > 0)
+            {
+                records.Append(',');
+            }
+
+            records.Append("{\"Id\":\"r").Append(i).Append("\",\"CreatedUtc\":\"2026-01-01T00:00:00Z\",\"UpdatedUtc\":\"2026-01-01T00:00:00Z\",")
+                .Append("\"UserId\":\"11111111-1111-1111-1111-111111111111\",\"Data\":{\"v\":\"").Append(chunk).Append("\"}}");
+        }
+
+        records.Append(']');
+        Directory.CreateDirectory(Path.GetDirectoryName(StoreFile())!);
+        File.WriteAllText(StoreFile(), records.ToString());
+        return store;
+    }
+
+    [Fact]
+    public void Create_PastTheStoreBudget_IsRefused()
+    {
+        var store = DefineNearlyFull(out _);
+        var service = Create();
+        var before = File.ReadAllBytes(StoreFile()).Length;
+
+        var (result, record) = service.Create(store, Data("one more"), null, Alice);
+
+        Assert.Equal(StoreWriteResult.OverBudget, result);
+        Assert.Null(record);
+        Assert.Equal(before, File.ReadAllBytes(StoreFile()).Length);
+    }
+
+    [Fact]
+    public void Update_ThatGrowsAStorePastItsBudget_IsRefused()
+    {
+        var store = DefineNearlyFull(out var id);
+        var service = Create();
+
+        var (result, _) = service.Update(store, id, JsonNode.Parse("{\"v\":\"" + new string('y', 63 * 1024) + "\"}"), null, null);
+
+        Assert.Equal(StoreWriteResult.OverBudget, result);
+    }
+
+    [Fact]
+    public void Update_ThatShrinksARecord_IsAllowedEvenOverBudget()
+    {
+        var store = DefineNearlyFull(out var id);
+        var service = Create();
+
+        var (result, _) = service.Update(store, id, Data("small"), null, null);
+
+        Assert.Equal(StoreWriteResult.Ok, result);
+    }
+
+    [Fact]
+    public void Delete_FreesRoomInTheBudget()
+    {
+        var store = DefineNearlyFull(out _);
+        var service = Create();
+        Assert.Equal(StoreWriteResult.OverBudget, service.Create(store, Data("x"), null, Alice).Result);
+
+        // Removing two records frees well over the overshoot.
+        Assert.True(service.Delete(store, "r1", null));
+        Assert.True(service.Delete(store, "r2", null));
+
+        Assert.Equal(StoreWriteResult.Ok, service.Create(store, Data("x"), null, Alice).Result);
+    }
+
+    // MARK: Clearing
+
+    [Fact]
+    public async Task Clear_WritesAnActivityEntry()
+    {
+        _activityManager = Substitute.For<IActivityManager>();
+        var service = Create();
+        var store = Define();
+        service.Create(store, Data("a"), null, Alice);
+        service.Create(store, Data("b"), null, Alice);
+        store.NotifyOnWrite = true;
+
+        Assert.Equal(2, service.Clear(store));
+
+        await Task.Delay(50);
+        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l =>
+            l.Name == "2 records were cleared from downloads" && l.Type == "CustomPages.StoreClear"));
+    }
+
+    [Fact]
+    public async Task Clear_IsAnnouncedEvenInsideTheRateLimitWindow()
+    {
+        _activityManager = Substitute.For<IActivityManager>();
+        var service = Create();
+        var store = Define();
+        store.NotifyOnWrite = true;
+        service.Create(store, Data("a"), null, Alice);
+
+        service.Clear(store);
+
+        await Task.Delay(50);
+        await _activityManager.Received(2).CreateAsync(Arg.Any<ActivityLog>());
+    }
+
+    [Fact]
+    public async Task Clear_OnAStoreThatDoesNotNotify_WritesNothing()
+    {
+        _activityManager = Substitute.For<IActivityManager>();
+        var service = Create();
+        var store = Define();
+        service.Create(store, Data("a"), null, Alice);
+
+        service.Clear(store);
+
+        await Task.Delay(50);
+        await _activityManager.DidNotReceive().CreateAsync(Arg.Any<ActivityLog>());
+    }
+
+    [Theory]
+    [InlineData(1, "1 record was cleared from downloads")]
+    [InlineData(5, "5 records were cleared from downloads")]
+    public void ClearHeadline_ReadsAsASentence(int removed, string expected)
+    {
+        Assert.Equal(expected, StoreService.ClearHeadline("downloads", removed));
+    }
+
+    // MARK: Sweep cancellation
+
+    [Fact]
+    public void SweepAll_HonoursCancellation()
+    {
+        var store = Define();
+        store.RetentionDays = 1;
+        var service = Create();
+        service.Create(store, Data("a"), null, Alice);
+        _clock.Advance(TimeSpan.FromDays(2));
+
+        using var cancelled = new System.Threading.CancellationTokenSource();
+        cancelled.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() => service.SweepAll(cancelled.Token));
+
+        // Nothing was swept, so the expired record is still on disk for the next run.
+        Assert.Contains("\"a\"", File.ReadAllText(StoreFile()), StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task RetentionTask_PassesItsCancellationTokenToTheSweep()
+    {
+        var stores = Substitute.For<IStoreService>();
+        var task = new Jellyfin.Plugin.CustomPages.Tasks.StoreRetentionTask(
+            stores, NullLogger<Jellyfin.Plugin.CustomPages.Tasks.StoreRetentionTask>.Instance);
+        using var source = new System.Threading.CancellationTokenSource();
+
+        await task.ExecuteAsync(new Progress<double>(), source.Token);
+
+        stores.Received(1).SweepAll(source.Token);
+    }
+
+    [Fact]
+    public async Task RetentionTask_CancelledRun_StopsWithACancellation()
+    {
+        var store = Define();
+        store.RetentionDays = 1;
+        var task = new Jellyfin.Plugin.CustomPages.Tasks.StoreRetentionTask(
+            Create(), NullLogger<Jellyfin.Plugin.CustomPages.Tasks.StoreRetentionTask>.Instance);
+        using var cancelled = new System.Threading.CancellationTokenSource();
+        cancelled.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task.ExecuteAsync(new Progress<double>(), cancelled.Token));
     }
 }

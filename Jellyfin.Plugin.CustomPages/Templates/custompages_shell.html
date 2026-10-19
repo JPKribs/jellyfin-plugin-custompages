@@ -49,41 +49,56 @@
         // localStorage['jellyfin_credentials'] is an internal of the web client, not a public API. If its
         // shape ever changes this returns nothing and every protected page degrades to the sign-in
         // prompt rather than breaking, which is the only safe direction to fail.
-        function getTokens() {
-            var here = location.origin.toLowerCase();
-            var mine = [];
-            var others = [];
+        function readServers() {
             try {
                 var raw = localStorage.getItem('jellyfin_credentials');
                 if (!raw) return [];
-                var servers = (JSON.parse(raw) || {}).Servers || [];
-                for (var i = 0; i < servers.length; i++) {
-                    var server = servers[i];
-                    if (!server || !server.AccessToken) continue;
+                return (JSON.parse(raw) || {}).Servers || [];
+            } catch (e) { return []; }
+        }
 
-                    // A client signed in to several servers stores one entry each, and only this
-                    // server's token can authenticate here. Prefer the entry whose address matches this
-                    // origin so another server's token is not the one we try first.
+        function originOf(address) {
+            try { return new URL(String(address)).origin.toLowerCase(); } catch (e) { return ''; }
+        }
+
+        function normalizeId(id) {
+            return String(id || '').replace(/-/g, '').toLowerCase();
+        }
+
+        // A client signed in to several servers stores one entry each. Only this server's own entry is
+        // ever sent here: another server's token would hand this server a credential for somewhere else.
+        // The entry is matched by server ID, which survives a reverse proxy serving this origin under a
+        // hostname the client never stored, or by an address on exactly this origin.
+        function getTokens(serverId) {
+            var here = location.origin.toLowerCase();
+            var wanted = normalizeId(serverId);
+            var tokens = [];
+            var servers = readServers();
+            for (var i = 0; i < servers.length; i++) {
+                var server = servers[i];
+                if (!server || !server.AccessToken) continue;
+
+                var matches = wanted && normalizeId(server.Id) === wanted;
+                if (!matches) {
                     var addresses = [server.ManualAddress, server.LocalAddress, server.RemoteAddress];
-                    var matches = false;
                     for (var j = 0; j < addresses.length; j++) {
-                        if (addresses[j] && String(addresses[j]).toLowerCase().indexOf(here) === 0) {
+                        if (addresses[j] && originOf(addresses[j]) === here) {
                             matches = true;
                             break;
                         }
                     }
-
-                    (matches ? mine : others).push(server.AccessToken);
                 }
-            } catch (e) { return []; }
 
-            // Unmatched entries are still worth trying: a reverse proxy can serve this origin under a
-            // hostname the client never stored.
-            return mine.concat(others);
+                if (matches && tokens.indexOf(server.AccessToken) < 0) tokens.push(server.AccessToken);
+            }
+
+            return tokens;
         }
 
-        var tokens = getTokens();
-        if (!tokens.length) { show('signin'); return; }
+        // This server's tokens, filled once the public info lookup answers. Declared here so it stays
+        // inside this closure: the protected page is written into this same document, and must never be
+        // able to read the viewer's tokens off the window.
+        var tokens = [];
 
         function attempt(index) {
             if (index >= tokens.length) { show('signin'); return; }
@@ -95,8 +110,8 @@
                 }
             })
                 .then(function (r) {
-                    // 401 only means this token is not valid here, which is expected for another
-                    // server's token. Try the next candidate before declaring the viewer signed out.
+                    // 401 means this token is no longer valid here, such as a stale entry left by an
+                    // earlier sign in. Try the next of this server's entries before giving up.
                     if (r.status === 401) { attempt(index + 1); return null; }
                     if (r.status === 403) { show('denied'); return null; }
                     if (r.status === 404) { show('missing'); return null; }
@@ -111,6 +126,15 @@
                 .catch(function () { show('signin'); });
         }
 
-        attempt(0);
+        // The public info endpoint needs no token and names this server, so credentials are chosen by
+        // which server issued them rather than by guessing from addresses.
+        fetch(prefix + '/System/Info/Public', { headers: { 'Accept': 'application/json' } })
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .catch(function () { return null; })
+            .then(function (info) {
+                tokens = getTokens(info && info.Id);
+                if (!tokens.length) { show('signin'); return; }
+                attempt(0);
+            });
     })();
 </script>

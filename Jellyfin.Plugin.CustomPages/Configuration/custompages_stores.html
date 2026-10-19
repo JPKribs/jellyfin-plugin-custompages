@@ -104,6 +104,13 @@
                             in. The record limit is the only thing bounding what they add.
                         </div>
 
+                        <div class="jpk-warn hidden" id="scopeAllWriteWarning">
+                            With <strong>Scope</strong> set to <strong>All records</strong>, everyone who can
+                            both read and write this store can change and delete <em>every</em> record in it,
+                            not only their own, whatever the edit setting below says. Set Scope to
+                            <strong>User records</strong> to limit them to what they created.
+                        </div>
+
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
                                 <input type="checkbox" is="emby-checkbox" id="storeEditOwn" />
@@ -112,7 +119,9 @@
                             <div class="fieldDescription">
                                 Leave this off when records carry a status you write, or the person who
                                 submitted a row can rewrite it. A viewer still has to clear the read tier
-                                as well, so this grants nothing on its own.
+                                as well, so this grants nothing on its own. It only narrows a store whose
+                                Scope is <strong>User records</strong>: with <strong>All records</strong>,
+                                anyone who can read and write may change any record.
                             </div>
                         </div>
 
@@ -120,7 +129,8 @@
                             <label for="storeMaxRecords">Record limit</label>
                             <input is="emby-input" type="number" id="storeMaxRecords" min="1" max="100000" />
                             <div class="fieldDescription">
-                                Writes past this are refused. No single record may exceed 64 KB.
+                                Writes past this are refused. No single record may exceed 64 KB, and a
+                                store holds at most 64 MB of record data in total.
                             </div>
                         </div>
 

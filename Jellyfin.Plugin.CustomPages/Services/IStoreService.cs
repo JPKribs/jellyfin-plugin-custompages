@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json.Nodes;
+using System.Threading;
 using Jellyfin.Plugin.CustomPages.Models;
 
 namespace Jellyfin.Plugin.CustomPages.Services;
@@ -24,7 +25,10 @@ public enum StoreWriteResult
     TooLarge,
 
     /// <summary>The records could not be written to disk.</summary>
-    Failed
+    Failed,
+
+    /// <summary>Storing the payload would take the store past its total size budget.</summary>
+    OverBudget
 }
 
 /// <summary>
@@ -104,6 +108,7 @@ public interface IStoreService
     /// <summary>
     /// Applies every store's retention policy, for the scheduled task.
     /// </summary>
+    /// <param name="cancellationToken">Stops the sweep between stores when cancelled.</param>
     /// <returns>The number of records removed across all stores.</returns>
-    int SweepAll();
+    int SweepAll(CancellationToken cancellationToken = default);
 }

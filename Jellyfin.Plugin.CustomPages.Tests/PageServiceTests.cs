@@ -420,6 +420,60 @@ public class PageServiceTests
         Assert.Contains("data:image/png;base64,", html, System.StringComparison.Ordinal);
     }
 
+    [Fact]
+    public void InlineGatedAssets_DoesNotRewriteTheFrontOfALongerName()
+    {
+        // "logo" is a prefix of "logo.png". Matching the bare prefix used to splice the shorter asset's
+        // data into the longer reference, leaving "data:...;base64,AQID.png" behind.
+        var shortAsset = MakeAsset("logo", PageVisibility.User, dataBase64: System.Convert.ToBase64String(new byte[] { 9, 9, 9 }));
+        var longAsset = MakeAsset("logo.png", PageVisibility.User);
+
+        var html = PageService.InlineGatedAssets(
+            "<img src=\"asset/logo.png\"><img src=\"asset/logo\">", PageVisibility.User, new[] { shortAsset, longAsset });
+
+        Assert.Equal(
+            "<img src=\"data:image/png;base64," + longAsset.DataBase64 + "\"><img src=\"data:image/png;base64," + shortAsset.DataBase64 + "\">",
+            html);
+    }
+
+    [Fact]
+    public void InlineGatedAssets_LeavesAReferenceToAnUnknownLongerNameAlone()
+    {
+        var asset = MakeAsset("logo", PageVisibility.User);
+
+        var html = PageService.InlineGatedAssets("<img src=\"asset/logo-dark.png\">", PageVisibility.User, new[] { asset });
+
+        Assert.Equal("<img src=\"asset/logo-dark.png\">", html);
+    }
+
+    [Theory]
+    [InlineData("url(asset/logo.png)")]
+    [InlineData("see asset/logo.png.")]
+    [InlineData("asset/logo.png?v=2")]
+    [InlineData("'asset/logo.png'")]
+    public void InlineGatedAssets_StillMatchesAReferenceFollowedByPunctuation(string reference)
+    {
+        var asset = MakeAsset("logo.png", PageVisibility.User);
+
+        var html = PageService.InlineGatedAssets(reference, PageVisibility.User, new[] { asset });
+
+        Assert.DoesNotContain("asset/logo.png", html, System.StringComparison.Ordinal);
+        Assert.Contains("data:image/png;base64," + asset.DataBase64, html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void InlineGatedAssets_NeverRescansAnEmbeddedDataUri()
+    {
+        // Base64 can contain "asset/", so a substituted data: URI must not be rewritten by a later asset.
+        var payload = System.Convert.FromBase64String("asset/x+");
+        var first = MakeAsset("a.png", PageVisibility.User, dataBase64: System.Convert.ToBase64String(payload));
+        var second = MakeAsset("x", PageVisibility.User, dataBase64: System.Convert.ToBase64String(new byte[] { 7 }));
+
+        var html = PageService.InlineGatedAssets("asset/a.png", PageVisibility.User, new[] { first, second });
+
+        Assert.Equal("data:image/png;base64,asset/x+", html);
+    }
+
     // MARK: Asset byte decoding
 
     [Fact]
@@ -651,5 +705,47 @@ public class PageServiceTests
 
         Assert.Contains("window.pageStore", injected, System.StringComparison.Ordinal);
         Assert.Contains("<p>fragment</p>", injected, System.StringComparison.Ordinal);
+    }
+
+    // MARK: Which saved credential the helpers send
+
+    public static TheoryData<string> InjectedHelpers => new()
+    {
+        PageService.InjectServerFetch("<p>x</p>", "download"),
+        PageService.InjectPageStore("<p>x</p>")
+    };
+
+    [Theory]
+    [MemberData(nameof(InjectedHelpers))]
+    public void InjectedHelpers_PickThisServersTokenByIdOrOrigin(string injected)
+    {
+        // A client signed in to several servers keeps one entry each. The helpers used to send whichever
+        // entry came first, which could hand this server another server's token.
+        Assert.Contains("/System/Info/Public", injected, System.StringComparison.Ordinal);
+        Assert.Contains("id(v.Id)===want", injected, System.StringComparison.Ordinal);
+        Assert.Contains(".origin.toLowerCase()===here", injected, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("s[i].AccessToken", injected, System.StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [MemberData(nameof(InjectedHelpers))]
+    public void InjectedHelpers_HonourTheServerBasePath(string injected)
+    {
+        // Behind a base URL the server answers at /base/System/Info/Public and /base/pages/..., so the
+        // helpers derive the base path from the served page's address, as the shell does, instead of
+        // calling the origin root.
+        Assert.Contains("new URL(document.baseURI)", injected, System.StringComparison.Ordinal);
+        Assert.Contains("fetch(root+\"/System/Info/Public\")", injected, System.StringComparison.Ordinal);
+        Assert.Contains("var base=root+\"/pages/", injected, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("location.origin", injected, System.StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [MemberData(nameof(InjectedHelpers))]
+    public void InjectedHelpers_SendNoTokenWhenNoneBelongsToThisServer(string injected)
+    {
+        // The Authorization header is only set once a matching token was found.
+        Assert.Contains("if(t){", injected, System.StringComparison.Ordinal);
+        Assert.Contains("return null;", injected, System.StringComparison.Ordinal);
     }
 }

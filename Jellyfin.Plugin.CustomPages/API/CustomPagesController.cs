@@ -11,6 +11,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Data;
 using Jellyfin.Database.Implementations.Enums;
+using Jellyfin.Plugin.CustomPages.Configuration;
 using Jellyfin.Plugin.CustomPages.Models;
 using Jellyfin.Plugin.CustomPages.Services;
 using JPKribs.Jellyfin.Base;
@@ -54,8 +55,20 @@ public class CustomPagesController : ControllerBase
         "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; "
         + "object-src 'none'; base-uri 'none'; frame-ancestors 'self'";
 
+    // The largest store request body. The record cap governs the payload; the rest of the allowance
+    // covers the envelope around it.
+    private const int StoreBodyLimit = StoreService.MaxRecordBytes + 4096;
+
     // Store responses are serialized here rather than through the server's MVC options, so a page
     // author gets the same camel cased shape no matter how the host has its own API configured.
+    // Reads a configuration posted by the dashboard, which sends the same shape it loaded: Pascal cased
+    // names, with tiers as either names or numbers.
+    private static readonly JsonSerializerOptions ConfigurationJson = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     private static readonly JsonSerializerOptions StoreResponseJson = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -276,13 +289,17 @@ public class CustomPagesController : ControllerBase
     /// <param name="slug">The page slug.</param>
     /// <param name="name">The route name.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>The target's response, or 403/404 when the caller or route is not permitted.</returns>
+    /// <returns>The target's response, 403/404 when the caller or route is not permitted, 413 for an
+    /// oversized body, or 502/504 when the target could not answer.</returns>
     [HttpGet("{slug}/api/{name}")]
     [HttpPost("{slug}/api/{name}")]
     [AllowAnonymous]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge)]
+    [ProducesResponseType(StatusCodes.Status502BadGateway)]
+    [ProducesResponseType(StatusCodes.Status504GatewayTimeout)]
     public async Task<IActionResult> ApiRoute(string slug, string name, CancellationToken cancellationToken)
     {
         var page = _pages.Find(slug);
@@ -302,9 +319,15 @@ public class CustomPagesController : ControllerBase
         byte[]? body = null;
         if (Request.ContentLength is > 0 || HttpMethods.IsPost(Request.Method))
         {
-            using var buffer = new MemoryStream();
-            await Request.Body.CopyToAsync(buffer, cancellationToken).ConfigureAwait(false);
-            body = buffer.ToArray();
+            // A route on an Anyone page is reachable without signing in, so the body is capped as it is
+            // read rather than buffered whole and measured afterwards.
+            var (read, tooLarge) = await ReadBodyAsync(RouteProxy.MaxRequestBytes, cancellationToken).ConfigureAwait(false);
+            if (tooLarge)
+            {
+                return StatusCode(StatusCodes.Status413PayloadTooLarge);
+            }
+
+            body = read;
         }
 
         var requestHeaders = Request.Headers
@@ -325,10 +348,33 @@ public class CustomPagesController : ControllerBase
             return StatusCode(StatusCodes.Status502BadGateway);
         }
 
-        Response.Headers["Cache-Control"] = "no-store";
+        // A target that could not answer becomes a gateway status rather than an unhandled exception.
+        if (forwarded.Error != ForwardError.None)
+        {
+            Response.Headers["Cache-Control"] = "no-store";
+            return StatusCode(forwarded.StatusCode);
+        }
+
+        // The relay is an allow list, so the target cannot set cookies, CORS, or framing policy on the
+        // Jellyfin origin. The headers this endpoint sets itself are applied after it regardless, so they
+        // win even if the allow list ever grows to include one of them.
         foreach (var header in forwarded.Headers)
         {
             Response.Headers[header.Key] = header.Value;
+        }
+
+        Response.Headers["Cache-Control"] = "no-store";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+
+        // The response is served from the Jellyfin origin, so a target answering with HTML would run
+        // script there if somebody navigated to the route directly. The sandbox directive puts such a
+        // document on an opaque origin with scripts off. It is applied only to types a browser renders
+        // as a scriptable document, since a sandboxed PDF cannot open in the browser's viewer. A page
+        // reading the route through fetch is unaffected either way, since a response's policy only
+        // applies when it is rendered as a document.
+        if (RouteProxy.NeedsSandbox(forwarded.ContentType))
+        {
+            Response.Headers["Content-Security-Policy"] = "sandbox";
         }
 
         Response.StatusCode = forwarded.StatusCode;
@@ -406,6 +452,9 @@ public class CustomPagesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status413PayloadTooLarge)]
+    [ProducesResponseType(StatusCodes.Status507InsufficientStorage)]
     public async Task<IActionResult> StoreWrite(string name, CancellationToken cancellationToken)
     {
         var store = _stores.Find(name);
@@ -420,7 +469,7 @@ public class CustomPagesController : ControllerBase
             return Refuse(caller);
         }
 
-        var (body, tooLarge) = await ReadBodyAsync(cancellationToken).ConfigureAwait(false);
+        var (body, tooLarge) = await ReadBodyAsync(StoreBodyLimit, cancellationToken).ConfigureAwait(false);
         if (tooLarge)
         {
             return StatusCode(StatusCodes.Status413PayloadTooLarge);
@@ -491,7 +540,7 @@ public class CustomPagesController : ControllerBase
             return Refuse(caller);
         }
 
-        var (body, tooLarge) = await ReadBodyAsync(cancellationToken).ConfigureAwait(false);
+        var (body, tooLarge) = await ReadBodyAsync(StoreBodyLimit, cancellationToken).ConfigureAwait(false);
         if (tooLarge)
         {
             return StatusCode(StatusCodes.Status413PayloadTooLarge);
@@ -568,6 +617,56 @@ public class CustomPagesController : ControllerBase
     }
 
     /// <summary>
+    /// Reports whether a configuration would be accepted, and why not, without saving it. Jellyfin answers
+    /// a refused configuration save with a generic error, so the dashboard asks here first and can show
+    /// the administrator the actual reason, such as a renamed route whose password cannot be carried over.
+    /// </summary>
+    /// <remarks>
+    /// This is advisory only. The save itself runs the same checks and refuses on its own, so a client
+    /// that skips this call gains nothing.
+    /// </remarks>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>Whether the configuration would be accepted, with the reason when it would not.</returns>
+    [HttpPost("config/check")]
+    [Authorize(Policy = AdminPolicy)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> CheckConfiguration(CancellationToken cancellationToken)
+    {
+        NoStore();
+
+        PluginConfiguration? incoming;
+        try
+        {
+            incoming = await JsonSerializer.DeserializeAsync<PluginConfiguration>(Request.Body, ConfigurationJson, cancellationToken)
+                .ConfigureAwait(false);
+        }
+        catch (JsonException)
+        {
+            incoming = null;
+        }
+
+        if (incoming is null)
+        {
+            return Json(new ConfigurationCheckResponse { Ok = false, Message = "The configuration could not be read." });
+        }
+
+        var stored = Plugin.Instance?.ReadConfiguration(static config => config) ?? new PluginConfiguration();
+
+        string? message;
+        try
+        {
+            ConfigurationValidator.Validate(incoming);
+            message = RouteSecrets.Check(incoming, stored);
+        }
+        catch (ArgumentException ex)
+        {
+            message = ex.Message;
+        }
+
+        return Json(new ConfigurationCheckResponse { Ok = message is null, Message = message });
+    }
+
+    /// <summary>
     /// Resolves the identity behind a store request.
     /// </summary>
     /// <remarks>
@@ -612,15 +711,20 @@ public class CustomPagesController : ControllerBase
     }
 
     /// <summary>
-    /// Reads the request body, refusing anything past what a single record may carry so an oversized
-    /// payload is turned away before it is parsed rather than after.
+    /// Reads the request body, refusing anything past <paramref name="limit"/> so an oversized payload is
+    /// turned away before it is parsed or forwarded rather than after.
     /// </summary>
+    /// <param name="limit">The largest body accepted, in bytes.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The body bytes, and whether the limit was exceeded.</returns>
-    private async Task<(byte[] Body, bool TooLarge)> ReadBodyAsync(CancellationToken cancellationToken)
+    private async Task<(byte[] Body, bool TooLarge)> ReadBodyAsync(long limit, CancellationToken cancellationToken)
     {
-        // The record cap governs the payload; the rest of the allowance covers the envelope around it.
-        var limit = StoreService.MaxRecordBytes + 4096;
+        // An honest client declares its length, so an oversized body is refused without reading any of it.
+        if (Request.ContentLength > limit)
+        {
+            return (Array.Empty<byte>(), true);
+        }
+
         using var buffer = new MemoryStream();
         var chunk = new byte[8192];
         int read;
@@ -648,6 +752,7 @@ public class CustomPagesController : ControllerBase
         StoreWriteResult.NotFound => NotFound(),
         StoreWriteResult.Full => StatusCode(StatusCodes.Status409Conflict),
         StoreWriteResult.TooLarge => StatusCode(StatusCodes.Status413PayloadTooLarge),
+        StoreWriteResult.OverBudget => StatusCode(StatusCodes.Status507InsufficientStorage),
         _ => StatusCode(StatusCodes.Status500InternalServerError)
     };
 

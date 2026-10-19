@@ -48,7 +48,9 @@ public class StoreRetentionTask : PluginScheduledTask
     {
         ArgumentNullException.ThrowIfNull(progress);
 
-        var removed = _stores.SweepAll();
+        // Cancellation is honoured between stores and surfaces as OperationCanceledException, which is
+        // how the task manager tells a cancelled run from a failed one.
+        var removed = _stores.SweepAll(cancellationToken);
         if (removed > 0)
         {
             _logger.LogInformation("Custom Pages: retention removed {Count} expired store records", removed);
