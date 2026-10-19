@@ -11,4 +11,4 @@ Releases use a four part version, `JJ.JJ.F.B`, that matches the supported Jellyf
  └─── 12.0 = Jellyfin version this build was tested/released for
 ```
 
-Targets **Jellyfin 12.0.x** (`net10.0`, ABI `12.0.0.0`).
+Targets **Jellyfin 12.2.x** (`net10.0`, ABI `12.2.0.0`).
