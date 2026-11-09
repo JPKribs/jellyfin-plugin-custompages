@@ -266,7 +266,15 @@ public class CustomPagesController : ControllerBase
             return true;
         }
 
-        var info = await _authorization.GetAuthorizationInfo(Request).ConfigureAwait(false);
+        AuthorizationInfo info;
+        try
+        {
+            info = await _authorization.GetAuthorizationInfo(Request).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is AuthenticationException or SecurityException)
+        {
+            return false;
+        }
 
         // An API key authenticates the caller without identifying a user, so it carries no identity
         // an allow list could name. AllowsUser refuses Guid.Empty, which is what UserId reports here.
@@ -825,7 +833,17 @@ public class CustomPagesController : ControllerBase
                 : StatusCodes.Status200OK;
         }
 
-        var info = await _authorization.GetAuthorizationInfo(Request).ConfigureAwait(false);
+        AuthorizationInfo info;
+        try
+        {
+            info = await _authorization.GetAuthorizationInfo(Request).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is AuthenticationException or SecurityException)
+        {
+            // A malformed or revoked token is no credential, so the caller is told to sign in again.
+            return StatusCodes.Status401Unauthorized;
+        }
+
         if (info.IsApiKey || info.User is null || info.UserId == Guid.Empty)
         {
             return StatusCodes.Status401Unauthorized;

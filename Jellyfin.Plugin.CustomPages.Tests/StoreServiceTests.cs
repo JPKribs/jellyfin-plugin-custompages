@@ -327,6 +327,37 @@ public class StoreServiceTests : IDisposable
     }
 
     [Fact]
+    public void NullEntriesInTheFile_AreSkipped()
+    {
+        // A hand edited file can hold a bare null. The store skips it and reads the rest.
+        var store = Define();
+        var file = Path.Combine(_dataPath, "custompages", "stores", "downloads.json");
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        File.WriteAllText(file, "[null,{\"Id\":\"a\",\"CreatedUtc\":\"2026-01-01T00:00:00Z\"}]");
+
+        var service = Create();
+        var records = service.Read(store, null);
+
+        Assert.Single(records);
+        Assert.Equal("a", records[0].Id);
+        Assert.Equal(StoreWriteResult.Ok, service.Create(store, Data("b"), null, Alice).Result);
+    }
+
+    [Fact]
+    public void FailedWrite_LeavesNoTempFile()
+    {
+        // A directory where the store file belongs makes the final move fail after the temp file is written.
+        var store = Define();
+        var folder = Path.Combine(_dataPath, "custompages", "stores");
+        Directory.CreateDirectory(Path.Combine(folder, "downloads.json"));
+
+        var (result, _) = Create().Create(store, Data("a"), null, Alice);
+
+        Assert.Equal(StoreWriteResult.Failed, result);
+        Assert.Empty(Directory.GetFiles(folder, "*.tmp"));
+    }
+
+    [Fact]
     public void Stores_AreIsolatedFromEachOther()
     {
         var service = Create();

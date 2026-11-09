@@ -25,7 +25,7 @@ Inside the page, the plugin injects a helper:
 serverFetch('name', { method: 'POST', headers: { ... }, body: '...' })
 ```
 
-That reaches `/pages/{slug}/api/{name}` on the Jellyfin origin, and the server forwards it to the route's target, adding the stored credentials. It returns a normal `fetch` promise, so the target's status and body come back to your script unchanged, along with the response headers that describe the payload.
+`init` takes the same options as `fetch`, and `headers` can be an object, a `Headers`, or name and value pairs. That reaches `/pages/{slug}/api/{name}` on the Jellyfin origin, and the server forwards it to the route's target, adding the stored credentials. It returns a normal `fetch` promise, so the target's status and body come back to your script unchanged, along with the response headers that describe the payload.
 
 This exists because a browser usually cannot call another machine on your network directly. That call is cross origin, most services send no CORS headers, and on an HTTPS page a plain HTTP call is blocked as mixed content. Routing through the server sidesteps all three, with no reverse proxy to configure.
 

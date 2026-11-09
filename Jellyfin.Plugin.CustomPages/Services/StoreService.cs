@@ -647,8 +647,11 @@ public sealed class StoreService : IStoreService
             if (File.Exists(state.File))
             {
                 using var stream = File.OpenRead(state.File);
-                var loaded = JsonSerializer.Deserialize<List<StoreRecord>>(stream, StoreJson);
-                state.Records = loaded ?? new List<StoreRecord>();
+                var loaded = JsonSerializer.Deserialize<List<StoreRecord>>(stream, StoreJson) ?? new List<StoreRecord>();
+
+                // A hand edited file can hold a bare null entry. It is skipped.
+                loaded.RemoveAll(static r => r is null);
+                state.Records = loaded;
                 state.PayloadBytes = MeasureAll(state.Records);
             }
         }
@@ -672,10 +675,10 @@ public sealed class StoreService : IStoreService
             return false;
         }
 
+        var temp = state.File + "." + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture) + ".tmp";
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(state.File)!);
-            var temp = state.File + "." + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture) + ".tmp";
             using (var stream = File.Create(temp))
             {
                 JsonSerializer.Serialize(stream, state.Records, StoreJson);
@@ -687,6 +690,17 @@ public sealed class StoreService : IStoreService
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
         {
             _logger.LogError(ex, "Custom Pages: could not write the store at {File}", state.File);
+
+            // A failed write removes its temp file.
+            try
+            {
+                File.Delete(temp);
+            }
+            catch (Exception cleanup) when (cleanup is IOException or UnauthorizedAccessException)
+            {
+                _logger.LogDebug(cleanup, "Custom Pages: could not remove the temp file {File}", temp);
+            }
+
             return false;
         }
     }

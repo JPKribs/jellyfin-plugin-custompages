@@ -242,6 +242,26 @@ public class CustomPagesControllerTests
     }
 
     [Fact]
+    public async Task UserContent_RefusesARestrictedPageWhenTheCallerCannotBeResolved()
+    {
+        var (controller, pages) = Create(Guid.NewGuid());
+        var authorization = Substitute.For<IAuthorizationContext>();
+        authorization.GetAuthorizationInfo(Arg.Any<HttpRequest>())
+            .Returns<Task<AuthorizationInfo>>(_ => throw new SecurityException("bad token"));
+        controller = new CustomPagesController(pages, Substitute.For<IStoreService>(), authorization, Substitute.For<System.Net.Http.IHttpClientFactory>(), Substitute.For<IServerApplicationPaths>())
+        {
+            ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
+        };
+        var page = Page(PageVisibility.User);
+        page.AllowedUserIds.Add(Guid.NewGuid().ToString());
+        pages.Find("p").Returns(page);
+
+        var result = Assert.IsType<StatusCodeResult>(await controller.UserContent("p"));
+        Assert.Equal(StatusCodes.Status403Forbidden, result.StatusCode);
+        pages.DidNotReceive().Render(Arg.Any<CustomPage>());
+    }
+
+    [Fact]
     public async Task UserContent_RefusesACallerTheAllowListDoesNotName()
     {
         var (controller, pages) = Create(Guid.NewGuid());

@@ -384,7 +384,8 @@ public partial class PageService : IPageService
     /// <remarks>
     /// The helper reads the viewer's Jellyfin token from same origin storage and calls the route on the
     /// Jellyfin origin, so the page must run with <see cref="CustomPage.Unsandboxed"/> access for it to
-    /// reach the server. The script is inserted as early as possible so it is defined before any author
+    /// reach the server. The caller's headers may be a plain object, a <c>Headers</c>, or name and value
+    /// pairs, and the caller's <c>init</c> is left untouched. The script is inserted as early as possible so it is defined before any author
     /// script that uses it.
     /// </remarks>
     /// <param name="document">The inner page document.</param>
@@ -397,9 +398,10 @@ public partial class PageService : IPageService
         var prelude =
             "<script>(function(){" + RootLookup + "var base=root+\"/pages/\"+\"" + StringUtilities.EscapeJsString(slug) + "\"+\"/api/\";"
             + TokenLookup
-            + "window.serverFetch=function(name,init){init=init||{};var h=init.headers||{};"
-            + "return token().then(function(t){if(t){h[\"Authorization\"]=\"MediaBrowser Token=\\\"\"+t+\"\\\"\";}"
-            + "init.headers=h;return fetch(base+encodeURIComponent(name),init);});};})();</script>";
+            + "window.serverFetch=function(name,init){init=init||{};"
+            + "return token().then(function(t){var h=new Headers(init.headers||undefined);"
+            + "if(t){h.set(\"Authorization\",\"MediaBrowser Token=\\\"\"+t+\"\\\"\");}"
+            + "return fetch(base+encodeURIComponent(name),Object.assign({},init,{headers:h}));});};})();</script>";
 
         return InsertPrelude(document, prelude);
     }

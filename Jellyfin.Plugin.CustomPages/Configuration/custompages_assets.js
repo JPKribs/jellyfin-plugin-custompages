@@ -64,14 +64,15 @@ export default function (view) {
         var files = Array.prototype.slice.call(fileList || []);
         if (!files.length) return;
 
+        var skipped = [];
         var tasks = files.map(function (file) {
             if (file.size > MAX_ASSET_BYTES) {
-                Shared.setStatus('assetStatus', file.name + ' is larger than 5 MB and was skipped.', true);
+                skipped.push(file.name);
                 return Promise.resolve();
             }
             return readFileAsDataUrl(file).then(function (dataUrl) {
                 var m = /^data:([^;]+);base64,(.*)$/.exec(dataUrl);
-                if (!m) return;
+                if (!m) { skipped.push(file.name); return; }
                 var name = sanitizeAssetName(file.name);
                 var entry = { Name: name, ContentType: m[1], DataBase64: m[2], Visibility: 'Anonymous' };
                 var existing = assets.findIndex(function (a) { return (a.Name || '').toLowerCase() === name.toLowerCase(); });
@@ -81,11 +82,18 @@ export default function (view) {
                 } else {
                     assets.push(entry);
                 }
+            }, function () {
+                skipped.push(file.name);
             });
         });
 
+        // A skipped file is reported once every read settles, so a later success never hides it.
         Promise.all(tasks).then(function () {
-            persistAssets('Uploaded.');
+            if (skipped.length === files.length) {
+                Shared.setStatus('assetStatus', skipped.join(', ') + ' could not be added. Files must be under 5 MB.', true);
+                return;
+            }
+            persistAssets(skipped.length ? 'Uploaded. Skipped ' + skipped.join(', ') + '.' : 'Uploaded.');
         });
     }
 

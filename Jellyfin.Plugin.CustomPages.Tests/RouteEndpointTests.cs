@@ -34,7 +34,8 @@ public class RouteEndpointTests
         None,
         User,
         Admin,
-        ApiKey
+        ApiKey,
+        Invalid
     }
 
     // Records every request the target saw and answers with whatever the test configured.
@@ -66,8 +67,16 @@ public class RouteEndpointTests
         }
 
         var authorization = Substitute.For<IAuthorizationContext>();
-        authorization.GetAuthorizationInfo(Arg.Any<HttpRequest>())
-            .Returns(Task.FromResult(new AuthorizationInfo { User = user, IsApiKey = caller == Caller.ApiKey }));
+        if (caller == Caller.Invalid)
+        {
+            authorization.GetAuthorizationInfo(Arg.Any<HttpRequest>())
+                .Returns<Task<AuthorizationInfo>>(_ => throw new SecurityException("bad token"));
+        }
+        else
+        {
+            authorization.GetAuthorizationInfo(Arg.Any<HttpRequest>())
+                .Returns(Task.FromResult(new AuthorizationInfo { User = user, IsApiKey = caller == Caller.ApiKey }));
+        }
 
         var target = new Target();
         var factory = Substitute.For<IHttpClientFactory>();
@@ -136,6 +145,8 @@ public class RouteEndpointTests
     [InlineData(PageVisibility.Admin, Caller.ApiKey, 401)]
     [InlineData(PageVisibility.Admin, Caller.User, 403)]
     [InlineData(PageVisibility.Admin, Caller.Admin, 200)]
+    [InlineData(PageVisibility.User, Caller.Invalid, 401)]
+    [InlineData(PageVisibility.Admin, Caller.Invalid, 401)]
     public async Task ApiRoute_ReachesExactlyThePageAudience(PageVisibility tier, Caller caller, int expected)
     {
         var (controller, target) = Create(Page(tier), caller);

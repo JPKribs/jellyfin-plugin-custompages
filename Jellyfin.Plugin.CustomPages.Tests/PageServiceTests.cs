@@ -748,4 +748,55 @@ public class PageServiceTests
         Assert.Contains("if(t){", injected, System.StringComparison.Ordinal);
         Assert.Contains("return null;", injected, System.StringComparison.Ordinal);
     }
+    // MARK: serverFetch request headers
+
+    [Theory]
+    [InlineData("{ 'X-Csrf': 'abc' }")]
+    [InlineData("new Headers({ 'X-Csrf': 'abc' })")]
+    [InlineData("[['X-Csrf', 'abc']]")]
+    public void ServerFetch_SendsTheTokenWithEveryHeadersShape(string headers)
+    {
+        var sent = RunServerFetch(headers);
+
+        Assert.Equal("MediaBrowser Token=\"tok\"|abc|untouched", sent);
+    }
+
+    // Runs the injected helper under node with a stub page, a saved token for this origin, and a fetch
+    // that reports the Authorization and X-Csrf headers it received and whether the caller's init kept
+    // its own headers.
+    private static string RunServerFetch(string headers)
+    {
+        var prelude = PageService.InjectServerFetch("<p>x</p>", "demo");
+        var script = prelude.Substring("<script>".Length, prelude.IndexOf("</script>", System.StringComparison.Ordinal) - "<script>".Length);
+        var harness =
+            "globalThis.window=globalThis;"
+            + "globalThis.document={baseURI:'http://jf.test/pages/demo'};"
+            + "globalThis.localStorage={getItem:()=>JSON.stringify({Servers:[{AccessToken:'tok',ManualAddress:'http://jf.test'}]})};"
+            + "globalThis.fetch=(url,init)=>url.endsWith('/System/Info/Public')"
+            + "?Promise.resolve({ok:false}):Promise.resolve(new Headers(init.headers));"
+            + script
+            + "const init={headers:" + headers + "};"
+            + "serverFetch('route',init).then(h=>{const own=new Headers(init.headers);"
+            + "process.stdout.write(h.get('Authorization')+'|'+h.get('X-Csrf')+'|'+(own.has('Authorization')?'changed':'untouched'));});";
+
+        var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "serverfetch-" + System.Guid.NewGuid().ToString("N") + ".mjs");
+        System.IO.File.WriteAllText(path, harness);
+        try
+        {
+            using var node = System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("node", path)
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            })!;
+            var output = node.StandardOutput.ReadToEnd();
+            var error = node.StandardError.ReadToEnd();
+            node.WaitForExit();
+            Assert.True(node.ExitCode == 0, error);
+            return output;
+        }
+        finally
+        {
+            System.IO.File.Delete(path);
+        }
+    }
 }
