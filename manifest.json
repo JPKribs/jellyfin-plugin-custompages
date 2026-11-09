@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "12.2.2.1",
+        "changelog": "\n## Fixed\n- serverFetch sends the sign-in token when headers are a Headers object or name and value pairs, and leaves the page init untouched\n- A route call with an expired or invalid token answers 401 instead of a server error\n- A restricted page refuses a caller it cannot identify\n- A failed store write leaves no temp file behind, and a store file holding a null entry still loads\n- Uploading assets reports the files that were skipped\n\n## Developer\n- Built with JPKribs.Jellyfin.Base 2026.10.28.",
+        "targetAbi": "12.2.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v12.2.2.1/jellyfin-plugin-custompages-12.2.2.1.zip",
+        "checksum": "9acda69f3d81b414aedad2fa66799484",
+        "timestamp": "2026-11-09T16:04:15Z"
+      },
+      {
         "version": "12.2.2.0",
         "changelog": "\n## Developer\n- Built for Jellyfin 12.2 (target ABI 12.2.0.0). Servers on Jellyfin 12.0 or 12.1 keep the previous release.\n- Updated test dependencies (Microsoft.NET.Test.Sdk 18.11, NSubstitute 6.2, xunit 2.9.3, xunit.runner.visualstudio 4.0.1).",
         "targetAbi": "12.2.0.0",
