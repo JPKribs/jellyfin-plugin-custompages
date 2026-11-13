@@ -311,7 +311,7 @@ public sealed class ForwardResult
 
 #pragma warning disable CA1819 // The forwarded body is opaque bytes handed straight to a file result.
     /// <summary>Gets or sets the response body bytes.</summary>
-    public byte[] Body { get; set; } = System.Array.Empty<byte>();
+    public byte[] Body { get; set; } = Array.Empty<byte>();
 #pragma warning restore CA1819
 
     /// <summary>Gets or sets the response content type, when the target supplied one.</summary>
@@ -321,8 +321,7 @@ public sealed class ForwardResult
     public ForwardError Error { get; set; }
 
     /// <summary>Gets the response headers worth relaying to the caller, limited to the relay allow list.</summary>
-    public System.Collections.Generic.Dictionary<string, string> Headers { get; }
-        = new(System.StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, string> Headers { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
     /// Builds a result for a failed forward, carrying the gateway status the caller should answer with.

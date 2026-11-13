@@ -280,7 +280,7 @@ export default function (view) {
             var name = s.Name.toLowerCase();
             return Shared.apiRequest('pages/store/' + encodeURIComponent(name) + '/stats').then(function (stats) {
                 if (stats && typeof stats.count === 'number') counts[name] = stats.count;
-            }).catch(function () { /* a store that has never been written has no file yet */ });
+            }).catch(function () { /* a disabled store, or one not saved yet, answers 404 */ });
         })).then(function () {
             renderCounts();
             updateUsage();

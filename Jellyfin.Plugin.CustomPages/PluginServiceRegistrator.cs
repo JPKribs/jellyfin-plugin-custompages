@@ -1,5 +1,6 @@
 using System;
 using Jellyfin.Plugin.CustomPages.Services;
+using Jellyfin.Plugin.CustomPages.Tasks;
 using JPKribs.Jellyfin.Base;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Plugins;
@@ -35,7 +36,7 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         serviceCollection.AddPluginSecretProtector(Plugin.SecretsName);
 
         // Applies store retention on a schedule, for the stores nobody reads or writes.
-        serviceCollection.AddSingleton<IScheduledTask, Tasks.StoreRetentionTask>();
+        serviceCollection.AddSingleton<IScheduledTask, StoreRetentionTask>();
 
         // Named client used by the per page server side routes. HandlerLifetime caps DNS staleness for
         // the long lived plugin process.

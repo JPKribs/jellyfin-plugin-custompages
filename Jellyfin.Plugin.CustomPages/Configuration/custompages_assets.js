@@ -23,7 +23,6 @@ export default function (view) {
     var VISIBILITIES = ['Anonymous', 'User', 'Admin'];
     var VISIBILITY_LABELS = { Anonymous: 'Anyone', User: 'Users', Admin: 'Administrators' };
 
-    var config = null;
     var assets = [];
 
     function el(id) { return view.querySelector('#' + id); }
@@ -50,7 +49,6 @@ export default function (view) {
     function persistAssets(message) {
         return Shared.getConfig().then(function (fresh) {
             fresh.Assets = assets;
-            config = fresh;
             return Shared.saveConfig(fresh);
         }).then(function () {
             renderAssets();
@@ -191,8 +189,7 @@ export default function (view) {
 
     function load() {
         Shared.getConfig().then(function (cfg) {
-            config = cfg;
-            assets = config.Assets || [];
+            assets = cfg.Assets || [];
             renderAssets();
         });
     }

@@ -59,8 +59,6 @@ public class CustomPagesController : ControllerBase
     // covers the envelope around it.
     private const int StoreBodyLimit = StoreService.MaxRecordBytes + 4096;
 
-    // Store responses are serialized here rather than through the server's MVC options, so a page
-    // author gets the same camel cased shape no matter how the host has its own API configured.
     // Reads a configuration posted by the dashboard, which sends the same shape it loaded: Pascal cased
     // names, with tiers as either names or numbers.
     private static readonly JsonSerializerOptions ConfigurationJson = new()
@@ -69,6 +67,8 @@ public class CustomPagesController : ControllerBase
         Converters = { new JsonStringEnumConverter() }
     };
 
+    // Store responses are serialized here rather than through the server's MVC options, so a page
+    // author gets the same camel cased shape no matter how the host has its own API configured.
     private static readonly JsonSerializerOptions StoreResponseJson = new()
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,

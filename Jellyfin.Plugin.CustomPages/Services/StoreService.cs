@@ -54,8 +54,8 @@ public sealed class StoreService : IStoreService
     };
 
     // The cap is measured against compact JSON so it means the same thing as the request body limit the
-    // controller applies. Measuring the indented form the file uses would reject payloads the body limit
-    // had already accepted, and by a margin that varies with how deeply nested the payload happens to be.
+    // controller applies. Measuring an indented form would reject payloads the body limit had already
+    // accepted, and by a margin that varies with how deeply nested the payload happens to be.
     private static readonly JsonSerializerOptions MeasureJson = new();
 
     /// <summary>How long a store waits between activity log entries, so a burst cannot flood the feed.</summary>

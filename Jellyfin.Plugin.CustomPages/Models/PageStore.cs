@@ -54,7 +54,6 @@ public class PageStore
     /// </summary>
     public PageVisibility WriteAccess { get; set; } = PageVisibility.User;
 
-
     /// <summary>
     /// Gets or sets a value indicating whether a signed in viewer may update and delete the records
     /// they created. Off by default, so a store whose records carry a server assigned status cannot

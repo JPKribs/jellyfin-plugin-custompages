@@ -385,8 +385,8 @@ public partial class PageService : IPageService
     /// The helper reads the viewer's Jellyfin token from same origin storage and calls the route on the
     /// Jellyfin origin, so the page must run with <see cref="CustomPage.Unsandboxed"/> access for it to
     /// reach the server. The caller's headers may be a plain object, a <c>Headers</c>, or name and value
-    /// pairs, and the caller's <c>init</c> is left untouched. The script is inserted as early as possible so it is defined before any author
-    /// script that uses it.
+    /// pairs, and the caller's <c>init</c> is left untouched. The script is inserted as early as possible
+    /// so it is defined before any author script that uses it.
     /// </remarks>
     /// <param name="document">The inner page document.</param>
     /// <param name="slug">The page slug, baked into the route base.</param>

@@ -36,7 +36,6 @@ export default function (view) {
     };
     var SINGLE_HINT = 'A complete HTML document served exactly as written.';
 
-    var config = null;
     var pages = [];
     var currentIndex = -1;
     var currentPane = 'html';
@@ -172,9 +171,8 @@ export default function (view) {
     function updateUrlPreview() {
         var slug = slugify(el('pageSlug').value);
         var link = el('pageUrl');
-        var href = pageOrigin().replace(/\/+$/, '') + '/pages/' + (slug || '');
-        link.textContent = '/pages/' + (slug || '');
-        link.href = slug ? href : '#';
+        link.textContent = '/pages/' + slug;
+        link.href = slug ? pageOrigin().replace(/\/+$/, '') + '/pages/' + slug : '#';
     }
 
     function readEditorInto(p) {
@@ -244,7 +242,7 @@ export default function (view) {
     function renderRoutes(routes) {
         routeRows = [];
         el('routesList').innerHTML = '';
-        (routes || []).forEach(makeRouteRow);
+        routes.forEach(makeRouteRow);
     }
 
     function applyRoutes() {
@@ -315,7 +313,6 @@ export default function (view) {
                     throw new Error(refused);
                 }
 
-                config = fresh;
                 return Shared.saveConfig(fresh);
             });
         }).then(function () {
@@ -388,8 +385,7 @@ export default function (view) {
 
     function load() {
         Shared.getConfig().then(function (cfg) {
-            config = cfg;
-            pages = config.Pages || [];
+            pages = cfg.Pages || [];
             currentIndex = pages.length ? 0 : -1;
             renderSelect();
         });
