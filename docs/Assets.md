@@ -1,6 +1,6 @@
 # Images and Assets
 
-Upload images on the **Assets** tab. Each image is stored as `Base64-encoded` in the plugin configuration. Reference one from your page's HTML or CSS using the relative path **`asset/{name}`**. For example:
+Upload images on the **Assets** tab. Each image is stored Base64-encoded in the plugin configuration. Reference one from your page's HTML or CSS using the relative path **`asset/{name}`**. For example:
 
 ```
 <img src="asset/logo.png">

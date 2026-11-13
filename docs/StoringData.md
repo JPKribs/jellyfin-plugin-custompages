@@ -69,7 +69,7 @@ pageStore.read('queue').then(render);
 pageStore.write('queue', { url: row.data.url, status: 'done' }, { id: row.id });
 ```
 
-The submitter watches their own row change status without ever seeing anyone else's, and cannot set the status themselves. The admin page needs no separate store, because Scope stops narrowing at the administrator. Whatever actually does the work can be a [server side route](SystemAccess.md#allow-local-resource-calls) the admin page calls, or something outside Jellyfin holding an API key.
+The submitter watches their own row change status without ever seeing anyone else's, and cannot set the status themselves. The admin page needs no separate store, because Scope stops narrowing at the administrator. Whatever actually does the work can be a [server side route](SystemAccess.md#server-side-routes) the admin page calls, or something outside Jellyfin holding an API key.
 
 ## The Helper
 

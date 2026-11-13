@@ -15,9 +15,9 @@ The toggle drops the whole `sandbox` attribute rather than adding `allow-same-or
 
 Everything else about serving is unchanged. Your content is still HTML encoded into the wrapper's `srcdoc` attribute, still gated by the same visibility tier, and still served under the same Content-Security-Policy.
 
-## Allow Local Resource Calls
+## Server Side Routes
 
-A page can be given named **routes** the server calls on its behalf. Turn on **Allow local resource calls**, add a route with a name and an absolute target URL, and optionally a username and password.
+A page can be given named **routes** the server calls on its behalf. With **Allow system access** turned on, click **Add route** and give it a name and an absolute target URL, and optionally a username and password.
 
 Inside the page, the plugin injects a helper:
 

@@ -2,7 +2,7 @@
 
 ## Writing a Page
 
-Each page has a slug, title, visibility tier, and its content. Content can be written two ways, chosen with the **Single file** toggle:
+Each page has a slug, title, visibility tier, and its content. Content can be written two ways, chosen with the **Use a single webpage file** checkbox:
 
 * **Separate files**: Write the HTML body, CSS, and JavaScript independently. On serve they are merged into one document and presented to the user.
 * **Single file**: Provide one complete HTML document that is served exactly as written. CSS and JS can be included in their respective elements.
