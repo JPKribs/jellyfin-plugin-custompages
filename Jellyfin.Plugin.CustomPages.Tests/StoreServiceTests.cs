@@ -36,6 +36,7 @@ public class StoreServiceTests : IDisposable
     public void Dispose()
     {
         GC.SuppressFinalize(this);
+        _activity?.Dispose();
         try
         {
             Directory.Delete(_dataPath, recursive: true);
@@ -50,18 +51,21 @@ public class StoreServiceTests : IDisposable
 
     private IActivityManager? _activityManager;
 
+    private StoreActivity? _activity;
+
     private StoreService Create()
     {
         var paths = Substitute.For<IApplicationPaths>();
         paths.DataPath.Returns(_dataPath);
 
-        ActivityLogger? activity = null;
         if (_activityManager is not null)
         {
-            activity = new ActivityLogger(_activityManager, NullLogger<ActivityLogger>.Instance);
+            // Quiet and longest spells of an hour, so a summary is only written when a test flushes it.
+            var logger = new ActivityLogger(_activityManager, NullLogger<ActivityLogger>.Instance);
+            _activity = new StoreActivity(logger, new ActivitySummary(logger, TimeSpan.FromHours(1), TimeSpan.FromHours(1)));
         }
 
-        return new StoreService(paths, NullLogger<StoreService>.Instance, () => _config, activity, _clock);
+        return new StoreService(paths, NullLogger<StoreService>.Instance, () => _config, _activity, _clock);
     }
 
     // A settable clock, so retention can be exercised without waiting out a real day.
@@ -536,15 +540,19 @@ public class StoreServiceTests : IDisposable
         var store = Define();
         store.NotifyOnWrite = true;
 
-        service.Create(store, Data("a"), null, Alice);
+        service.Create(store, Data("a"), "Big Buck Bunny", Alice);
+        _activity!.Flush();
 
         // ActivityLogger is fire and forget, so let the continuation run before asserting.
         await Task.Delay(50);
-        await _activityManager.Received(1).CreateAsync(Arg.Any<ActivityLog>());
+        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l =>
+            l.Name == "1 Record Added"
+            && l.ShortOverview == "1 record was added to downloads (1), including Big Buck Bunny (1)"
+            && l.Type == "CustomPages.RecordsAdded"));
     }
 
     [Fact]
-    public async Task Notify_RateLimitsABurst()
+    public async Task Notify_SumsABurst()
     {
         // A submission form under load would otherwise put one entry in the feed per submission and
         // bury everything else in it.
@@ -558,41 +566,65 @@ public class StoreServiceTests : IDisposable
             service.Create(store, Data("a"), null, Alice);
         }
 
+        _activity!.Flush();
+
         await Task.Delay(50);
-        await _activityManager.Received(1).CreateAsync(Arg.Any<ActivityLog>());
+        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l =>
+            l.Name == "10 Records Added" && l.ShortOverview == "10 records were added to downloads (10)"));
     }
 
     [Fact]
-    public async Task Notify_ResumesAfterTheRateLimitWindow()
+    public async Task Notify_WritesNothingUntilTheBurstGoesQuiet()
     {
         _activityManager = Substitute.For<IActivityManager>();
         var service = Create();
-        var store = Define(max: 50);
+        var store = Define();
         store.NotifyOnWrite = true;
 
         service.Create(store, Data("a"), null, Alice);
-        _clock.Advance(StoreService.NotifyInterval + TimeSpan.FromSeconds(1));
-        service.Create(store, Data("b"), null, Alice);
 
         await Task.Delay(50);
-        await _activityManager.Received(2).CreateAsync(Arg.Any<ActivityLog>());
+        await _activityManager.DidNotReceive().CreateAsync(Arg.Any<ActivityLog>());
     }
 
-    // MARK: Activity log headlines
+    // MARK: Activity log wording
 
     [Theory]
-    [InlineData(1, 0, "Big Buck Bunny", "Big Buck Bunny was added to downloads")]
-    [InlineData(0, 1, "Big Buck Bunny", "Big Buck Bunny was removed from downloads")]
-    [InlineData(1, 0, null, "A record was added to downloads")]
-    [InlineData(0, 1, null, "A record was removed from downloads")]
-    [InlineData(4, 0, "ignored", "4 items added to downloads")]
-    [InlineData(0, 3, "ignored", "3 items removed from downloads")]
-    [InlineData(4, 3, "ignored", "4 items added and 3 items removed from downloads")]
-    public void Headline_ReadsAsASentence(int added, int removed, string? label, string expected)
+    [InlineData(1, null, "1 record was added to downloads (1)")]
+    [InlineData(1, "Big Buck Bunny", "1 record was added to downloads (1), including Big Buck Bunny (1)")]
+    [InlineData(4, null, "4 records were added to downloads (4)")]
+    public void AddedOverview_ReadsAsASentence(int count, string? label, string expected)
     {
-        // A batch has no single thing to name, so it reports counts rather than picking one record's
-        // label and implying the entry was about that record.
-        Assert.Equal(expected, StoreService.Headline("downloads", added, removed, label));
+        var reasons = new Dictionary<string, int>();
+        if (label is not null)
+        {
+            reasons[label] = 1;
+        }
+
+        var tally = new ActivityTally(count, new Dictionary<string, int> { ["downloads"] = count }, reasons);
+
+        Assert.Equal(expected, StoreActivity.AddedOverview(tally));
+    }
+
+    [Fact]
+    public void RemovedOverview_NamesEachStoreAndLabel()
+    {
+        var tally = new ActivityTally(
+            3,
+            new Dictionary<string, int> { ["queue"] = 2, ["downloads"] = 1 },
+            new Dictionary<string, int> { ["Holiday photos"] = 1 });
+
+        Assert.Equal(
+            "3 records were removed from queue (2), downloads (1), including Holiday photos (1)",
+            StoreActivity.RemovedOverview(tally));
+    }
+
+    [Theory]
+    [InlineData(1, "1 record was cleared from downloads by an administrator from the dashboard")]
+    [InlineData(5, "5 records were cleared from downloads by an administrator from the dashboard")]
+    public void ClearedOverview_ReadsAsASentence(int removed, string expected)
+    {
+        Assert.Equal(expected, StoreActivity.ClearedOverview("downloads", removed));
     }
 
     // MARK: Labels
@@ -668,17 +700,20 @@ public class StoreServiceTests : IDisposable
         store.NotifyOnWrite = true;
         var (_, created) = service.Create(store, Data("a"), "Big Buck Bunny", Alice);
 
-        _clock.Advance(StoreService.NotifyInterval + TimeSpan.FromSeconds(1));
         service.Delete(store, created!.Id, null);
+        _activity!.Flush();
 
+        // The label was given when the record was written, so the removal names it too.
         await Task.Delay(50);
-        await _activityManager.Received(2).CreateAsync(Arg.Any<ActivityLog>());
+        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l =>
+            l.Name == "1 Record Removed"
+            && l.ShortOverview == "1 record was removed from downloads (1), including Big Buck Bunny (1)"
+            && l.Type == "CustomPages.RecordsRemoved"));
     }
 
     [Fact]
-    public async Task Notify_AddsAndRemovesShareOneWindow()
+    public async Task Notify_AddsAndRemovesAreSummedPerOutcome()
     {
-        // One line saying what happened to the store, rather than two racing each other.
         _activityManager = Substitute.For<IActivityManager>();
         var service = Create();
         var store = Define(max: 50);
@@ -687,9 +722,12 @@ public class StoreServiceTests : IDisposable
         var (_, first) = service.Create(store, Data("a"), "one", Alice);
         service.Create(store, Data("b"), "two", Alice);
         service.Delete(store, first!.Id, null);
+        _activity!.Flush();
 
         await Task.Delay(50);
-        await _activityManager.Received(1).CreateAsync(Arg.Any<ActivityLog>());
+        await _activityManager.Received(2).CreateAsync(Arg.Any<ActivityLog>());
+        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l => l.Name == "2 Records Added"));
+        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l => l.Name == "1 Record Removed"));
     }
 
     // MARK: File format
@@ -837,11 +875,13 @@ public class StoreServiceTests : IDisposable
 
         await Task.Delay(50);
         await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l =>
-            l.Name == "2 records were cleared from downloads" && l.Type == "CustomPages.StoreClear"));
+            l.Name == "2 Records Cleared"
+            && l.ShortOverview == "2 records were cleared from downloads by an administrator from the dashboard"
+            && l.Type == "CustomPages.StoreClear"));
     }
 
     [Fact]
-    public async Task Clear_IsAnnouncedEvenInsideTheRateLimitWindow()
+    public async Task Clear_IsWrittenAtOnceRatherThanSummed()
     {
         _activityManager = Substitute.For<IActivityManager>();
         var service = Create();
@@ -851,8 +891,10 @@ public class StoreServiceTests : IDisposable
 
         service.Clear(store);
 
+        // The clear goes out on its own while the earlier addition is still waiting in the summary.
         await Task.Delay(50);
-        await _activityManager.Received(2).CreateAsync(Arg.Any<ActivityLog>());
+        await _activityManager.Received(1).CreateAsync(Arg.Any<ActivityLog>());
+        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l => l.Type == "CustomPages.StoreClear"));
     }
 
     [Fact]
@@ -867,14 +909,6 @@ public class StoreServiceTests : IDisposable
 
         await Task.Delay(50);
         await _activityManager.DidNotReceive().CreateAsync(Arg.Any<ActivityLog>());
-    }
-
-    [Theory]
-    [InlineData(1, "1 record was cleared from downloads")]
-    [InlineData(5, "5 records were cleared from downloads")]
-    public void ClearHeadline_ReadsAsASentence(int removed, string expected)
-    {
-        Assert.Equal(expected, StoreService.ClearHeadline("downloads", removed));
     }
 
     // MARK: Sweep cancellation

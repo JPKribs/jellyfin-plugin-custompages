@@ -58,13 +58,10 @@ public sealed class StoreService : IStoreService
     // accepted, and by a margin that varies with how deeply nested the payload happens to be.
     private static readonly JsonSerializerOptions MeasureJson = new();
 
-    /// <summary>How long a store waits between activity log entries, so a burst cannot flood the feed.</summary>
-    public static readonly TimeSpan NotifyInterval = TimeSpan.FromMinutes(1);
-
     private readonly ConcurrentDictionary<string, StoreState> _states = new(StringComparer.Ordinal);
     private readonly Func<PluginConfiguration?> _configuration;
     private readonly ILogger<StoreService> _logger;
-    private readonly ActivityLogger? _activity;
+    private readonly StoreActivity? _activity;
     private readonly TimeProvider _time;
     private readonly string _root;
 
@@ -73,8 +70,8 @@ public sealed class StoreService : IStoreService
     /// </summary>
     /// <param name="paths">The application paths, used to place the stores under Jellyfin's data directory.</param>
     /// <param name="logger">The logger.</param>
-    /// <param name="activity">Writes new-record notices to Jellyfin's activity log.</param>
-    public StoreService(IApplicationPaths paths, ILogger<StoreService> logger, ActivityLogger activity)
+    /// <param name="activity">Writes store notices to Jellyfin's activity log.</param>
+    public StoreService(IApplicationPaths paths, ILogger<StoreService> logger, StoreActivity activity)
         : this(paths, logger, static () => Plugin.Instance?.ReadConfiguration(static config => config), activity)
     {
     }
@@ -86,13 +83,13 @@ public sealed class StoreService : IStoreService
     /// <param name="paths">The application paths, used to place the stores under Jellyfin's data directory.</param>
     /// <param name="logger">The logger.</param>
     /// <param name="configuration">Returns the current configuration, or <c>null</c> when unavailable.</param>
-    /// <param name="activity">Writes new-record notices to the activity log, or <c>null</c> to write none.</param>
+    /// <param name="activity">Writes store notices to the activity log, or <c>null</c> to write none.</param>
     /// <param name="time">The clock, so retention can be exercised without waiting out a real day.</param>
     public StoreService(
         IApplicationPaths paths,
         ILogger<StoreService> logger,
         Func<PluginConfiguration?> configuration,
-        ActivityLogger? activity = null,
+        StoreActivity? activity = null,
         TimeProvider? time = null)
     {
         ArgumentNullException.ThrowIfNull(paths);
@@ -210,7 +207,7 @@ public sealed class StoreService : IStoreService
 
             state.PayloadBytes += size;
 
-            Notify(store, state, NoticeKind.Added, record.Label, now);
+            Notify(store, NoticeKind.Added, record.Label);
             return (StoreWriteResult.Ok, record.Clone());
         }
     }
@@ -311,7 +308,7 @@ public sealed class StoreService : IStoreService
 
             // The label was supplied when the record was written, so a removal names the same thing the
             // addition did without the page having to send it again.
-            Notify(store, state, NoticeKind.Removed, record.Label, _time.GetUtcNow().UtcDateTime);
+            Notify(store, NoticeKind.Removed, record.Label);
             return true;
         }
     }
@@ -346,14 +343,11 @@ public sealed class StoreService : IStoreService
             state.PayloadBytes = 0;
 
             // A clear is a removal like any other, so a store that announces removals announces this
-            // one too. It is reported on its own rather than folded into the rate limited window, since
-            // it is a single administrator action and the most consequential change a store can see.
+            // one too. It is written on its own rather than summed with the other removals, since it is
+            // a single administrator action and the most consequential change a store can see.
             if (store.NotifyOnWrite && _activity is not null)
             {
-                _activity.Log(
-                    ClearHeadline(store.Name, removed.Count),
-                    "CustomPages.StoreClear",
-                    "An administrator cleared the store from the dashboard. It now holds 0 records.");
+                _activity.StoreCleared(store.Name, removed.Count);
             }
 
             return removed.Count;
@@ -475,12 +469,10 @@ public sealed class StoreService : IStoreService
         Removed
     }
 
-    // Announces a record arriving or leaving in Jellyfin's activity log, rate limited per store. A
-    // submission form under load would otherwise put one entry in the feed per submission and bury
-    // everything else in it, so events inside the window are counted and reported by the next entry
-    // that does go out. Adds and removes share one window, because what an administrator wants is one
-    // line saying what happened to the store, not two racing each other.
-    private void Notify(PageStore store, StoreState state, NoticeKind kind, string? label, DateTime now)
+    // Counts a record arriving or leaving toward the store's activity log summary. A submission form
+    // under load would otherwise put one entry in the feed per submission and bury everything else in
+    // it, so events are summed into one entry per outcome once the burst goes quiet.
+    private void Notify(PageStore store, NoticeKind kind, string? label)
     {
         if (!store.NotifyOnWrite || _activity is null)
         {
@@ -489,82 +481,13 @@ public sealed class StoreService : IStoreService
 
         if (kind == NoticeKind.Added)
         {
-            state.PendingAdds++;
+            _activity.RecordAdded(store.Name, label);
         }
         else
         {
-            state.PendingRemoves++;
+            _activity.RecordRemoved(store.Name, label);
         }
-
-        // Only useful when this turns out to be the only event in the window, which is the case the
-        // label exists for. A batch reports counts instead and has no single thing to name.
-        state.PendingLabel = label;
-
-        if (state.LastNoticeUtc is not null && now - state.LastNoticeUtc.Value < NotifyInterval)
-        {
-            return;
-        }
-
-        var added = state.PendingAdds;
-        var removed = state.PendingRemoves;
-        var only = state.PendingLabel;
-        state.PendingAdds = 0;
-        state.PendingRemoves = 0;
-        state.PendingLabel = null;
-        state.LastNoticeUtc = now;
-
-        _activity.Log(
-            Headline(store.Name, added, removed, only),
-            "CustomPages.StoreWrite",
-            "The store now holds " + state.Records.Count.ToString(CultureInfo.InvariantCulture) + " records.");
     }
-
-    /// <summary>
-    /// Builds the activity log headline for a window of store activity. One record names itself when the
-    /// page supplied a label, and anything more reports counts, since a batch has no single thing to name.
-    /// </summary>
-    /// <param name="store">The store name.</param>
-    /// <param name="added">How many records arrived in the window.</param>
-    /// <param name="removed">How many records left in the window.</param>
-    /// <param name="label">The label of the only record involved, when there was only one.</param>
-    /// <returns>The headline.</returns>
-    public static string Headline(string store, int added, int removed, string? label)
-    {
-        if (added == 1 && removed == 0)
-        {
-            return (string.IsNullOrEmpty(label) ? "A record" : label) + " was added to " + store;
-        }
-
-        if (added == 0 && removed == 1)
-        {
-            return (string.IsNullOrEmpty(label) ? "A record" : label) + " was removed from " + store;
-        }
-
-        var addedCount = added.ToString(CultureInfo.InvariantCulture);
-        var removedCount = removed.ToString(CultureInfo.InvariantCulture);
-
-        if (removed == 0)
-        {
-            return addedCount + " items added to " + store;
-        }
-
-        if (added == 0)
-        {
-            return removedCount + " items removed from " + store;
-        }
-
-        return addedCount + " items added and " + removedCount + " items removed from " + store;
-    }
-
-    /// <summary>
-    /// Builds the activity log headline for a store being cleared.
-    /// </summary>
-    /// <param name="store">The store name.</param>
-    /// <param name="removed">How many records the clear removed.</param>
-    /// <returns>The headline.</returns>
-    public static string ClearHeadline(string store, int removed)
-        => (removed == 1 ? "1 record was" : removed.ToString(CultureInfo.InvariantCulture) + " records were")
-            + " cleared from " + store;
 
     /// <summary>
     /// Normalizes a caller supplied label. It is shown to administrators in the activity log, so control
@@ -729,14 +652,5 @@ public sealed class StoreService : IStoreService
         // Cleared when the backing file exists but could not be parsed. Writing then would destroy
         // whatever it holds, so every write is refused until the file is fixed or removed.
         public bool Readable { get; set; } = true;
-
-        // Activity log rate limiting. Process lifetime only, so a restart simply starts a fresh window.
-        public DateTime? LastNoticeUtc { get; set; }
-
-        public int PendingAdds { get; set; }
-
-        public int PendingRemoves { get; set; }
-
-        public string? PendingLabel { get; set; }
     }
 }

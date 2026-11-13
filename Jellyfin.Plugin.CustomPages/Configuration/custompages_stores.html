@@ -163,8 +163,8 @@
                                 <span class="checkboxLabel">Notify administrators when records are added or removed</span>
                             </label>
                             <div class="fieldDescription">
-                                Writes an entry to Jellyfin's activity log. Entries are rate limited to
-                                one a minute per store, and a batch reports counts, so a burst cannot
+                                Writes an entry to Jellyfin's activity log. Additions and removals are
+                                summed into one entry each once writes go quiet, so a burst cannot
                                 flood the feed. Pass a label when writing to name the record.
                             </div>
                         </div>

@@ -24,6 +24,10 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
         // events to administrators.
         serviceCollection.AddActivityLogger();
 
+        // Sums store notices into one entry per outcome. A singleton, so the host disposes it on
+        // shutdown and whatever is still waiting gets written.
+        serviceCollection.AddSingleton<StoreActivity>();
+
         // Holds each store's records in memory behind its own gate, so it has to be a singleton. Two
         // instances would each believe they owned the file and the later write would drop the other's
         // records.

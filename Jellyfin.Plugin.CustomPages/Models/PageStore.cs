@@ -78,8 +78,8 @@ public class PageStore
 
     /// <summary>
     /// Gets or sets a value indicating whether a new record writes an entry to Jellyfin's activity log,
-    /// where administrators already look. Entries are rate limited per store, so a burst of submissions
-    /// cannot flood the feed.
+    /// where administrators already look. Additions and removals are summed into one entry each, so a
+    /// burst of submissions cannot flood the feed.
     /// </summary>
     public bool NotifyOnWrite { get; set; }
 }

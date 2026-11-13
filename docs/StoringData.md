@@ -97,17 +97,17 @@ Retention is applied two ways so it always holds. Reading or writing a store dro
 
 ## Notifying Administrators
 
-Turn on **Notify administrators when records are added or removed** and both write entries to Jellyfin's activity log, where the dashboard already surfaces plugin events. Clearing the store from the dashboard writes its own entry too, such as `12 records were cleared from queue`.
+Turn on **Notify administrators when records are added or removed** and both write entries to Jellyfin's activity log, where the dashboard already surfaces plugin events. Clearing the store from the dashboard writes its own entry straight away too, such as `12 Records Cleared`, reading `12 records were cleared from queue by an administrator from the dashboard`.
 
-Pass a **label** when you write and the entry names the record instead of counting it:
+Additions and removals are summed rather than written one at a time, so a submission form under load cannot bury the rest of the feed. Each is written as one entry once writes have gone quiet for 30 seconds, and at least every 5 minutes while they keep coming. The entry counts the records and names the stores they went to, such as `4 Records Added` reading `4 records were added to queue (3), downloads (1)`, and removals read the same way as `3 Records Removed`.
 
-```js
+Pass a **label** when you write and the entry names the record as well as counting it:
+
+```javascript
 pageStore.write('queue', { url: value, status: 'queued' }, { label: 'Holiday photos' });
 ```
 
-That reads as `Holiday photos was added to queue`, and the same label comes back as `Holiday photos was removed from queue` when the record is deleted, so the page only supplies it once. An update carrying no label keeps the one the record already has, since writing a status onto a record is not renaming it. Without a label the entry falls back to `A record was added to queue`.
-
-Entries are rate limited to one a minute per store, and additions and removals share that window, so what an administrator gets is one line saying what happened rather than two racing each other. A batch reports counts, because it has no single thing to name: `4 items added to queue`, `3 items removed from queue`, or `4 items added and 3 items removed from queue`. The label is capped and flattened before it reaches the feed, so a page cannot write a line break into it.
+That reads as `1 record was added to queue (1), including Holiday photos (1)`, and the same label comes back on `1 Record Removed` when the record is deleted, so the page only supplies it once. An update carrying no label keeps the one the record already has, since writing a status onto a record is not renaming it. Records written without a label are counted but not named. The label is capped and flattened before it reaches the feed, so a page cannot write a line break into it.
 
 ## Limits and Storage
 
