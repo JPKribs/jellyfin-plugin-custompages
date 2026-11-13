@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "12.4.2.4",
+        "changelog": "\n## Fixed\n- The arrows on collapsible sections are back to their usual size\n\n## Developer\n- Uses JPKribs.Jellyfin.Base 2026.11.13.3",
+        "targetAbi": "12.4.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v12.4.2.4/jellyfin-plugin-custompages-12.4.2.4.zip",
+        "checksum": "94c1f9e852c9168dacd312b391584459",
+        "timestamp": "2026-11-13T19:59:31Z"
+      },
+      {
         "version": "12.4.2.3",
         "changelog": "\n## Changed\n- Activity log entries are summed per outcome and share one shape. Store additions and removals are written as one entry each once writes go quiet, such as 4 Records Added, instead of one a minute per store, and clearing a store reads 12 Records Cleared\n\n## Developer\n- Uses JPKribs.Jellyfin.Base 2026.11.13.2",
         "targetAbi": "12.4.0.0",
