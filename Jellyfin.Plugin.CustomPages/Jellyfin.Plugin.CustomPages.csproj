@@ -7,7 +7,7 @@
     <Nullable>enable</Nullable>
     <AnalysisMode>AllEnabledByDefault</AnalysisMode>
     <CodeAnalysisRuleSet>../jellyfin.ruleset</CodeAnalysisRuleSet>
-    <NoWarn>NU1605;CA1002;CA2227;CA1305;CA1867</NoWarn>
+    <NoWarn>NU1605;CA1002;CA2227;CA1305</NoWarn>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
   </PropertyGroup>
 
@@ -20,7 +20,7 @@
       <PrivateAssets>all</PrivateAssets>
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
-    <PackageReference Include="JPKribs.Jellyfin.Base" Version="2026.11.13.1" />
+    <PackageReference Include="JPKribs.Jellyfin.Base" Version="2026.11.13.2" />
   </ItemGroup>
 
   <ItemGroup>

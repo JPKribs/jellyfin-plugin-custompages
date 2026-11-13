@@ -18,4 +18,4 @@ changelog:
   changed:
   - Activity log entries are summed per outcome and share one shape. Store additions and removals are written as one entry each once writes go quiet, such as "4 Records Added", instead of one a minute per store, and clearing a store reads "12 Records Cleared"
   developer:
-  - Uses JPKribs.Jellyfin.Base 2026.11.13.1
+  - Uses JPKribs.Jellyfin.Base 2026.11.13.2
