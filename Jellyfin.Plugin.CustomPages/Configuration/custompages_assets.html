@@ -12,28 +12,23 @@
                     </div>
 
                     <div class="fieldDescription">
-                        Upload images to host them for your pages. Reference one from a page's HTML or CSS with
-                        the path shown on its card, for example <code>&lt;img src="asset/logo.png"&gt;</code> or
-                        <code>url('asset/logo.png')</code>. Visibility controls who can see the image. Assets set
-                        to <strong>Anyone</strong> are served publicly at <code>/pages/asset/{name}</code>. Assets
-                        set to <strong>Users</strong> or <strong>Administrators</strong> are referenced the same way
-                        but are never served by URL. They are embedded into pages of an equal or higher
-                        visibility tier when the page renders.
+                        Hosts images for your pages. Reference one by the path on its row, such as <code>asset/logo.png</code>.
+                    </div>
+                    <div class="base-info">
+                        Images set to Anyone are public at <code>/pages/asset/{name}</code>. Images set to User or Admin are only embedded into pages of the same or a higher visibility.
                     </div>
 
                     <!-- Asset counts -->
-                    <div id="assetCounts" class="jpk-cards"></div>
+                    <div id="assetCounts" class="base-cards compact"></div>
 
                     <!-- Upload -->
-                    <div class="inputContainer">
-                        <label for="assetFile">Upload images</label>
-                        <input type="file" id="assetFile" accept="image/*" multiple />
-                    </div>
+                    <!-- Filled by createFilePicker. -->
+                    <div id="assetPicker"></div>
 
                     <!-- Asset list -->
-                    <div id="assetEmpty" class="jpk-empty-section hidden">No images uploaded yet.</div>
-                    <div id="assetList" class="jpk-asset-list"></div>
-                    <span id="assetStatus" class="jpk-status-text"></span>
+                    <div id="assetEmpty" class="base-empty-section hidden">No images yet. Add one above.</div>
+                    <div id="assetList" class="base-asset-list"></div>
+                    <span id="assetStatus" class="base-status-text" role="status"></span>
 
                 </div>
             </form>

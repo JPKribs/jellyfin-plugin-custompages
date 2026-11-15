@@ -95,8 +95,8 @@ export default function (view) {
 
     function setPublishVisual(enabled) {
         var btn = el('btnPublish');
-        btn.classList.toggle('jpk-button-submit', enabled);
-        btn.classList.toggle('jpk-secondary', !enabled);
+        btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+        btn.title = enabled ? 'Published' : 'Unpublished';
         el('publishLabel').textContent = enabled ? 'Published' : 'Unpublished';
         btn.querySelector('.material-icons').textContent = enabled ? 'visibility' : 'visibility_off';
     }
@@ -189,7 +189,7 @@ export default function (view) {
 
     function makeRouteRow(route) {
         route = route || { Name: '', Url: '', Username: '', Password: '' };
-        // Deliberately not jpk-field-row. form.css gives that class a full field gap as an important
+        // Deliberately not base-field-row. form.css gives that class a full field gap as an important
         // margin, which stacks a large space between every route. The list container supplies the gap.
         var row = document.createElement('div');
         row.style.display = 'flex';
@@ -198,7 +198,7 @@ export default function (view) {
 
         function field(placeholder, value, type) {
             var wrap = document.createElement('div');
-            wrap.className = 'jpk-field';
+            wrap.className = 'base-field';
             var inp = document.createElement('input');
             inp.setAttribute('is', 'emby-input');
             inp.type = type || 'text';
@@ -218,11 +218,12 @@ export default function (view) {
         var passEl = field('password (optional)', route.Password ? SECRET_KEPT : '', 'password');
 
         var removeWrap = document.createElement('div');
-        removeWrap.className = 'jpk-field jpk-field-fixed';
+        removeWrap.className = 'base-field base-field-fixed';
         var remove = document.createElement('button');
-        remove.setAttribute('is', 'emby-button');
         remove.type = 'button';
-        remove.className = 'raised jpk-icon-btn jpk-button-destructive';
+        remove.className = 'base-row-btn destructive';
+        remove.title = 'Remove';
+        remove.setAttribute('aria-label', 'Remove');
         remove.innerHTML = '<span class="material-icons" aria-hidden="true">delete</span>';
         remove.addEventListener('click', function () {
             var i = routeRows.indexOf(entry);
@@ -270,7 +271,7 @@ export default function (view) {
         readEditorInto(p);
 
         if (!p.Slug) {
-            Shared.setStatus('pageStatus', 'A slug is required.', true);
+            Shared.setStatus('pageStatus', 'Enter a slug.', true);
             return;
         }
 
@@ -279,7 +280,7 @@ export default function (view) {
         if (el('pageVisibility').value === 'User'
             && el('pageAccess').value === 'specific'
             && !p.AllowedUserIds.length) {
-            Shared.setStatus('pageStatus', 'Pick at least one user, or switch back to All users.', true);
+            Shared.setStatus('pageStatus', 'Select at least one user, or set Access to All Users.', true);
             return;
         }
 
@@ -291,7 +292,7 @@ export default function (view) {
             return;
         }
 
-        persistPages('Saved.', 'Save failed.');
+        persistPages('Page saved.', 'Could not save the page.');
     }
 
     // Jellyfin answers a refused configuration save with a generic error, so the server is asked first
@@ -344,11 +345,11 @@ export default function (view) {
         var p = pages[currentIndex];
         if (!p) return;
         var label = p.Slug || 'this page';
-        confirmDialog('Delete /pages/' + label + '? This cannot be undone.', { title: 'Delete page', confirmText: 'Delete', destructive: true }).then(function (ok) {
+        confirmDialog('Delete /pages/' + label + '? This cannot be undone.', { title: 'Delete Page', confirmText: 'Delete', destructive: true }).then(function (ok) {
             if (!ok) return;
             pages.splice(currentIndex, 1);
             currentIndex = -1;
-            persistPages('Deleted.', 'Delete failed.');
+            persistPages('Page deleted.', 'Could not delete the page.');
         });
     }
 

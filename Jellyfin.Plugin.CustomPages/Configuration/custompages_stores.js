@@ -1,4 +1,4 @@
-import { createConfigPage, confirmDialog } from './configurationpage?name=custompages_jpkribs_shared.js';
+import { createConfigPage, confirmDialog, createUsageMeter } from './configurationpage?name=custompages_jpkribs_shared.js';
 
 export default function (view) {
     'use strict';
@@ -28,6 +28,7 @@ export default function (view) {
     var stores = [];
     var currentIndex = -1;
     var editorEnabled = true;
+    var usageMeter = null;
     // Record counts keyed by the name a store had when it was last saved. A renamed but unsaved store
     // has no server side counterpart, so it reports nothing rather than the previous name's count.
     var counts = {};
@@ -80,14 +81,14 @@ export default function (view) {
         Shared.renderCards('storeCounts', [
             { count: stores.length, label: 'Stores', color: 'blue' },
             { count: total, label: 'Records', color: 'green' },
-            { count: open, label: 'Open to writes', color: open > 0 ? 'orange' : 'gray' }
+            { count: open, label: 'Open to Writes', color: open > 0 ? 'orange' : 'gray' }
         ]);
     }
 
     function setEnabledVisual(enabled) {
         var btn = el('btnEnableStore');
-        btn.classList.toggle('jpk-button-submit', enabled);
-        btn.classList.toggle('jpk-secondary', !enabled);
+        btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+        btn.title = enabled ? 'Enabled' : 'Disabled';
         el('enableLabel').textContent = enabled ? 'Enabled' : 'Disabled';
         btn.querySelector('.material-icons').textContent = enabled ? 'visibility' : 'visibility_off';
     }
@@ -123,12 +124,10 @@ export default function (view) {
         var saved = (stores[currentIndex] && stores[currentIndex].Name || '').toLowerCase();
         var count = counts[saved];
         var limit = parseInt(el('storeMaxRecords').value, 10) || 0;
-        if (!saved) {
-            el('storeUsage').textContent = 'Not saved yet.';
-        } else if (typeof count === 'number') {
-            el('storeUsage').textContent = count + ' of ' + limit + ' records stored.';
-        } else {
-            el('storeUsage').textContent = 'No records yet.';
+        // A store that was never saved has no records on the server to measure.
+        Shared.setVisible('storeUsageRow', !!saved);
+        if (saved && usageMeter) {
+            usageMeter.setValue({ used: typeof count === 'number' ? count : 0, total: limit });
         }
     }
 
@@ -208,7 +207,7 @@ export default function (view) {
             renderSelect();
             return loadCounts();
         }).catch(function () {
-            Shared.setStatus('storeStatus', 'Save failed.', true);
+            Shared.setStatus('storeStatus', 'Could not save the store.', true);
         });
     }
 
@@ -218,7 +217,7 @@ export default function (view) {
         readEditorInto(s);
 
         if (!s.Name) {
-            Shared.setStatus('storeStatus', 'A name is required.', true);
+            Shared.setStatus('storeStatus', 'Enter a name.', true);
             return;
         }
 
@@ -230,7 +229,7 @@ export default function (view) {
             return;
         }
 
-        persist('Saved.');
+        persist('Store saved.');
     }
 
     function clearRecords() {
@@ -242,16 +241,17 @@ export default function (view) {
         }
 
         var count = counts[name];
-        var message = 'Delete every record in "' + name + '"'
-            + (typeof count === 'number' ? ' (' + count + ' records)' : '')
-            + '? This cannot be undone, and a configuration backup will not bring them back.';
-        confirmDialog(message, { title: 'Clear store', confirmText: 'Clear', destructive: true }).then(function (ok) {
+        var message = 'Clear ' + name + '? '
+            + (typeof count === 'number' ? 'Its ' + count + ' ' + (count === 1 ? 'record is' : 'records are') : 'Every record is')
+            + ' deleted, and a configuration backup cannot bring them back.';
+        confirmDialog(message, { title: 'Clear Store', confirmText: 'Clear', destructive: true }).then(function (ok) {
             if (!ok) return;
             Shared.apiRequest('pages/store/' + encodeURIComponent(name) + '/clear', 'POST').then(function (result) {
                 counts[name] = 0;
                 renderCounts();
                 updateUsage();
-                Shared.setStatus('storeStatus', 'Removed ' + ((result && result.removed) || 0) + ' records.', false);
+                var removed = (result && result.removed) || 0;
+                Shared.setStatus('storeStatus', 'Removed ' + removed + ' ' + (removed === 1 ? 'record' : 'records') + '.', false);
             }).catch(function () {
                 Shared.setStatus('storeStatus', 'Could not clear the store.', true);
             });
@@ -264,13 +264,13 @@ export default function (view) {
         var name = (s.Name || '').toLowerCase();
         var count = counts[name];
         var message = typeof count === 'number' && count > 0
-            ? 'Delete "' + name + '"? Its ' + count + ' records stay on disk and come back if you recreate a store with the same name. Clear it first if you want them gone.'
-            : 'Delete this store? Pages calling it will stop working.';
-        confirmDialog(message, { title: 'Delete store', confirmText: 'Delete', destructive: true }).then(function (ok) {
+            ? 'Delete ' + name + '? Its records stay on disk and return when a store with the same name is added.'
+            : 'Delete this store? Pages that call it stop working.';
+        confirmDialog(message, { title: 'Delete Store', confirmText: 'Delete', destructive: true }).then(function (ok) {
             if (!ok) return;
             stores.splice(currentIndex, 1);
             currentIndex = Math.min(currentIndex, stores.length - 1);
-            persist('Deleted.');
+            persist('Store deleted.');
         });
     }
 
@@ -288,6 +288,8 @@ export default function (view) {
     }
 
     function bind() {
+        usageMeter = createUsageMeter({ label: 'Records', usedText: '{used} of {total} records' });
+        el('storeUsage').appendChild(usageMeter.element);
         el('selectStore').addEventListener('change', function () {
             readEditorInto(stores[currentIndex] || {});
             currentIndex = parseInt(this.value, 10);

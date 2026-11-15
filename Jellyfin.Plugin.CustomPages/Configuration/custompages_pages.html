@@ -1,6 +1,6 @@
 <div id="CustomPagesPage" data-role="page"
      class="page type-interior pluginConfigurationPage withTabs"
-     data-require="emby-input,emby-button,emby-checkbox"
+     data-require="emby-input,emby-button,emby-select,emby-checkbox"
      data-controller="__plugin/custompages_pages.js">
     <div data-role="content">
         <div class="content-primary">
@@ -17,24 +17,24 @@
                     </div>
 
                     <!-- Page counts -->
-                    <div id="pageCounts" class="jpk-cards"></div>
+                    <div id="pageCounts" class="base-cards compact"></div>
 
                     <!-- Page selector -->
-                    <div class="jpk-selector">
+                    <div class="base-selector">
                         <div class="selectContainer">
                             <label class="selectLabel" for="selectPage">Page</label>
-                            <select id="selectPage" class="jpk-selector-dropdown"></select>
+                            <select id="selectPage" class="base-selector-dropdown"></select>
                         </div>
-                        <div class="jpk-selector-actions">
-                            <button is="emby-button" type="button" id="btnNewPage" class="raised jpk-icon-btn jpk-button-submit" title="New page">
+                        <div class="base-selector-actions">
+                            <button is="emby-button" type="button" id="btnNewPage" class="raised base-button primary" title="New Page">
                                 <span class="material-icons" aria-hidden="true">add</span>
                                 <span>New</span>
                             </button>
-                            <button is="emby-button" type="button" id="btnPublish" class="raised jpk-icon-btn" title="Toggle published">
+                            <button is="emby-button" type="button" id="btnPublish" class="raised base-button" aria-pressed="true" title="Published">
                                 <span class="material-icons" aria-hidden="true">visibility</span>
                                 <span id="publishLabel">Published</span>
                             </button>
-                            <button is="emby-button" type="button" id="btnDeletePage" class="raised jpk-icon-btn jpk-button-destructive" title="Delete page">
+                            <button is="emby-button" type="button" id="btnDeletePage" class="raised base-button destructive" title="Delete Page">
                                 <span class="material-icons" aria-hidden="true">delete</span>
                                 <span>Delete</span>
                             </button>
@@ -42,14 +42,14 @@
                     </div>
 
                     <!-- Empty state -->
-                    <div id="emptyState" class="jpk-empty-section hidden">No pages yet. Click <strong>New</strong> to create one.</div>
+                    <div id="emptyState" class="base-empty-section hidden">No pages yet. Select New to add one.</div>
 
                     <!-- Page editor -->
                     <div id="pageEditor" class="hidden">
                         <div class="inputContainer">
                             <label for="pageSlug">Slug</label>
                             <input is="emby-input" type="text" id="pageSlug" autocomplete="off" />
-                            <div class="fieldDescription jpk-url">URL: <a id="pageUrl" href="#" target="_blank" rel="noopener"></a></div>
+                            <div class="fieldDescription base-url">URL: <a id="pageUrl" href="#" target="_blank" rel="noopener"></a></div>
                         </div>
 
                         <div class="inputContainer">
@@ -59,7 +59,7 @@
 
                         <div class="selectContainer">
                             <label class="selectLabel" for="pageVisibility">Visibility</label>
-                            <select id="pageVisibility" class="jpk-selector-dropdown">
+                            <select is="emby-select" id="pageVisibility">
                                 <option value="Admin">Admin</option>
                                 <option value="User">User</option>
                                 <option value="Anonymous">Anyone</option>
@@ -69,7 +69,7 @@
                         <!-- Page access -->
                         <div class="selectContainer hidden" id="accessRow">
                             <label class="selectLabel" for="pageAccess">Access</label>
-                            <select id="pageAccess" class="jpk-selector-dropdown">
+                            <select is="emby-select" id="pageAccess">
                                 <option value="all">All Users</option>
                                 <option value="specific">Specific Users</option>
                             </select>
@@ -89,10 +89,10 @@
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
                                 <input type="checkbox" is="emby-checkbox" id="pageSingleFile" />
-                                <span class="checkboxLabel">Use a single webpage file</span>
+                                <span class="checkboxLabel">Use a Single Webpage File</span>
                             </label>
-                            <div class="fieldDescription">
-                                Serve one complete HTML document instead of separate HTML, CSS, and JS.
+                            <div class="fieldDescription checkboxFieldDescription">
+                                Serves one complete HTML document instead of separate HTML, CSS, and JS.
                             </div>
                         </div>
 
@@ -101,9 +101,9 @@
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
                                 <input type="checkbox" is="emby-checkbox" id="pageUnsandboxed" />
-                                <span class="checkboxLabel">Allow system access</span>
+                                <span class="checkboxLabel">Allow System Access</span>
                             </label>
-                            <div class="fieldDescription">
+                            <div class="fieldDescription checkboxFieldDescription">
                                 Runs the page unsandboxed with the same access as the web client. Only for pages you wrote.
                             </div>
 
@@ -113,9 +113,9 @@
                                 </div>
                                 <div id="routesList" style="display:flex;flex-direction:column;gap:0.5rem;padding-top:0.5rem"></div>
                                 <div style="padding-top:0.5rem">
-                                    <button is="emby-button" type="button" id="btnAddRoute" class="raised jpk-icon-btn">
+                                    <button is="emby-button" type="button" id="btnAddRoute" class="raised base-button secondary small">
                                         <span class="material-icons" aria-hidden="true">add</span>
-                                        <span>Add route</span>
+                                        <span>Add Route</span>
                                     </button>
                                 </div>
                             </div>
@@ -123,7 +123,7 @@
 
                         <div class="selectContainer" id="sourceRow">
                             <label class="selectLabel" for="selectSource">Source</label>
-                            <select id="selectSource" class="jpk-selector-dropdown">
+                            <select is="emby-select" id="selectSource">
                                 <option value="html">HTML</option>
                                 <option value="css">CSS</option>
                                 <option value="js">JavaScript</option>
@@ -131,16 +131,16 @@
                         </div>
 
                         <div class="inputContainer">
-                            <textarea id="pageSource" class="jpk-code" spellcheck="false" aria-label="Page source"></textarea>
+                            <textarea id="pageSource" class="base-code" spellcheck="false" aria-label="Page source"></textarea>
                             <div class="fieldDescription" id="sourceHint"></div>
                         </div>
 
                         <!-- Save -->
                         <div class="inputContainer">
-                            <button is="emby-button" type="button" id="btnSavePage" data-theme="b" class="raised jpk-button-submit block">
+                            <button is="emby-button" type="button" id="btnSavePage" class="raised base-button primary fill">
                                 <span>Save</span>
                             </button>
-                            <span id="pageStatus" class="jpk-status-text"></span>
+                            <span id="pageStatus" class="base-status-text" role="status"></span>
                         </div>
                     </div>
 

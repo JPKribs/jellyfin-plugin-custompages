@@ -1,4 +1,4 @@
-import { createConfigPage, confirmDialog } from './configurationpage?name=custompages_jpkribs_shared.js';
+import { createConfigPage, confirmDialog, createFilePicker } from './configurationpage?name=custompages_jpkribs_shared.js';
 
 export default function (view) {
     'use strict';
@@ -21,9 +21,10 @@ export default function (view) {
 
     var MAX_ASSET_BYTES = 5 * 1024 * 1024;
     var VISIBILITIES = ['Anonymous', 'User', 'Admin'];
-    var VISIBILITY_LABELS = { Anonymous: 'Anyone', User: 'Users', Admin: 'Administrators' };
+    var VISIBILITY_LABELS = { Anonymous: 'Anyone', User: 'User', Admin: 'Admin' };
 
     var assets = [];
+    var picker = null;
 
     function el(id) { return view.querySelector('#' + id); }
 
@@ -54,20 +55,21 @@ export default function (view) {
             renderAssets();
             if (message) Shared.setStatus('assetStatus', message, false);
         }).catch(function () {
-            Shared.setStatus('assetStatus', 'Save failed.', true);
+            Shared.setStatus('assetStatus', 'Could not save the images.', true);
         });
     }
 
-    function addAssetFiles(fileList) {
-        var files = Array.prototype.slice.call(fileList || []);
+    // addAssetFiles
+    // Reads each picked file and saves it as an asset, replacing one with the same name.
+    //
+    // Inputs
+    // files [File[]]: The files the picker accepted, each already under the size limit.
+    // refused [string]: The picker's refusal sentences for the files it turned away, or an empty string.
+    function addAssetFiles(files, refused) {
         if (!files.length) return;
 
         var skipped = [];
         var tasks = files.map(function (file) {
-            if (file.size > MAX_ASSET_BYTES) {
-                skipped.push(file.name);
-                return Promise.resolve();
-            }
             return readFileAsDataUrl(file).then(function (dataUrl) {
                 var m = /^data:([^;]+);base64,(.*)$/.exec(dataUrl);
                 if (!m) { skipped.push(file.name); return; }
@@ -88,25 +90,26 @@ export default function (view) {
         // A skipped file is reported once every read settles, so a later success never hides it.
         Promise.all(tasks).then(function () {
             if (skipped.length === files.length) {
-                Shared.setStatus('assetStatus', skipped.join(', ') + ' could not be added. Files must be under 5 MB.', true);
+                Shared.setStatus('assetStatus', 'Could not read ' + skipped.join(', ') + '.', true);
                 return;
             }
-            persistAssets(skipped.length ? 'Uploaded. Skipped ' + skipped.join(', ') + '.' : 'Uploaded.');
+            var note = (skipped.length ? ' Could not read ' + skipped.join(', ') + '.' : '') + (refused ? ' ' + refused : '');
+            persistAssets('Images uploaded.' + note);
         });
     }
 
     function copyAssetRef(name) {
         var ref = 'asset/' + name;
         Shared.copyToClipboard(ref).then(function () {
-            Shared.setStatus('assetStatus', 'Copied ' + ref, false);
+            Shared.setStatus('assetStatus', 'Path copied.', false);
         });
     }
 
     function deleteAsset(name) {
-        confirmDialog('Delete image "' + name + '"? Pages referencing it will break.', { title: 'Delete image', confirmText: 'Delete', destructive: true }).then(function (ok) {
+        confirmDialog('Delete ' + name + '? Pages that use it show a broken image.', { title: 'Delete Image', confirmText: 'Delete', destructive: true }).then(function (ok) {
             if (!ok) return;
             assets = assets.filter(function (a) { return a.Name !== name; });
-            persistAssets('Deleted.');
+            persistAssets('Image deleted.');
         });
     }
 
@@ -147,18 +150,18 @@ export default function (view) {
                 return '<option value="' + v + '"' + (v === visibility ? ' selected' : '') + '>'
                     + VISIBILITY_LABELS[v] + '</option>';
             }).join('');
-            return '<div class="jpk-asset-item">'
-                + '<img class="jpk-asset-thumb" src="' + src + '" alt="" />'
-                + '<div class="jpk-asset-info">'
-                + '<div class="jpk-asset-name">' + name + '</div>'
-                + '<div class="jpk-asset-ref">asset/' + name + '</div>'
+            return '<div class="base-asset-item">'
+                + '<img class="base-asset-thumb" src="' + src + '" alt="" />'
+                + '<div class="base-asset-info">'
+                + '<div class="base-asset-name">' + name + '</div>'
+                + '<div class="base-asset-ref">asset/' + name + '</div>'
                 + '</div>'
-                + '<div class="jpk-asset-actions">'
-                + '<select class="jpk-selector-dropdown" data-vis="' + name + '" title="Visibility" aria-label="Visibility">'
+                + '<div class="base-asset-actions">'
+                + '<select class="small" data-vis="' + name + '" title="Visibility" aria-label="Visibility">'
                 + options + '</select>'
-                + '<button type="button" class="jpk-asset-btn" data-copy="' + name + '" title="Copy path" aria-label="Copy path">'
+                + '<button type="button" class="base-row-btn" data-copy="' + name + '" title="Copy Path" aria-label="Copy Path">'
                 + '<span class="material-icons" aria-hidden="true">content_copy</span></button>'
-                + '<button type="button" class="jpk-asset-btn danger" data-del="' + name + '" title="Delete" aria-label="Delete">'
+                + '<button type="button" class="base-row-btn destructive" data-del="' + name + '" title="Delete" aria-label="Delete">'
                 + '<span class="material-icons" aria-hidden="true">delete</span></button>'
                 + '</div>'
                 + '</div>';
@@ -166,10 +169,28 @@ export default function (view) {
     }
 
     function bind() {
-        el('assetFile').addEventListener('change', function () {
-            addAssetFiles(this.files);
-            this.value = '';
+        // Each pick uploads at once, so the picker is emptied after it hands its files over. Emptying it
+        // also clears its refusal message, so a refusal that came with good files joins the result.
+        var refused = '';
+        picker = createFilePicker({
+            accept: 'image/*',
+            maxSize: MAX_ASSET_BYTES,
+            multiple: true,
+            dropText: 'Drop images here or click to select.',
+            sizeLimitText: '{value} is larger than 5 MB.',
+            onChange: function (files) {
+                if (!files.length) return;
+                addAssetFiles(files, refused);
+                refused = '';
+                picker.setValue([]);
+            },
+            onError: function (messages) {
+                // The picker calls onChange in the same turn as onError, so a refusal never outlives its pick.
+                refused = messages.join(' ');
+                setTimeout(function () { refused = ''; }, 0);
+            }
         });
+        el('assetPicker').appendChild(picker.element);
         el('assetList').addEventListener('click', function (e) {
             var copy = e.target.closest('[data-copy]');
             if (copy) { copyAssetRef(copy.getAttribute('data-copy')); return; }
