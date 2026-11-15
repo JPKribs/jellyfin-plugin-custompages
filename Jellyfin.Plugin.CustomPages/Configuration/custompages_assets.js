@@ -98,13 +98,6 @@ export default function (view) {
         });
     }
 
-    function copyAssetRef(name) {
-        var ref = 'asset/' + name;
-        Shared.copyToClipboard(ref).then(function () {
-            Shared.setStatus('assetStatus', 'Path copied.', false);
-        });
-    }
-
     function deleteAsset(name) {
         confirmDialog('Delete ' + name + '? Pages that use it show a broken image.', { title: 'Delete Image', confirmText: 'Delete', destructive: true }).then(function (ok) {
             if (!ok) return;
@@ -131,41 +124,96 @@ export default function (view) {
         var size = Shared.formatSize(bytes);
         Shared.renderCards('assetCounts', [
             { count: images, label: 'Images', color: 'blue' },
-            { count: other, label: 'Other', color: 'green' },
-            { count: size, label: 'Size', color: 'gray' }
+            { count: other, label: 'Other', color: 'blue' },
+            { count: size, label: 'Size', color: 'blue' }
         ]);
+    }
+
+    function make(tag, className, text) {
+        var node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text !== undefined) node.textContent = text;
+        return node;
+    }
+
+    function rowButton(icon, label, modifier, onClick) {
+        var button = make('button', 'base-row-btn' + modifier);
+        button.type = 'button';
+        button.title = label;
+        button.setAttribute('aria-label', label);
+        var glyph = make('span', 'material-icons', icon);
+        glyph.setAttribute('aria-hidden', 'true');
+        button.appendChild(glyph);
+        button.addEventListener('click', onClick);
+        return button;
+    }
+
+    function copyAssetRef(name) {
+        Shared.copyToClipboard('asset/' + name).then(function (ok) {
+            if (ok === false) Shared.setStatus('assetStatus', 'Copy failed.', true);
+            else Shared.setStatus('assetStatus', 'Path copied.', false);
+        });
+    }
+
+    // renderAssetRow
+    // Builds one Asset List row: the thumbnail, the name over its path, the visibility, Copy Path, and Delete.
+    //
+    // Inputs
+    // a [object]: The asset, with Name, ContentType, DataBase64, and Visibility.
+    //
+    // Output
+    // [HTMLElement]: The row.
+    function renderAssetRow(a) {
+        var row = make('div', 'base-asset-item');
+
+        // Set as a property, never as markup, so a stored value can never break out of the attribute.
+        // The halves are also validated server side, since this preview runs against an administrator.
+        var thumb = make('img', 'base-asset-thumb');
+        thumb.alt = '';
+        thumb.src = 'data:' + (a.ContentType || '') + ';base64,' + (a.DataBase64 || '');
+        row.appendChild(thumb);
+
+        var info = make('div', 'base-asset-info');
+        info.appendChild(make('div', 'base-asset-name', a.Name));
+        info.appendChild(make('div', 'base-asset-ref', 'asset/' + a.Name));
+        row.appendChild(info);
+
+        var actions = make('div', 'base-asset-actions');
+        var select = make('select', 'small');
+        select.title = 'Visibility';
+        select.setAttribute('aria-label', 'Visibility');
+        var visibility = normalizeVisibility(a.Visibility);
+        VISIBILITIES.forEach(function (v) {
+            var option = make('option', '', VISIBILITY_LABELS[v]);
+            option.value = v;
+            option.selected = v === visibility;
+            select.appendChild(option);
+        });
+        select.addEventListener('change', function () {
+            setVisibility(a.Name, select.value);
+        });
+        actions.appendChild(select);
+
+        actions.appendChild(rowButton('content_copy', 'Copy Path', '', function () { copyAssetRef(a.Name); }));
+        actions.appendChild(rowButton('delete', 'Delete', ' destructive', function () { deleteAsset(a.Name); }));
+
+        row.appendChild(actions);
+        return row;
+    }
+
+    function setVisibility(name, value) {
+        var idx = assets.findIndex(function (a) { return a.Name === name; });
+        if (idx < 0) return;
+        assets[idx].Visibility = normalizeVisibility(value);
+        persistAssets('Saved.');
     }
 
     function renderAssets() {
         renderCounts();
         var list = el('assetList');
         Shared.setVisible('assetEmpty', assets.length === 0);
-        list.innerHTML = assets.map(function (a) {
-            var name = Shared.escapeHtml(a.Name);
-            // Both halves are escaped as well as validated server side: this preview runs in the
-            // dashboard, so an attribute break out here would execute against an administrator.
-            var src = 'data:' + Shared.escapeHtml(a.ContentType) + ';base64,' + Shared.escapeHtml(a.DataBase64);
-            var visibility = normalizeVisibility(a.Visibility);
-            var options = VISIBILITIES.map(function (v) {
-                return '<option value="' + v + '"' + (v === visibility ? ' selected' : '') + '>'
-                    + VISIBILITY_LABELS[v] + '</option>';
-            }).join('');
-            return '<div class="base-asset-item">'
-                + '<img class="base-asset-thumb" src="' + src + '" alt="" />'
-                + '<div class="base-asset-info">'
-                + '<div class="base-asset-name">' + name + '</div>'
-                + '<div class="base-asset-ref">asset/' + name + '</div>'
-                + '</div>'
-                + '<div class="base-asset-actions">'
-                + '<select class="small" data-vis="' + name + '" title="Visibility" aria-label="Visibility">'
-                + options + '</select>'
-                + '<button type="button" class="base-row-btn" data-copy="' + name + '" title="Copy Path" aria-label="Copy Path">'
-                + '<span class="material-icons" aria-hidden="true">content_copy</span></button>'
-                + '<button type="button" class="base-row-btn destructive" data-del="' + name + '" title="Delete" aria-label="Delete">'
-                + '<span class="material-icons" aria-hidden="true">delete</span></button>'
-                + '</div>'
-                + '</div>';
-        }).join('');
+        list.innerHTML = '';
+        assets.forEach(function (a) { list.appendChild(renderAssetRow(a)); });
     }
 
     function bind() {
@@ -191,21 +239,6 @@ export default function (view) {
             }
         });
         el('assetPicker').appendChild(picker.element);
-        el('assetList').addEventListener('click', function (e) {
-            var copy = e.target.closest('[data-copy]');
-            if (copy) { copyAssetRef(copy.getAttribute('data-copy')); return; }
-            var del = e.target.closest('[data-del]');
-            if (del) { deleteAsset(del.getAttribute('data-del')); }
-        });
-        el('assetList').addEventListener('change', function (e) {
-            var select = e.target.closest('[data-vis]');
-            if (!select) return;
-            var name = select.getAttribute('data-vis');
-            var idx = assets.findIndex(function (a) { return a.Name === name; });
-            if (idx < 0) return;
-            assets[idx].Visibility = normalizeVisibility(select.value);
-            persistAssets('Saved.');
-        });
     }
 
     function load() {

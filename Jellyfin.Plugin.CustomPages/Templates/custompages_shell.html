@@ -1,18 +1,18 @@
 <!-- Content fragment injected into the base JPKribs.Jellyfin.Base status card. -->
 <div id="signin" class="hidden">
-    <h1>Sign in required</h1>
+    <h1>Sign In Required</h1>
     <p>Sign in to your account to view this page.</p>
-    <a id="signinLink" class="base-btn" href="/web/">Sign in</a>
+    <a id="signinLink" class="base-btn" href="/web/">Sign In</a>
 </div>
 
 <div id="denied" class="hidden">
-    <h1>Not authorized</h1>
-    <p>Your account doesn't have access to this page.</p>
+    <h1>Not Authorized</h1>
+    <p>Your account does not have access to this page.</p>
     <a id="homeLink" class="base-btn" href="/web/">Back to Jellyfin</a>
 </div>
 
 <div id="missing" class="hidden">
-    <h1>Page not found</h1>
+    <h1>Page Not Found</h1>
     <p>This page is no longer available.</p>
     <a id="missingLink" class="base-btn" href="/web/">Back to Jellyfin</a>
 </div>
@@ -31,12 +31,13 @@
             if (a) a.href = webHref;
         });
 
-        // Hide the base card's loading heading + spinner before revealing a state.
+        // Hide the status card's loading heading and spinner before revealing a state. The status page
+        // template carries its own hidden class.
         function leaveLoading() {
             var h = document.querySelector('.base-status-card > h1');
             var s = document.querySelector('.base-status-card > .base-spinner');
-            if (h) h.style.display = 'none';
-            if (s) s.style.display = 'none';
+            if (h) h.classList.add('hidden');
+            if (s) s.classList.add('hidden');
         }
 
         function show(id) {

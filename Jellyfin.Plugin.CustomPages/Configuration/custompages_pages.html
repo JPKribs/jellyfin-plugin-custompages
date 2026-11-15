@@ -49,7 +49,11 @@
                         <div class="inputContainer">
                             <label for="pageSlug">Slug</label>
                             <input is="emby-input" type="text" id="pageSlug" autocomplete="off" />
-                            <div class="fieldDescription base-url">URL: <a id="pageUrl" href="#" target="_blank" rel="noopener"></a></div>
+                        </div>
+
+                        <!-- Filled by createCopyField. Hidden while the page has no slug. -->
+                        <div class="inputContainer hidden" id="pageUrlRow">
+                            <label for="pageUrl">URL</label>
                         </div>
 
                         <div class="inputContainer">
@@ -96,8 +100,6 @@
                             </div>
                         </div>
 
-                        <!-- Routes live inside this container so form.css contributes one field gap for
-                             the whole block. Inner spacing is padding, which the margin reset leaves alone. -->
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
                                 <input type="checkbox" is="emby-checkbox" id="pageUnsandboxed" />
@@ -106,17 +108,15 @@
                             <div class="fieldDescription checkboxFieldDescription">
                                 Runs the page unsandboxed with the same access as the web client. Only for pages you wrote.
                             </div>
+                        </div>
 
-                            <div class="hidden" id="routesRow" style="padding-top:0.75rem">
-                                <div class="fieldDescription" style="margin-top:0 !important">
-                                    Optional server routes. <code>serverFetch('name', options)</code> is forwarded to the target below, credentials included.
-                                </div>
-                                <div id="routesList" style="display:flex;flex-direction:column;gap:0.5rem;padding-top:0.5rem"></div>
-                                <div style="padding-top:0.5rem">
-                                    <button is="emby-button" type="button" id="btnAddRoute" class="raised base-button secondary small">
-                                        <span class="material-icons" aria-hidden="true">add</span>
-                                        <span>Add Route</span>
-                                    </button>
+                        <!-- Routes, filled by createRepeater. Shown while Allow System Access is on. -->
+                        <div class="base-indent hidden" id="routesRow">
+                            <div class="base-section">
+                                <div class="base-section-content" id="routesList">
+                                    <div class="fieldDescription">
+                                        Optional server routes. <code>serverFetch('name', options)</code> is forwarded to the target below, credentials included.
+                                    </div>
                                 </div>
                             </div>
                         </div>

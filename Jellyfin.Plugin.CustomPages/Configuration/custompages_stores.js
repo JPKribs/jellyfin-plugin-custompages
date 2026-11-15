@@ -1,4 +1,4 @@
-import { createConfigPage, confirmDialog, createUsageMeter } from './configurationpage?name=custompages_jpkribs_shared.js';
+import { createConfigPage, confirmDialog, createUsageMeter, createCopyField } from './configurationpage?name=custompages_jpkribs_shared.js';
 
 export default function (view) {
     'use strict';
@@ -29,6 +29,7 @@ export default function (view) {
     var currentIndex = -1;
     var editorEnabled = true;
     var usageMeter = null;
+    var urlField = null;
     // Record counts keyed by the name a store had when it was last saved. A renamed but unsaved store
     // has no server side counterpart, so it reports nothing rather than the previous name's count.
     var counts = {};
@@ -80,7 +81,7 @@ export default function (view) {
         });
         Shared.renderCards('storeCounts', [
             { count: stores.length, label: 'Stores', color: 'blue' },
-            { count: total, label: 'Records', color: 'green' },
+            { count: total, label: 'Records', color: 'blue' },
             { count: open, label: 'Open to Writes', color: open > 0 ? 'orange' : 'gray' }
         ]);
     }
@@ -114,10 +115,8 @@ export default function (view) {
 
     function updateUrl() {
         var name = slugify(el('storeName').value);
-        var link = el('storeUrl');
-        var path = name ? pageOrigin() + '/pages/store/' + name + '/read' : '';
-        link.textContent = path || 'Give the store a name.';
-        link.href = path || '#';
+        Shared.setVisible('storeUrlRow', !!name);
+        urlField.setValue(name ? pageOrigin().replace(/\/+$/, '') + '/pages/store/' + name + '/read' : '');
     }
 
     function updateUsage() {
@@ -290,6 +289,9 @@ export default function (view) {
     function bind() {
         usageMeter = createUsageMeter({ label: 'Records', usedText: '{used} of {total} records' });
         el('storeUsage').appendChild(usageMeter.element);
+        urlField = createCopyField({ label: 'URL', copyLabel: 'Copy URL' });
+        urlField.input.id = 'storeUrl';
+        el('storeUrlRow').appendChild(urlField.element);
         el('selectStore').addEventListener('change', function () {
             readEditorInto(stores[currentIndex] || {});
             currentIndex = parseInt(this.value, 10);

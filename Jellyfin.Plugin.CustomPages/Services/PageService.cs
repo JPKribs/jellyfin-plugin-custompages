@@ -238,8 +238,8 @@ public partial class PageService : IPageService
     {
         var where = IsValidSlug(slug) ? "/pages/" + slug : "this address";
         return StatusPage.Render(
-            "Page not found",
-            "There's nothing published at " + where + ".",
+            "Page Not Found",
+            "Nothing is published at " + where + ".",
             buttonText: "Back to Jellyfin",
             buttonHref: "../web/");
     }

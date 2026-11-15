@@ -1,4 +1,6 @@
-import { createConfigPage, confirmDialog, createUserMultiSelector, SECRET_KEPT } from './configurationpage?name=custompages_jpkribs_shared.js';
+import {
+    createConfigPage, confirmDialog, createUserMultiSelector, createRepeater, createCheckbox, createCopyField, SECRET_KEPT
+} from './configurationpage?name=custompages_jpkribs_shared.js';
 
 export default function (view) {
     'use strict';
@@ -42,7 +44,8 @@ export default function (view) {
     var editorSingle = false;
     var editorEnabled = true;
     var userPicker = null;
-    var routeRows = [];
+    var routeEditor = null;
+    var urlField = null;
 
     function el(id) { return view.querySelector('#' + id); }
 
@@ -66,8 +69,8 @@ export default function (view) {
         });
         Shared.renderCards('pageCounts', [
             { count: c.pub, label: 'Public', color: 'blue' },
-            { count: c.user, label: 'User', color: 'green' },
-            { count: c.admin, label: 'Admin', color: 'purple' },
+            { count: c.user, label: 'User', color: 'blue' },
+            { count: c.admin, label: 'Admin', color: 'blue' },
             { count: c.unpublished, label: 'Unpublished', color: 'gray' }
         ]);
     }
@@ -168,11 +171,17 @@ export default function (view) {
         updateUrlPreview();
     }
 
+    function mountUrlField() {
+        if (urlField) return;
+        urlField = createCopyField({ label: 'URL', copyLabel: 'Copy URL' });
+        urlField.input.id = 'pageUrl';
+        el('pageUrlRow').appendChild(urlField.element);
+    }
+
     function updateUrlPreview() {
         var slug = slugify(el('pageSlug').value);
-        var link = el('pageUrl');
-        link.textContent = '/pages/' + slug;
-        link.href = slug ? pageOrigin().replace(/\/+$/, '') + '/pages/' + slug : '#';
+        Shared.setVisible('pageUrlRow', !!slug);
+        urlField.setValue(slug ? pageOrigin().replace(/\/+$/, '') + '/pages/' + slug : '');
     }
 
     function readEditorInto(p) {
@@ -187,63 +196,57 @@ export default function (view) {
         p.Enabled = editorEnabled;
     }
 
-    function makeRouteRow(route) {
-        route = route || { Name: '', Url: '', Username: '', Password: '' };
-        // Deliberately not base-field-row. form.css gives that class a full field gap as an important
-        // margin, which stacks a large space between every route. The list container supplies the gap.
-        var row = document.createElement('div');
-        row.style.display = 'flex';
-        row.style.gap = '0.5rem';
-        row.style.alignItems = 'center';
-
-        function field(placeholder, value, type) {
-            var wrap = document.createElement('div');
-            wrap.className = 'base-field';
-            var inp = document.createElement('input');
-            inp.setAttribute('is', 'emby-input');
-            inp.type = type || 'text';
-            inp.placeholder = placeholder;
-            inp.value = value || '';
-            inp.autocomplete = 'off';
-            wrap.appendChild(inp);
-            row.appendChild(wrap);
-            return inp;
-        }
-
-        var nameEl = field('name', route.Name);
-        var urlEl = field('http://host:port/path', route.Url);
-        var userEl = field('username (optional)', route.Username);
-        // Never render the stored credential. The sentinel round-trips untouched and the server keeps
-        // whatever it already has, so the real value is never sent to a browser.
-        var passEl = field('password (optional)', route.Password ? SECRET_KEPT : '', 'password');
-
-        var removeWrap = document.createElement('div');
-        removeWrap.className = 'base-field base-field-fixed';
-        var remove = document.createElement('button');
-        remove.type = 'button';
-        remove.className = 'base-row-btn destructive';
-        remove.title = 'Remove';
-        remove.setAttribute('aria-label', 'Remove');
-        remove.innerHTML = '<span class="material-icons" aria-hidden="true">delete</span>';
-        remove.addEventListener('click', function () {
-            var i = routeRows.indexOf(entry);
-            if (i >= 0) routeRows.splice(i, 1);
-            row.remove();
-        });
-        removeWrap.appendChild(remove);
-        row.appendChild(removeWrap);
-
-        var entry = { row: row, read: function () {
-            return { Name: nameEl.value.trim(), Url: urlEl.value.trim(), Username: userEl.value, Password: passEl.value };
-        } };
-        routeRows.push(entry);
-        el('routesList').appendChild(row);
+    // renderClearControl
+    // Draws the Clear box of a route row, which removes the stored password on the next save.
+    //
+    // Inputs
+    // value [boolean|null]: false or true while the route has a stored password, null while it has none.
+    // change [function]: Tells the repeater the value changed.
+    function renderClearControl(value, change) {
+        var stored = value === true || value === false;
+        var box = createCheckbox({ ariaLabel: 'Clear Password', field: true, checked: value === true, disabled: !stored, onChange: change });
+        return {
+            element: box.element,
+            input: box.input,
+            getValue: function () { return stored ? box.getValue() : null; },
+            setValue: function (next) {
+                stored = next === true || next === false;
+                box.setValue(next === true);
+                box.setDisabled(!stored);
+            },
+            destroy: function () { box.destroy(); }
+        };
     }
 
+    function mountRoutes() {
+        if (routeEditor) return;
+        routeEditor = createRepeater({
+            fields: [
+                { key: 'Name', label: 'Name', placeholder: 'name' },
+                { key: 'Url', label: 'Target URL', placeholder: 'http://host:port/path', width: '2fr' },
+                { key: 'Username', label: 'Username', placeholder: 'Optional' },
+                { key: 'Password', label: 'Password', type: 'secret', placeholder: 'Optional' },
+                { key: 'Clear', label: 'Clear', type: 'custom', width: '4rem', render: renderClearControl }
+            ],
+            addText: 'Add Route',
+            rowName: 'Route',
+            emptyText: 'No routes yet. Add one below.'
+        });
+        el('routesList').appendChild(routeEditor.element);
+    }
+
+    // Never render the stored credential. A stored password shows as SECRET_KEPT, which round-trips
+    // untouched, and the server keeps whatever it already has, so the real value never reaches a browser.
     function renderRoutes(routes) {
-        routeRows = [];
-        el('routesList').innerHTML = '';
-        routes.forEach(makeRouteRow);
+        routeEditor.setValue(routes.map(function (r) {
+            return {
+                Name: r.Name || '',
+                Url: r.Url || '',
+                Username: r.Username || '',
+                Password: r.Password ? SECRET_KEPT : '',
+                Clear: r.Password ? false : null
+            };
+        }));
     }
 
     function applyRoutes() {
@@ -252,8 +255,13 @@ export default function (view) {
 
     function readRoutes() {
         if (!el('pageUnsandboxed').checked) return [];
-        return routeRows
-            .map(function (e) { return e.read(); })
+        // Clear posts an empty password, which removes the stored one. A typed replacement wins over it.
+        return routeEditor.getValue()
+            .map(function (r) {
+                var password = r.Password || '';
+                if (r.Clear === true && password === SECRET_KEPT) password = '';
+                return { Name: (r.Name || '').trim(), Url: (r.Url || '').trim(), Username: r.Username || '', Password: password };
+            })
             .filter(function (r) { return r.Name || r.Url; });
     }
 
@@ -355,6 +363,8 @@ export default function (view) {
 
     function bind() {
         mountUserPicker();
+        mountUrlField();
+        mountRoutes();
         el('selectPage').addEventListener('change', function () {
             keepCurrentEdits();
             currentIndex = parseInt(this.value, 10);
@@ -380,7 +390,6 @@ export default function (view) {
         el('pageVisibility').addEventListener('change', applyAccess);
         el('pageAccess').addEventListener('change', applyAccess);
         el('pageUnsandboxed').addEventListener('change', applyRoutes);
-        el('btnAddRoute').addEventListener('click', function () { makeRouteRow(); });
         el('pageSlug').addEventListener('input', updateUrlPreview);
     }
 

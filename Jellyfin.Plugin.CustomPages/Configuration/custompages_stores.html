@@ -54,7 +54,11 @@
                         <div class="inputContainer">
                             <label for="storeName">Name</label>
                             <input is="emby-input" type="text" id="storeName" autocomplete="off" />
-                            <div class="fieldDescription base-url">URL: <a id="storeUrl" href="#" target="_blank" rel="noopener"></a></div>
+                        </div>
+
+                        <!-- Filled by createCopyField. Hidden while the store has no name. -->
+                        <div class="inputContainer hidden" id="storeUrlRow">
+                            <label for="storeUrl">URL</label>
                         </div>
 
                         <div class="selectContainer">
