@@ -598,32 +598,15 @@ public sealed class StoreService : IStoreService
             return false;
         }
 
-        var temp = state.File + "." + Guid.NewGuid().ToString("N", CultureInfo.InvariantCulture) + ".tmp";
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(state.File)!);
-            using (var stream = File.Create(temp))
-            {
-                JsonSerializer.Serialize(stream, state.Records, StoreJson);
-            }
-
-            File.Move(temp, state.File, overwrite: true);
+            AtomicFile.WriteAllBytes(state.File, JsonSerializer.SerializeToUtf8Bytes(state.Records, StoreJson), logger: _logger);
             return true;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or ArgumentException)
         {
             _logger.LogError(ex, "Custom Pages: could not write the store at {File}", state.File);
-
-            // A failed write removes its temp file.
-            try
-            {
-                File.Delete(temp);
-            }
-            catch (Exception cleanup) when (cleanup is IOException or UnauthorizedAccessException)
-            {
-                _logger.LogDebug(cleanup, "Custom Pages: could not remove the temp file {File}", temp);
-            }
-
             return false;
         }
     }
