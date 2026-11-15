@@ -1,6 +1,6 @@
 # Storing Data
 
-A page can keep records on the server. Add a **store** on the **Stores** tab, give it a name, and any page with [Allow system access](SystemAccess.md) turned on can read and write it:
+A page can keep records on the server. Add a **store** on the **Stores** tab, give it a name, and any page with [Allow System Access](SystemAccess.md) turned on can read and write it:
 
 ```js
 pageStore.write('queue', { url: value })
@@ -35,14 +35,14 @@ A store belongs to the plugin rather than to one page, so a page that collects s
 * **Read** is the tier required to read the store at all. It is definitive. A viewer below it reads nothing, and no other setting can let them back in.
 * **Scope** decides how much of the store a viewer who cleared that tier is shown. **All records** shows everything. **User records** narrows each viewer to the rows they created, which is what turns a store into a submission queue where people watch their own entry and nobody else's.
 * **Write** is the tier that may add a record. It is independent of Read, so a write only drop box, one people submit to and nobody reads back, is a valid store.
-* **Writers can edit and delete their own records** is off by default, so a record carrying a status an administrator wrote cannot be rewritten by the person who submitted it. It only applies to a store whose Scope is **User records**. See the warning below.
+* **Writers Edit Own Records** is off by default, so a record carrying a status an administrator wrote cannot be rewritten by the person who submitted it. It only applies to a store whose Scope is **User records**. See the warning below.
 
 **Administrators are shown every record whatever Scope says**, the same way they are always admitted to a page restricted to specific users. That is what lets one store serve both halves of a workflow, and an administrator can read the store's file off disk regardless, so narrowing them here would only look like a restriction. Scope is therefore hidden on a store whose read tier is already **Admin**.
 
 Changing a record needs both tiers. Write is what admits a caller to the store, and Read is what decides which records are theirs to touch, so a caller can never rewrite something the store would refuse to show them.
 
 !!! warning "Scope All records lets every writer change every record"
-    With **Scope** set to **All records**, anyone who clears both the Read and the Write tier can update and delete **any** record in the store, not only their own, and **Writers can edit and delete their own records** has no effect. On a store with Read and Write both set to **User**, any signed in user can rewrite or remove anybody's row. With both set to **Anyone**, so can somebody who never signed in. Use **User records** when submitters must not touch each other's rows, or keep Read or Write at **Admin**. The Stores tab shows this warning when a store is set up this way.
+    With **Scope** set to **All records**, anyone who clears both the Read and the Write tier can update and delete **any** record in the store, not only their own, and **Writers Edit Own Records** has no effect. On a store with Read and Write both set to **User**, any signed in user can rewrite or remove anybody's row. With both set to **Anyone**, so can somebody who never signed in. Use **User records** when submitters must not touch each other's rows, or keep Read or Write at **Admin**. The Stores tab shows this warning when a store is set up this way.
 
 !!! warning "Anonymous writes"
     An anonymous caller owns nothing, so **User records** shows one an empty list rather than everything. If a store is open to anonymous writes, understand what that means: anybody who can reach your server can add records to it without signing in, and the record limit is the only thing bounding what they add.
@@ -73,7 +73,7 @@ The submitter watches their own row change status without ever seeing anyone els
 
 ## The Helper
 
-`pageStore` is injected into any page running with **Allow system access**. It is a convenience and never a grant. Every call it makes is authorized on the server against the store's own tiers, so a page holding the helper reaches exactly the stores its viewer was already entitled to.
+`pageStore` is injected into any page running with **Allow System Access**. It is a convenience and never a grant. Every call it makes is authorized on the server against the store's own tiers, so a page holding the helper reaches exactly the stores its viewer was already entitled to.
 
 | Call | Does |
 | --- | --- |
@@ -97,7 +97,7 @@ Retention is applied two ways so it always holds. Reading or writing a store dro
 
 ## Notifying Administrators
 
-Turn on **Notify administrators when records are added or removed** and both write entries to Jellyfin's activity log, where the dashboard already surfaces plugin events. Clearing the store from the dashboard writes its own entry straight away too, such as `12 Records Cleared`, reading `12 records were cleared from queue by an administrator from the dashboard`.
+Turn on **Notify Administrators** and both write entries to Jellyfin's activity log, where the dashboard already surfaces plugin events. Clearing the store from the dashboard writes its own entry straight away too, such as `12 Records Cleared`, reading `12 records were cleared from queue by an administrator from the dashboard`.
 
 Additions and removals are summed rather than written one at a time, so a submission form under load cannot bury the rest of the feed. Each is written as one entry once writes have gone quiet for 30 seconds, and at least every 5 minutes while they keep coming. The entry counts the records and names the stores they went to, such as `4 Records Added` reading `4 records were added to queue (3), downloads (1)`, and removals read the same way as `3 Records Removed`.
 
@@ -112,6 +112,8 @@ That reads as `1 record was added to queue (1), including Holiday photos (1)`, a
 ## Limits and Storage
 
 Every store caps how many records it holds, no single record's payload may exceed 64 KB, and a store holds at most 64 MB of payload in total. Writes past the record limit are refused with `409`, an oversized record with `413`, and a write that would take the store past its total size with `507`, rather than silently dropping the oldest row. An update that makes a record smaller is always accepted, so a store over its size can be trimmed back down. These caps apply to every store whatever its tiers, because they are the only thing bounding a store that accepts anonymous writes.
+
+The **Stores** tab shows a **Records** bar for a saved store, with how many records it holds out of its **Record Limit**. The bar turns orange at 80 percent and red at 95 percent.
 
 Records are kept as one JSON file per store under Jellyfin's data directory, at `data/custompages/stores/{name}.json`. They are data rather than settings, so unlike pages and assets they do **not** live in the plugin configuration and a configuration backup will not bring them back. Removing a store from the dashboard leaves its file alone, so recreating a store with the same name picks the old records back up. Use **Clear** when you actually want them gone.
 

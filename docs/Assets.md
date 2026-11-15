@@ -1,6 +1,6 @@
 # Images and Assets
 
-Upload images on the **Assets** tab. Each image is stored Base64-encoded in the plugin configuration. Reference one from your page's HTML or CSS using the relative path **`asset/{name}`**. For example:
+Drop or select images on the **Assets** tab. Each image is stored Base64-encoded in the plugin configuration. Reference one from your page's HTML or CSS using the relative path **`asset/{name}`**. For example:
 
 ```
 <img src="asset/logo.png">
@@ -10,7 +10,7 @@ Upload images on the **Assets** tab. Each image is stored Base64-encoded in the 
 background: url('asset/logo.png')
 ```
 
-Each uploaded asset gets a card with its path and visibility:
+Each uploaded image gets a row with its path, its visibility, and buttons to copy the path and delete the image:
 
 ![Assets tab](screenshots/Assets.png)
 
@@ -37,7 +37,7 @@ background: url('asset/floorplan.png')
 
 The plugin tells the two apart at render time. Public references are left as URLs and fetched from `/pages/asset/{name}`, while gated references are swapped for the embedded image data before the page is delivered. The only rules to remember:
 
-1. The page's visibility tier must be equal to or higher than the asset's tier. A **Users** asset works on **Users** and **Administrators** pages, but appears broken on an **Anyone** page.
+1. The page's visibility tier must be equal to or higher than the asset's tier. A **User** asset works on **User** and **Admin** pages, but appears broken on an **Anyone** page.
 2. Requesting a gated asset's URL directly returns `404`, even when signed in. The image is only available inside its pages.
 3. Only image content types are embedded. A gated non image asset is never delivered anywhere.
 

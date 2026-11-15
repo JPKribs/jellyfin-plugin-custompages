@@ -15,7 +15,16 @@ owner: "JPKribs"
 artifacts:
 - "Jellyfin.Plugin.CustomPages.dll"
 changelog:
+  changed:
+  - Buttons, count cards, image rows, and notices on the dashboard tabs take the JPKribs.Jellyfin.Base 2026.11.17 look
+  - The Published and Enabled buttons show their state as filled while on and dimmed while off
+  - The Assets tab takes images through a drop zone that also opens a file picker
+  - The Stores tab shows a Records bar of how many records a saved store holds out of its Record Limit
+  - Dashboard labels and messages are shorter and use Title Case, such as Allow System Access, Writers Edit Own Records, and Notify Administrators
+  - Asset visibility reads Anyone, User, and Admin, the same as page visibility
   fixed:
   - The arrows on collapsible sections are back to their usual size
   developer:
-  - Uses JPKribs.Jellyfin.Base 2026.11.13.3
+  - Uses JPKribs.Jellyfin.Base 2026.11.17, with its File Picker and Usage Meter on the dashboard and AtomicFile for store writes
+  - The sign in, not authorized, and not found states of a protected page use the base- classes of Base's status page
+  - Adds starthere.md, agent.md, and the guides in skills/

@@ -20,7 +20,7 @@ A published page as a signed in user sees it:
 
 Every page declares who may view it: administrators only, any signed in account, or anyone. A user tier page can be narrowed further to specific accounts. See [Visibility](Visibility.md) and [Restricting Access](RestrictingAccess.md).
 
-A page you trust can opt out of the sandbox with **Allow system access**, which lets it call the Jellyfin API, reach services on your network through server side routes, and keep records in a store on the server. See [System Access](SystemAccess.md) and [Storing Data](StoringData.md).
+A page you trust can opt out of the sandbox with **Allow System Access**, which lets it call the Jellyfin API, reach services on your network through server side routes, and keep records in a store on the server. See [System Access](SystemAccess.md) and [Storing Data](StoringData.md).
 
 Images are uploaded on the **Assets** tab and referenced from a page with a relative `asset/{name}` path. See [Images and Assets](Assets.md).
 

@@ -2,11 +2,11 @@
 
 ## Allow System Access
 
-Each page has an **Allow system access** toggle, off by default. Leave it off and the page keeps the isolation described in [How Pages Are Served](Authoring.md#how-pages-are-served). Turn it on and the plugin serves the page without the `sandbox` attribute, so the page runs on your Jellyfin origin and its scripts can call the Jellyfin API, read the viewer's session, and reach anything else the web client can reach on that origin. That is what makes a page useful as a small control panel or a dashboard that talks to the server.
+Each page has an **Allow System Access** toggle, off by default. Leave it off and the page keeps the isolation described in [How Pages Are Served](Authoring.md#how-pages-are-served). Turn it on and the plugin serves the page without the `sandbox` attribute, so the page runs on your Jellyfin origin and its scripts can call the Jellyfin API, read the viewer's session, and reach anything else the web client can reach on that origin. That is what makes a page useful as a small control panel or a dashboard that talks to the server.
 
 The toggle and its route list in the page editor:
 
-![Allow system access](screenshots/System%20Access.png)
+![Allow System Access](screenshots/System%20Access.png)
 
 !!! warning "Understand the trade before you use it"
     An unsandboxed page has the same reach as the Jellyfin web client itself, so any script it runs can act as whoever is viewing it. A public or user tier page that pulls in a third party script hands that script the viewer's session. Only turn this on for pages whose source you wrote and control, and prefer to pin any external library you do use to a copy you host yourself.
@@ -17,7 +17,7 @@ Everything else about serving is unchanged. Your content is still HTML encoded i
 
 ## Server Side Routes
 
-A page can be given named **routes** the server calls on its behalf. With **Allow system access** turned on, click **Add route** and give it a name and an absolute target URL, and optionally a username and password.
+A page can be given named **routes** the server calls on its behalf. With **Allow System Access** turned on, select **Add Route** and give it a name and an absolute target URL, and optionally a username and password.
 
 Inside the page, the plugin injects a helper:
 
@@ -31,7 +31,7 @@ This exists because a browser usually cannot call another machine on your networ
 
 ### Requirements and Behaviour
 
-* Routes live under **Allow system access**, which is the single permission a page needs. The helper reads the viewer's token from same origin storage and calls the route on the Jellyfin origin, and neither works from the sandbox's opaque origin, so routes and the unsandboxed page are one decision. A page may turn that toggle on and define no routes at all, which simply gives its scripts same origin access to Jellyfin's own API.
+* Routes live under **Allow System Access**, which is the single permission a page needs. The helper reads the viewer's token from same origin storage and calls the route on the Jellyfin origin, and neither works from the sandbox's opaque origin, so routes and the unsandboxed page are one decision. A page may turn that toggle on and define no routes at all, which simply gives its scripts same origin access to Jellyfin's own API.
 * A route reaches exactly the audience of its page. The tier is enforced first, then the page's allowed user list, and only then is anything forwarded.
 * The target URL is fixed in configuration and never comes from the caller, so this is not an open proxy. A page can only reach what you wired up for it. Only absolute `http` and `https` targets are accepted.
 * The helper sends the viewer's token for this server only, matched by server ID or by an address on this origin. A token the browser saved for another Jellyfin server is never sent.
@@ -42,4 +42,4 @@ This exists because a browser usually cannot call another machine on your networ
 
 The plugin has no knowledge of any particular service. What a route talks to, and what your page sends it, is entirely yours.
 
-A page with **Allow system access** can also read and write server side stores. See [Storing Data](StoringData.md).
+A page with **Allow System Access** can also read and write server side stores. See [Storing Data](StoringData.md).
