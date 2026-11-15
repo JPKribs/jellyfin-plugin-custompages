@@ -326,6 +326,8 @@ grep -o "export function create[A-Za-z]*" ~/.nuget/packages/jpkribs.jellyfin.bas
 | Several users | `createUserMultiSelector` |
 | Several fields side by side | `base-field-row` with `base-field` |
 | A secret | `bindSecretField`, `readSecretField`, and `clearSecretField` |
+| A secret in a repeater row | A `secret` field, with a `custom` field whose `render` returns a `createCheckbox` to clear a stored one, as the route rows do |
+| A link or a path the reader copies | `createCopyField` |
 | A template with `{name}` tokens | `placeholderHint` and `bindPlaceholders` |
 | Code or JSON, read only | `base-code-block` |
 
@@ -460,11 +462,7 @@ This plugin ships no CSS of its own. Every class on its pages comes from Base or
 
 ## Hand Built Pieces
 
-These pieces are still built by hand in this plugin while Base has a component for them. Replace each when its page is next changed. Add nothing to this list.
-
-| Hand built today | Replace with |
-| :--- | :--- |
-| The route rows on the **Pages** tab, with inline styles in `custompages_pages.html` and `makeRouteRow` in `custompages_pages.js` | `createRepeater` with a `secret` field for the password. Its secret field cannot clear a stored password in place, so the move needs that in Base and approval, since route secrets are a [stop and ask](../starthere.md#stop-and-ask) item |
+No piece of these pages is built by hand. Every list, row, field, button, and notice comes from Base. Add nothing to this section. When Base lacks something, report the gap to Base.
 
 ## Checklist
 
