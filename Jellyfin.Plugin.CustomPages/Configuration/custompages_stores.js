@@ -82,7 +82,7 @@ export default function (view) {
         });
         Shared.renderCards('storeCounts', [
             { count: stores.length, label: 'Stores', color: 'blue' },
-            { count: total, label: 'Records', color: 'blue' },
+            { count: total, label: 'Records', color: 'green' },
             { count: open, label: 'Open to Writes', color: open > 0 ? 'orange' : 'gray' }
         ]);
     }

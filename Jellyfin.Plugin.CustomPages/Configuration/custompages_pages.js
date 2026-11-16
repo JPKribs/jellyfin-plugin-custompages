@@ -69,9 +69,9 @@ export default function (view) {
             else c.pub++;
         });
         Shared.renderCards('pageCounts', [
-            { count: c.pub, label: 'Public', color: 'blue' },
+            { count: c.pub, label: 'Public', color: 'green' },
             { count: c.user, label: 'User', color: 'blue' },
-            { count: c.admin, label: 'Admin', color: 'blue' },
+            { count: c.admin, label: 'Admin', color: 'purple' },
             { count: c.unpublished, label: 'Unpublished', color: 'gray' }
         ]);
     }

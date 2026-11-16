@@ -399,6 +399,8 @@ grep -o "export function create[A-Za-z]*" ~/.nuget/packages/jpkribs.jellyfin.bas
 | The result of an action | `shared.setStatus` |
 | A row of reset actions | `base-reset-group` with `base-reset-row` |
 
+* Give each count card in a row its own color, so no two neighbours match. Pages are Public green, User blue, Admin purple, and Unpublished gray. Assets are Images blue, Other purple, and Size gray. Stores are Stores blue, Records green, and Open to Writes orange while above 0.
+
 * Never use `Dashboard.alert` for a result. It blocks the page. Use `setStatus`.
 * A notice holds one sentence. Use a callout for something the reader must know before acting, not for a result.
 

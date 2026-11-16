@@ -126,8 +126,8 @@ export default function (view) {
         var size = Shared.formatSize(bytes);
         Shared.renderCards('assetCounts', [
             { count: images, label: 'Images', color: 'blue' },
-            { count: other, label: 'Other', color: 'blue' },
-            { count: size, label: 'Size', color: 'blue' }
+            { count: other, label: 'Other', color: 'purple' },
+            { count: size, label: 'Size', color: 'gray' }
         ]);
     }
 

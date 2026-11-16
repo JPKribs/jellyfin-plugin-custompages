@@ -16,6 +16,7 @@ artifacts:
 - "Jellyfin.Plugin.CustomPages.dll"
 changelog:
   changed:
+  - The count cards on each tab have a color each, such as green for Public and purple for Admin pages
   - Buttons, count cards, image rows, and notices on the dashboard tabs take the JPKribs.Jellyfin.Base 2026.11.19 look
   - The Published and Enabled buttons show their state as filled while on and dimmed while off
   - The Assets tab takes images through a drop zone that also opens a file picker
