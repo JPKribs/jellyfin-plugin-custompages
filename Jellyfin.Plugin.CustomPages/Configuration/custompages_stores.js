@@ -1,4 +1,4 @@
-import { createConfigPage, confirmDialog, createUsageMeter, createCopyField } from './configurationpage?name=custompages_jpkribs_shared.js';
+import { createConfigPage, confirmDialog, createUsageMeter, createCopyField, createSaveBar } from './configurationpage?name=custompages_jpkribs_shared.js';
 
 export default function (view) {
     'use strict';
@@ -30,6 +30,7 @@ export default function (view) {
     var editorEnabled = true;
     var usageMeter = null;
     var urlField = null;
+    var saveBar = null;
     // Record counts keyed by the name a store had when it was last saved. A renamed but unsaved store
     // has no server side counterpart, so it reports nothing rather than the previous name's count.
     var counts = {};
@@ -197,45 +198,69 @@ export default function (view) {
         s.NotifyOnWrite = el('storeNotify').checked;
     }
 
-    function persist(message) {
+    // persist
+    // Saves the store list into a fresh copy of the configuration, then redraws and recounts.
+    //
+    // Output
+    // [Promise]: Resolves once saved, or rejects with an Error saying the store could not be saved.
+    function persist() {
         return Shared.getConfig().then(function (fresh) {
             fresh.Stores = stores;
             return Shared.saveConfig(fresh);
         }).then(function () {
-            if (message) Shared.setStatus('storeStatus', message, false);
             renderSelect();
             return loadCounts();
-        }).catch(function () {
-            Shared.setStatus('storeStatus', 'Could not save the store.', true);
+        }, function () {
+            throw new Error('Could not save the store.');
         });
     }
 
+    // save
+    // Checks the editor and saves every store. The Save Bar shows the result.
+    //
+    // Output
+    // [Promise]: Resolves once saved, or rejects with an Error whose message says why not.
     function save() {
         var s = stores[currentIndex];
-        if (!s) return;
+        if (!s) return Promise.resolve();
         readEditorInto(s);
 
-        if (!s.Name) {
-            Shared.setStatus('storeStatus', 'Enter a name.', true);
-            return;
-        }
+        if (!s.Name) return Promise.reject(new Error('Enter a name.'));
 
         var clash = stores.some(function (other, i) {
             return i !== currentIndex && (other.Name || '').toLowerCase() === s.Name.toLowerCase();
         });
-        if (clash) {
-            Shared.setStatus('storeStatus', 'Another store already uses that name.', true);
-            return;
-        }
+        if (clash) return Promise.reject(new Error('Another store already uses that name.'));
 
-        persist('Store saved.');
+        return persist();
+    }
+
+    // mountSaveBar
+    // Builds the editor's Save Bar. The bar in this Base build shows its own failed line, so the reason
+    // a save failed is set on it once the bar has handled the rejection.
+    function mountSaveBar() {
+        saveBar = createSaveBar({
+            fill: true,
+            onSave: function () {
+                return save().catch(function (err) {
+                    var reason = err && err.message;
+                    setTimeout(function () { if (reason && saveBar.getState() === 'failed') saveBar.setState('failed', reason); }, 0);
+                    throw err;
+                });
+            }
+        });
+        el('storeSaveBar').appendChild(saveBar.element);
+    }
+
+    function markDirty() {
+        saveBar.setDirty(true);
     }
 
     function clearRecords() {
         var s = stores[currentIndex];
         var name = (s && s.Name || '').toLowerCase();
         if (!name) {
-            Shared.setStatus('storeStatus', 'Save the store before clearing it.', true);
+            saveBar.setState('failed', 'Save the store before clearing it.');
             return;
         }
 
@@ -250,9 +275,9 @@ export default function (view) {
                 renderCounts();
                 updateUsage();
                 var removed = (result && result.removed) || 0;
-                Shared.setStatus('storeStatus', 'Removed ' + removed + ' ' + (removed === 1 ? 'record' : 'records') + '.', false);
+                saveBar.setState('saved', 'Removed ' + removed + ' ' + (removed === 1 ? 'record' : 'records') + '.');
             }).catch(function () {
-                Shared.setStatus('storeStatus', 'Could not clear the store.', true);
+                saveBar.setState('failed', 'Could not clear the store.');
             });
         });
     }
@@ -269,7 +294,11 @@ export default function (view) {
             if (!ok) return;
             stores.splice(currentIndex, 1);
             currentIndex = Math.min(currentIndex, stores.length - 1);
-            persist('Store deleted.');
+            persist().then(function () {
+                saveBar.setState('saved', 'Store deleted.');
+            }, function (err) {
+                saveBar.setState('failed', err.message);
+            });
         });
     }
 
@@ -292,6 +321,10 @@ export default function (view) {
         urlField = createCopyField({ label: 'URL', copyLabel: 'Copy URL' });
         urlField.input.id = 'storeUrl';
         el('storeUrlRow').appendChild(urlField.element);
+        mountSaveBar();
+        // Any edit in the editor, and New and Enabled, leave changes to save.
+        el('storeEditor').addEventListener('input', markDirty);
+        el('storeEditor').addEventListener('change', markDirty);
         el('selectStore').addEventListener('change', function () {
             readEditorInto(stores[currentIndex] || {});
             currentIndex = parseInt(this.value, 10);
@@ -300,6 +333,7 @@ export default function (view) {
         el('btnNewStore').addEventListener('click', function () {
             if (stores[currentIndex]) readEditorInto(stores[currentIndex]);
             stores.push(newStore());
+            markDirty();
             currentIndex = stores.length - 1;
             renderSelect();
         });
@@ -307,10 +341,10 @@ export default function (view) {
             editorEnabled = !editorEnabled;
             setEnabledVisual(editorEnabled);
             applyWarnings();
+            markDirty();
         });
         el('btnClearStore').addEventListener('click', clearRecords);
         el('btnDeleteStore').addEventListener('click', deleteStore);
-        el('btnSaveStores').addEventListener('click', save);
         el('storeRead').addEventListener('change', applyWarnings);
         el('storeWrite').addEventListener('change', applyWarnings);
         el('storeScope').addEventListener('change', applyWarnings);

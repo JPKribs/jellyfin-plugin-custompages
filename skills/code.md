@@ -177,7 +177,7 @@ function addAssetFiles(files, refused) {
 * The page scripts use `'use strict'`, `var`, and function declarations. Keep new code in the same style as the file around it.
 * Keep one handle for each Base component a page draws, such as `userPicker` and `usageMeter`. Draw it once in `bind`, and call `setValue` when only its values change.
 * Escape every value placed in HTML with `Shared.escapeHtml`.
-* Report results with `Shared.setStatus` on the status line beside the action.
+* Report a save, delete, or clear on the editor's Save Bar. `onSave` returns the save promise, which rejects with an `Error` carrying the reason. Report other results with `Shared.setStatus` on the status line beside the action.
 * Save through `Shared.getConfig` and `Shared.saveConfig`, changing only the list the tab owns, so a save never drops another tab's edits.
 * Hold edits in the in memory records until **Save**, and read the editor into the current record before the picker moves to another one.
 

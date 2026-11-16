@@ -1,5 +1,5 @@
 import {
-    createConfigPage, confirmDialog, createUserMultiSelector, createRepeater, createCheckbox, createCopyField, SECRET_KEPT
+    createConfigPage, confirmDialog, createUserMultiSelector, createRepeater, createCheckbox, createCopyField, createSaveBar, SECRET_KEPT
 } from './configurationpage?name=custompages_jpkribs_shared.js';
 
 export default function (view) {
@@ -46,6 +46,7 @@ export default function (view) {
     var userPicker = null;
     var routeEditor = null;
     var urlField = null;
+    var saveBar = null;
 
     function el(id) { return view.querySelector('#' + id); }
 
@@ -273,34 +274,32 @@ export default function (view) {
         return userPicker ? userPicker.getValue() : [];
     }
 
+    // save
+    // Checks the editor and saves every page. The Save Bar shows the result.
+    //
+    // Output
+    // [Promise]: Resolves once saved, or rejects with an Error whose message says why not.
     function save() {
         var p = pages[currentIndex];
-        if (!p) return;
+        if (!p) return Promise.resolve();
         readEditorInto(p);
 
-        if (!p.Slug) {
-            Shared.setStatus('pageStatus', 'Enter a slug.', true);
-            return;
-        }
+        if (!p.Slug) return Promise.reject(new Error('Enter a slug.'));
 
         // Saving "only the users I pick" with nobody picked would store an empty list, which the
         // server reads as every user at the tier. Stop rather than quietly widen the page.
         if (el('pageVisibility').value === 'User'
             && el('pageAccess').value === 'specific'
             && !p.AllowedUserIds.length) {
-            Shared.setStatus('pageStatus', 'Select at least one user, or set Access to All Users.', true);
-            return;
+            return Promise.reject(new Error('Select at least one user, or set Access to All Users.'));
         }
 
         var clash = pages.some(function (other, i) {
             return i !== currentIndex && (other.Slug || '').toLowerCase() === p.Slug.toLowerCase();
         });
-        if (clash) {
-            Shared.setStatus('pageStatus', 'Another page already uses that slug.', true);
-            return;
-        }
+        if (clash) return Promise.reject(new Error('Another page already uses that slug.'));
 
-        persistPages('Page saved.', 'Could not save the page.');
+        return persistPages('Could not save the page.');
     }
 
     // Jellyfin answers a refused configuration save with a generic error, so the server is asked first
@@ -312,7 +311,15 @@ export default function (view) {
             .catch(function () { return null; });
     }
 
-    function persistPages(okMessage, errMessage) {
+    // persistPages
+    // Saves the page list into a fresh copy of the configuration.
+    //
+    // Inputs
+    // errMessage [string]: The reason given when the save fails without one from the server.
+    //
+    // Output
+    // [Promise]: Resolves once saved, or rejects with an Error carrying the server's reason or errMessage.
+    function persistPages(errMessage) {
         var refused = null;
         return Shared.getConfig().then(function (fresh) {
             fresh.Pages = pages;
@@ -326,10 +333,27 @@ export default function (view) {
             });
         }).then(function () {
             renderSelect();
-            Shared.setStatus('pageStatus', okMessage, false);
-        }).catch(function () {
-            Shared.setStatus('pageStatus', refused || errMessage, true, refused ? { timeout: 0 } : undefined);
+        }, function () {
+            throw new Error(refused || errMessage);
         });
+    }
+
+    // mountSaveBar
+    // Builds the editor's Save Bar. The bar in this Base build shows its own failed line, so the reason
+    // a save failed is set on it once the bar has handled the rejection.
+    function mountSaveBar() {
+        if (saveBar) return;
+        saveBar = createSaveBar({
+            fill: true,
+            onSave: function () {
+                return save().catch(function (err) {
+                    var reason = err && err.message;
+                    setTimeout(function () { if (reason && saveBar.getState() === 'failed') saveBar.setState('failed', reason); }, 0);
+                    throw err;
+                });
+            }
+        });
+        el('pageSaveBar').appendChild(saveBar.element);
     }
 
     // Edits live in the in-memory page objects until Save persists them, so anything typed into the
@@ -339,8 +363,13 @@ export default function (view) {
         if (current) readEditorInto(current);
     }
 
+    function markDirty() {
+        if (saveBar) saveBar.setDirty(true);
+    }
+
     function addPage() {
         keepCurrentEdits();
+        markDirty();
         pages.push({ Slug: '', Title: '', Visibility: 'Anonymous', Html: '', Css: '', Js: '', Document: '', SingleFile: false, Unsandboxed: false, AllowedUserIds: [], ApiRoutes: [], Enabled: true });
         currentIndex = pages.length - 1;
         currentPane = 'html';
@@ -357,7 +386,11 @@ export default function (view) {
             if (!ok) return;
             pages.splice(currentIndex, 1);
             currentIndex = -1;
-            persistPages('Page deleted.', 'Could not delete the page.');
+            persistPages('Could not delete the page.').then(function () {
+                saveBar.setState('saved', 'Page deleted.');
+            }, function (err) {
+                saveBar.setState('failed', err.message);
+            });
         });
     }
 
@@ -365,6 +398,12 @@ export default function (view) {
         mountUserPicker();
         mountUrlField();
         mountRoutes();
+        mountSaveBar();
+        // Any edit in the editor, and New and Published, leave changes to save.
+        // Source only picks which pane shows, so it changes nothing to save.
+        function onEdit(e) { if (e.target !== el('selectSource')) markDirty(); }
+        el('pageEditor').addEventListener('input', onEdit);
+        el('pageEditor').addEventListener('change', onEdit);
         el('selectPage').addEventListener('change', function () {
             keepCurrentEdits();
             currentIndex = parseInt(this.value, 10);
@@ -382,10 +421,10 @@ export default function (view) {
         });
         el('btnNewPage').addEventListener('click', addPage);
         el('btnDeletePage').addEventListener('click', deletePage);
-        el('btnSavePage').addEventListener('click', save);
         el('btnPublish').addEventListener('click', function () {
             editorEnabled = !editorEnabled;
             setPublishVisual(editorEnabled);
+            markDirty();
         });
         el('pageVisibility').addEventListener('change', applyAccess);
         el('pageAccess').addEventListener('change', applyAccess);

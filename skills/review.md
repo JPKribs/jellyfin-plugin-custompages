@@ -46,7 +46,7 @@ The check to run on your own changes before you call them done. People and AI as
 * [ ] The page works at 375 px wide.
 * [ ] Every changed tab and served page was opened on a test server and looked at, after a reload.
 * [ ] Every top level group on a page has the same header, and a section with nothing to show is hidden.
-* [ ] Results use `setStatus`, confirms use `confirmDialog`, and nothing uses `Dashboard.alert` or `window.confirm`.
+* [ ] Saves use a full width Save Bar reading Save, other results use `setStatus`, confirms use `confirmDialog`, and nothing uses `Dashboard.alert` or `window.confirm`.
 
 ## Code
 

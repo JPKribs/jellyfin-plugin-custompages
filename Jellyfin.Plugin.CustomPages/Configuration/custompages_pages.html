@@ -51,8 +51,9 @@
                             <input is="emby-input" type="text" id="pageSlug" autocomplete="off" />
                         </div>
 
-                        <!-- Filled by createCopyField. Hidden while the page has no slug. -->
-                        <div class="inputContainer hidden" id="pageUrlRow">
+                        <!-- Filled by createCopyField. Hidden while the page has no slug. Not an inputContainer,
+                             whose input rule would stretch the copy field's controls. -->
+                        <div class="base-field hidden" id="pageUrlRow">
                             <label for="pageUrl">URL</label>
                         </div>
 
@@ -135,13 +136,8 @@
                             <div class="fieldDescription" id="sourceHint"></div>
                         </div>
 
-                        <!-- Save -->
-                        <div class="inputContainer">
-                            <button is="emby-button" type="button" id="btnSavePage" class="raised base-button primary fill">
-                                <span>Save</span>
-                            </button>
-                            <span id="pageStatus" class="base-status-text" role="status"></span>
-                        </div>
+                        <!-- Filled by createSaveBar. The last thing in the editor. -->
+                        <div id="pageSaveBar"></div>
                     </div>
 
                 </div>

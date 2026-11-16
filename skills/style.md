@@ -114,7 +114,7 @@ A placeholder shows an example of a valid value. It is never the only place an i
 
 * A verb, or a verb and a noun. **Save**, **New**, **Add Route**.
 * Name the object when the page has more than one of that action, such as **Add Route** beside the page's own **New**.
-* A primary Save is **Save**. Use **Save** and a noun only when one page has several saves.
+* Every Save reads **Save**, with no noun after it, even when a page has several.
 * An icon only button carries a `title` of one to three words, such as `Remove`, `Move Up`, or `Retry`. Never a sentence.
 * A button that runs for a while shows progress in place. See [Progress](#progress).
 
@@ -277,18 +277,20 @@ Every config page uses Jellyfin's page shell.
 
 ### Saving
 
-Pick one model per page and keep it.
+Every save is Base's `createSaveBar` with `fill: true`, and its button reads **Save**.
 
-| Model | Use it when | Save button |
+| Model | Use it when | Save Bar |
 | :--- | :--- | :--- |
-| One Save per page | Settings depend on each other | `raised base-button primary fill` at the bottom |
-| One Save per section | Sections are independent and long | `raised base-button primary small` in `base-collapsible-actions flush` |
+| One Save per page | Settings depend on each other | One bar at the bottom of the page |
+| One Save per section | Sections are independent and long | One bar at the bottom of each section's content |
 | Editor dialog | Each record is edited on its own | **Done** in `openEditorDialog` |
 
-* Track unsaved changes with `createChangeTracker` and the `base-unsaved` indicator, which reads "Unsaved".
+* The Save Bar is the last element of what it saves. Nothing sits beside it or below it in that section.
+* Other actions that belong with the save, such as **Reset to Defaults**, **Clear**, or **Test**, go in one `base-button-row` directly above the bar. Each is `raised base-button secondary fill`, or `destructive fill` when it deletes or resets data. A select that belongs there stays a normal select in the row. Never `small`.
+* Never place a Save button by hand, use a `small` Save, or a Save Bar without `fill`. Never add a status line beside it, or plugin CSS that positions it.
+* Call `setDirty(true)` on every edit, and return the save promise from `onSave`. Reject with an `Error` whose message says why the save failed.
+* Messages about the same record, such as a delete or a clear, use the bar's line through `setState`.
 * Guard leaving the page with `page.guardUnsaved`.
-* Report the result with `shared.setStatus` next to the button.
-* Use `shared.saveConfigWith` for get, change, save, and report.
 
 ## Components
 
@@ -342,7 +344,9 @@ grep -o "export function create[A-Za-z]*" ~/.nuget/packages/jpkribs.jellyfin.bas
 | An on and off action, such as **Published** | `raised base-button` with `aria-pressed` |
 | Destructive action | `raised base-button destructive` |
 | Secondary action | `raised base-button secondary` |
-| Compact action in a section | add `small` |
+| Save | `createSaveBar` with `fill: true`. See [Saving](#saving) |
+| Actions that go with a Save | `raised base-button secondary fill` in a `base-button-row` directly above the Save Bar |
+| Compact action in a section, never beside a Save | add `small` |
 | Icon and label in a toolbar | `raised base-button` holding a `material-icons` span and a label |
 | Icon only in a row | `base-row-btn`, with `.dirty` for unsaved and `.success` after saving |
 
