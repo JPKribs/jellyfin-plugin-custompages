@@ -104,7 +104,7 @@ grep -E "export (function|const) createFilePicker\b" ~/.nuget/packages/jpkribs.j
 
 ## Harness
 
-The harness is the page the [screenshot kit](documentation.md#screenshot-kit) serves. It loads a tab the way the dashboard does, with no Jellyfin server behind it.
+The harness is `tools/screenshots/harness.html`, the page the [screenshot kit](documentation.md#screenshot-kit) serves. It loads a tab the way the dashboard does, with no Jellyfin server behind it.
 
 * It loads Jellyfin's real stylesheets from the installed jellyfin-web, `index.html`'s first two, then the dark theme and the chunks. Base's CSS alone hides real bugs, such as Jellyfin's `.card` rule or its widened inputs.
 * It mimics the upgrade of each `emby-*` element, so labels, select arrows, and checkboxes are drawn as the dashboard draws them.

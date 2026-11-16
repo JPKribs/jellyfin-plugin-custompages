@@ -1,0 +1,18 @@
+<!doctype html><html dir="ltr" class="layout-desktop"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Custom Pages harness</title>
+<!-- jellyfin-web stylesheets -->
+<link rel="stylesheet" href="/configurationpage?name=custompages_jpkribs_shared.css">
+</head><body class="force-scroll"><div class="skinBody mainAnimatedPages" id="host"></div>
+<script src="upgrade.js"></script>
+<script src="stub.js"></script>
+<script type="module">
+var page = new URLSearchParams(location.search).get('page') || 'custompages_pages';
+var html = await (await fetch('/configurationpage?name=' + page)).text();
+var host = document.getElementById('host');
+host.innerHTML = html;
+var view = host.firstElementChild;
+var mod = await import('/configurationpage?name=' + page + '.js');
+mod.default(view);
+view.dispatchEvent(new CustomEvent('viewshow'));
+window.__ready = true;
+</script></body></html>

@@ -185,35 +185,23 @@ Save every capture as PNG, with no browser frame and no Jellyfin header.
 
 ### Screenshot Kit
 
-The kit captures every screenshot in `docs/screenshots/` from the repository's own files, with no Jellyfin server. It lives outside the repository in a `custompages-shots` folder.
+The kit in `tools/screenshots/` captures every screenshot in `docs/screenshots/` from the repository's own files, with no Jellyfin server. Its [README](../tools/screenshots/README.md) lists its files, what it needs, and how to set each path.
 
 | File | Does |
 | :--- | :--- |
-| `server.py` | Serves the [harness](testing.md#harness), the tab HTML and JS from the repository, Base's assets from the NuGet package, and jellyfin-web from the installed Jellyfin app. It also serves `/pages/{slug}` from `site/`, answering the shell's content fetch as a signed in user |
+| `server.py` | Serves the [harness](testing.md#harness), the tab HTML and JS from the repository, Base's assets from the NuGet package at the csproj's version, and jellyfin-web. It also serves `/pages/{slug}`, answering the shell's content fetch as a signed in user |
 | `harness.html`, `upgrade.js`, `stub.js` | Load a tab under Jellyfin's real stylesheets, upgrade its `emby-*` elements, and answer its API calls with generic pages, stores, users, and images |
-| `build_site.py` | Renders the served pages into `site/` from the repository's templates and Base's status template, with sample content |
-| `shoot.mjs` | Captures **Pages**, **Page Editor**, **Visibility**, **System Access**, **Restricted Page**, **Assets**, and **Stores** into `out/` |
-| `public.mjs` | Captures **House Rules Page**, **Requests Page**, and **Not Authorized** into `out/`, through the real sign in shell |
+| `public_pages.py` | Renders the served pages from the repository's templates and Base's status template, with sample content |
+| `shoot.mjs` | Captures every tab and served page into `docs/screenshots/`, or only the files it is given by name |
 
-Point `server.py` and `build_site.py` at the Base version in the csproj, then run the kit from its folder.
-
-```bash
-python3 server.py 8811
-```
+Run it from the repository root.
 
 ```bash
-python3 build_site.py
+python3 -I tools/screenshots/server.py 8811 &
+PLAYWRIGHT_CORE=/path/to/node_modules/playwright-core/index.mjs node tools/screenshots/shoot.mjs
 ```
 
-```bash
-node shoot.mjs
-```
-
-```bash
-node public.mjs
-```
-
-Each script prints any page error. Open every PNG in `out/` and look at it before copying it over the one in `docs/screenshots/` with the same name. A shot that matches the committed one byte for byte needs no commit.
+`node tools/screenshots/shoot.mjs "Page Editor" Stores` retakes only the named files. Each shot prints any page error. Open every PNG it writes and look at it before committing it. A shot that matches the committed one byte for byte needs no commit.
 
 ### Names and Placement
 
