@@ -16,7 +16,7 @@ artifacts:
 - "Jellyfin.Plugin.CustomPages.dll"
 changelog:
   changed:
-  - Buttons, count cards, image rows, and notices on the dashboard tabs take the JPKribs.Jellyfin.Base 2026.11.18 look
+  - Buttons, count cards, image rows, and notices on the dashboard tabs take the JPKribs.Jellyfin.Base 2026.11.19 look
   - The Published and Enabled buttons show their state as filled while on and dimmed while off
   - The Assets tab takes images through a drop zone that also opens a file picker
   - The Stores tab shows a Records bar of how many records a saved store holds out of its Record Limit
@@ -32,6 +32,6 @@ changelog:
   fixed:
   - The arrows on collapsible sections are back to their usual size
   developer:
-  - Uses JPKribs.Jellyfin.Base 2026.11.18, with its File Picker, Usage Meter, inline Copy Field, and clearable Repeater secrets on the dashboard and AtomicFile for store writes
+  - Uses JPKribs.Jellyfin.Base 2026.11.19, with its File Picker, Usage Meter, inline Copy Field, and clearable Repeater secrets on the dashboard and AtomicFile for store writes
   - The sign in, not authorized, and not found states of a protected page use the base- classes of Base's status page
   - Adds starthere.md, agent.md, and the guides in skills/

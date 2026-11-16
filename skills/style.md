@@ -286,7 +286,7 @@ Every save is Base's `createSaveBar` with `fill: true`, and its button reads **S
 | Editor dialog | Each record is edited on its own | **Done** in `openEditorDialog` |
 
 * The Save Bar is the last element of what it saves. Nothing sits beside it or below it in that section.
-* Other actions that belong with the save, such as **Reset to Defaults**, **Clear**, or **Test**, go in one `base-button-row` directly above the bar. Each is `raised base-button secondary fill`, or `destructive fill` when it deletes or resets data. A select that belongs there stays a normal select in the row. Never `small`.
+* Other actions that belong with the save, such as **Reset to Defaults**, **Clear**, or **Test**, go in one `base-button-row` directly above the bar. Each is `raised base-button secondary fill`, or `destructive fill` when it deletes or resets data. A select that belongs there stays a normal select in the row. Never `small`. Base spaces that row. Its buttons have no margin of their own, so their edges line up with the Save Bar's, the row sits one `--base-gap-narrow` above the Save Bar, and its buttons use the same font weight as Save. A plugin adds no margin, gap, or weight of its own. The Save Bar's element goes directly after the row, never inside a wrapper, since Base spaces them as siblings.
 * Never place a Save button by hand, use a `small` Save, or a Save Bar without `fill`. Never add a status line beside it, or plugin CSS that positions it.
 * Call `setDirty(true)` on every edit, and return the save promise from `onSave`. Reject with an `Error` whose message says why the save failed.
 * Messages about the same record, such as a delete or a clear, use the bar's line through `setState`.
