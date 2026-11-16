@@ -41,6 +41,7 @@ The agreed name for every concept in this plugin. The UI, the docs, messages, an
 | Route | A named target URL the server calls for a page, with an optional username and password | `PageApiRoute`, `ApiRoutes` | Endpoint, proxy, API |
 | Route proxy | The code that forwards a route call and filters its headers | `RouteProxy` | Gateway, relay |
 | `serverFetch` | The page helper that calls a route by name | `InjectServerFetch` | Proxy fetch |
+| Clear Password | The button beside a stored route password that removes it on the next save | A `secret` Repeater field with `clearable: true` | Reset Password, Delete Password |
 
 ## Assets
 
@@ -69,6 +70,16 @@ The agreed name for every concept in this plugin. The UI, the docs, messages, an
 | Clear | Deletes every record in a store and keeps the store | `Clear`, `POST /pages/store/{name}/clear` | Empty, reset, purge |
 | `pageStore` | The page helper that reads and writes stores | `InjectPageStore` | Store client |
 | Store file | The JSON file that holds one store's records, at `data/custompages/stores/{name}.json` | `StoreState.File` | Database, data file |
+| Records bar | The bar on the **Stores** tab of how many records a saved store holds out of its Record Limit | `usageMeter`, `createUsageMeter` | Usage bar, quota bar |
+| Open to Writes | The count card of enabled stores whose Write is Anyone | `renderCounts` in `custompages_stores.js` | Public stores, open stores |
+
+## Dashboard
+
+| Term | Meaning | In Code | Not |
+| :--- | :--- | :--- | :--- |
+| Count cards | The row of counts at the top of each tab, one color per card | `renderCards` | Stats, tiles, badges |
+| Save Bar | The full width **Save** button with its status line, the last element of the editor it saves | `createSaveBar` | Save button, footer |
+| Copy field | A read only field with a Copy button, for a page's or a store's **URL** and an asset's path | `createCopyField` | Link box, copy box |
 
 ## Housekeeping
 

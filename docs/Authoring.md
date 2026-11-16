@@ -11,6 +11,8 @@ The page editor with the HTML pane of a separate files page open:
 
 ![Page editor](screenshots/Page%20Editor.png)
 
+The **URL** field shows the page's full address once it has a slug, with a button to copy it. **Published** sets whether the page is served. Select **Save** at the bottom of the editor to keep your changes. When the server refuses a save, the line above **Save** says why.
+
 Pages live in the plugin's configuration, so they are captured by your normal Jellyfin config backups.
 
 ## How Pages Are Served

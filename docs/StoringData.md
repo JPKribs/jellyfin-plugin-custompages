@@ -28,6 +28,8 @@ The **Stores** tab with a store set up for the worked example below:
 
 ![Stores tab](screenshots/Stores.png)
 
+The count cards at the top show how many **Stores** there are, how many **Records** they hold, and how many enabled stores are **Open to Writes** from anyone. **Open to Writes** turns orange while it is above 0.
+
 ## Who Can Read and Who Can Write
 
 A store belongs to the plugin rather than to one page, so a page that collects submissions and a page that reports on them can work against the same records. Access is decided by the store's own settings and never by which page is calling, which is what keeps one page from quietly widening another's audience.

@@ -14,6 +14,8 @@ Each uploaded image gets a row with its path in a copy field, its visibility, an
 
 ![Assets tab](screenshots/Assets.png)
 
+The count cards at the top show how many **Images** and **Other** files the tab holds, and their total **Size**.
+
 Because your page renders at `/pages/{slug}`, that relative path resolves to `/pages/asset/{name}` automatically, regardless of the base Jellyfin URL or subfolder.
 
 ## Asset Visibility

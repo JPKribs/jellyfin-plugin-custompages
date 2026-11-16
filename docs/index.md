@@ -8,7 +8,7 @@ Custom Pages is a simple Jellyfin plugin that publishes custom pages on your ser
 
 Each page has a slug, title, visibility tier, and its content. You write the content as separate HTML, CSS, and JavaScript, or as one complete HTML document. See [Authoring](Authoring.md).
 
-The **Pages** tab counts your pages by tier and picks the one to edit:
+The **Pages** tab counts your published pages by tier as **Public**, **User**, and **Admin**, counts the rest as **Unpublished**, and picks the page to edit:
 
 ![Pages tab](screenshots/Pages.png)
 
