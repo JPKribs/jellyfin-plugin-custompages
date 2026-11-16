@@ -1,5 +1,5 @@
 import {
-    createConfigPage, confirmDialog, createUserMultiSelector, createRepeater, createCheckbox, createCopyField, createSaveBar, SECRET_KEPT
+    createConfigPage, confirmDialog, createUserMultiSelector, createRepeater, createCopyField, createSaveBar, SECRET_KEPT
 } from './configurationpage?name=custompages_jpkribs_shared.js';
 
 export default function (view) {
@@ -197,28 +197,6 @@ export default function (view) {
         p.Enabled = editorEnabled;
     }
 
-    // renderClearControl
-    // Draws the Clear box of a route row, which removes the stored password on the next save.
-    //
-    // Inputs
-    // value [boolean|null]: false or true while the route has a stored password, null while it has none.
-    // change [function]: Tells the repeater the value changed.
-    function renderClearControl(value, change) {
-        var stored = value === true || value === false;
-        var box = createCheckbox({ ariaLabel: 'Clear Password', field: true, checked: value === true, disabled: !stored, onChange: change });
-        return {
-            element: box.element,
-            input: box.input,
-            getValue: function () { return stored ? box.getValue() : null; },
-            setValue: function (next) {
-                stored = next === true || next === false;
-                box.setValue(next === true);
-                box.setDisabled(!stored);
-            },
-            destroy: function () { box.destroy(); }
-        };
-    }
-
     function mountRoutes() {
         if (routeEditor) return;
         routeEditor = createRepeater({
@@ -226,8 +204,7 @@ export default function (view) {
                 { key: 'Name', label: 'Name', placeholder: 'name' },
                 { key: 'Url', label: 'Target URL', placeholder: 'http://host:port/path', width: '2fr' },
                 { key: 'Username', label: 'Username', placeholder: 'Optional' },
-                { key: 'Password', label: 'Password', type: 'secret', placeholder: 'Optional' },
-                { key: 'Clear', label: 'Clear', type: 'custom', width: '4rem', render: renderClearControl }
+                { key: 'Password', label: 'Password', type: 'secret', placeholder: 'Optional', clearable: true, clearText: 'Clear Password' }
             ],
             addText: 'Add Route',
             rowName: 'Route',
@@ -238,14 +215,14 @@ export default function (view) {
 
     // Never render the stored credential. A stored password shows as SECRET_KEPT, which round-trips
     // untouched, and the server keeps whatever it already has, so the real value never reaches a browser.
+    // The password's Clear button empties it, which posts an empty password and removes the stored one.
     function renderRoutes(routes) {
         routeEditor.setValue(routes.map(function (r) {
             return {
                 Name: r.Name || '',
                 Url: r.Url || '',
                 Username: r.Username || '',
-                Password: r.Password ? SECRET_KEPT : '',
-                Clear: r.Password ? false : null
+                Password: r.Password ? SECRET_KEPT : ''
             };
         }));
     }
@@ -256,12 +233,9 @@ export default function (view) {
 
     function readRoutes() {
         if (!el('pageUnsandboxed').checked) return [];
-        // Clear posts an empty password, which removes the stored one. A typed replacement wins over it.
         return routeEditor.getValue()
             .map(function (r) {
-                var password = r.Password || '';
-                if (r.Clear === true && password === SECRET_KEPT) password = '';
-                return { Name: (r.Name || '').trim(), Url: (r.Url || '').trim(), Username: r.Username || '', Password: password };
+                return { Name: (r.Name || '').trim(), Url: (r.Url || '').trim(), Username: r.Username || '', Password: r.Password || '' };
             })
             .filter(function (r) { return r.Name || r.Url; });
     }
@@ -339,20 +313,10 @@ export default function (view) {
     }
 
     // mountSaveBar
-    // Builds the editor's Save Bar. The bar in this Base build shows its own failed line, so the reason
-    // a save failed is set on it once the bar has handled the rejection.
+    // Builds the editor's Save Bar. A failed save's Error message, such as the server's reason, is its failed line.
     function mountSaveBar() {
         if (saveBar) return;
-        saveBar = createSaveBar({
-            fill: true,
-            onSave: function () {
-                return save().catch(function (err) {
-                    var reason = err && err.message;
-                    setTimeout(function () { if (reason && saveBar.getState() === 'failed') saveBar.setState('failed', reason); }, 0);
-                    throw err;
-                });
-            }
-        });
+        saveBar = createSaveBar({ fill: true, onSave: save });
         el('pageSaveBar').appendChild(saveBar.element);
     }
 

@@ -38,7 +38,7 @@ How to write, comment, and test code in this plugin. It covers C#, JavaScript, H
 | Page helpers | The `shared` bag `createConfigPage` returns |
 | Record picker | `base-selector` with `base-selector-dropdown` and `base-selector-actions` |
 | Counts | `shared.renderCards` with `base-cards compact` |
-| Uploads and stored files | `createFilePicker`, and `base-asset-list` for what is stored |
+| Uploads and stored files | `createFilePicker`, and `base-asset-list` for what is stored, with an `inline` `createCopyField` of each path |
 | Users | `createUserMultiSelector` |
 | A used amount of a limit | `createUsageMeter` |
 | Lists and row editors | `createCheckboxList`, `createRepeater`, `createSortableCardList` |
@@ -135,7 +135,7 @@ function addAssetFiles(files, refused) {
 
 * One comment line naming each section or dialog where it starts, and an optional second line saying what it is for.
 * Use no inline `style` attributes. The route rows on the **Pages** tab still have some, per [style.md](style.md#hand-built-pieces).
-* The templates in `Templates/` are served to visitors, not to the dashboard. They use the classes of Base's status page, such as `base-status-card` and `base-btn`, and no dashboard CSS.
+* The templates in `Templates/` are served to visitors, not to the dashboard. They use the classes of Base's status page, such as `base-status-card`, `base-btn`, `base-btn-secondary`, `base-btn-stack`, and `base-status-error`, and no dashboard CSS or local `<style>`.
 
 ### CSS
 

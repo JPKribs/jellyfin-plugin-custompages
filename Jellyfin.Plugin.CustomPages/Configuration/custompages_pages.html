@@ -51,9 +51,8 @@
                             <input is="emby-input" type="text" id="pageSlug" autocomplete="off" />
                         </div>
 
-                        <!-- Filled by createCopyField. Hidden while the page has no slug. Not an inputContainer,
-                             whose input rule would stretch the copy field's controls. -->
-                        <div class="base-field hidden" id="pageUrlRow">
+                        <!-- Filled by createCopyField. Hidden while the page has no slug. -->
+                        <div class="inputContainer hidden" id="pageUrlRow">
                             <label for="pageUrl">URL</label>
                         </div>
 
@@ -80,10 +79,8 @@
                             </select>
                         </div>
 
-                        <!-- Deliberately not an inputContainer. Base's form.css gives every input
-                             inside one width:100% !important, which would stretch each of the picker's
-                             checkboxes across the whole row. -->
-                        <div class="hidden" id="allowedUsersRow">
+                        <!-- Filled by createUserMultiSelector. -->
+                        <div class="inputContainer hidden" id="allowedUsersRow">
                             <div id="allowedUsers"></div>
                             <div class="fieldDescription">
                                 Everyone else is refused before any content is rendered. Administrators

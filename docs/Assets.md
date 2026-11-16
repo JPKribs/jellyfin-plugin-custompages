@@ -10,7 +10,7 @@ Drop or select images on the **Assets** tab. Each image is stored Base64-encoded
 background: url('asset/logo.png')
 ```
 
-Each uploaded image gets a row with its path, its visibility, and buttons to copy the path and delete the image:
+Each uploaded image gets a row with its path in a copy field, its visibility, and a button to delete the image:
 
 ![Assets tab](screenshots/Assets.png)
 

@@ -1,4 +1,4 @@
-import { createConfigPage, confirmDialog, createFilePicker } from './configurationpage?name=custompages_jpkribs_shared.js';
+import { createConfigPage, confirmDialog, createFilePicker, createCopyField } from './configurationpage?name=custompages_jpkribs_shared.js';
 
 export default function (view) {
     'use strict';
@@ -25,6 +25,8 @@ export default function (view) {
 
     var assets = [];
     var picker = null;
+    // The Copy Fields of the drawn rows, destroyed before the rows are drawn again.
+    var rowFields = [];
 
     function el(id) { return view.querySelector('#' + id); }
 
@@ -148,15 +150,8 @@ export default function (view) {
         return button;
     }
 
-    function copyAssetRef(name) {
-        Shared.copyToClipboard('asset/' + name).then(function (ok) {
-            if (ok === false) Shared.setStatus('assetStatus', 'Copy failed.', true);
-            else Shared.setStatus('assetStatus', 'Path copied.', false);
-        });
-    }
-
     // renderAssetRow
-    // Builds one Asset List row: the thumbnail, the name over its path, the visibility, Copy Path, and Delete.
+    // Builds one Asset List row: the thumbnail, the name over a Copy Field of its path, the visibility, and Delete.
     //
     // Inputs
     // a [object]: The asset, with Name, ContentType, DataBase64, and Visibility.
@@ -175,7 +170,9 @@ export default function (view) {
 
         var info = make('div', 'base-asset-info');
         info.appendChild(make('div', 'base-asset-name', a.Name));
-        info.appendChild(make('div', 'base-asset-ref', 'asset/' + a.Name));
+        var path = createCopyField({ value: 'asset/' + a.Name, inline: true, size: 'small', label: 'Path', copyLabel: 'Copy Path' });
+        rowFields.push(path);
+        info.appendChild(path.element);
         row.appendChild(info);
 
         var actions = make('div', 'base-asset-actions');
@@ -194,7 +191,6 @@ export default function (view) {
         });
         actions.appendChild(select);
 
-        actions.appendChild(rowButton('content_copy', 'Copy Path', '', function () { copyAssetRef(a.Name); }));
         actions.appendChild(rowButton('delete', 'Delete', ' destructive', function () { deleteAsset(a.Name); }));
 
         row.appendChild(actions);
@@ -212,6 +208,8 @@ export default function (view) {
         renderCounts();
         var list = el('assetList');
         Shared.setVisible('assetEmpty', assets.length === 0);
+        rowFields.forEach(function (f) { f.destroy(); });
+        rowFields = [];
         list.innerHTML = '';
         assets.forEach(function (a) { list.appendChild(renderAssetRow(a)); });
     }

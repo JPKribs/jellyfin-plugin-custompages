@@ -236,19 +236,9 @@ export default function (view) {
     }
 
     // mountSaveBar
-    // Builds the editor's Save Bar. The bar in this Base build shows its own failed line, so the reason
-    // a save failed is set on it once the bar has handled the rejection.
+    // Builds the editor's Save Bar. A failed save's Error message is its failed line.
     function mountSaveBar() {
-        saveBar = createSaveBar({
-            fill: true,
-            onSave: function () {
-                return save().catch(function (err) {
-                    var reason = err && err.message;
-                    setTimeout(function () { if (reason && saveBar.getState() === 'failed') saveBar.setState('failed', reason); }, 0);
-                    throw err;
-                });
-            }
-        });
+        saveBar = createSaveBar({ fill: true, onSave: save });
         el('storeSaveBar').appendChild(saveBar.element);
     }
 

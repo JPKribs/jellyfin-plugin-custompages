@@ -328,7 +328,7 @@ grep -o "export function create[A-Za-z]*" ~/.nuget/packages/jpkribs.jellyfin.bas
 | Several users | `createUserMultiSelector` |
 | Several fields side by side | `base-field-row` with `base-field` |
 | A secret | `bindSecretField`, `readSecretField`, and `clearSecretField` |
-| A secret in a repeater row | A `secret` field, with a `custom` field whose `render` returns a `createCheckbox` to clear a stored one, as the route rows do |
+| A secret in a repeater row | A `secret` field with `clearable: true`, whose Clear button removes a stored one, as the route rows do |
 | A link or a path the reader copies | `createCopyField` |
 | A template with `{name}` tokens | `placeholderHint` and `bindPlaceholders` |
 | Code or JSON, read only | `base-code-block` |
