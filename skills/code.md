@@ -134,8 +134,8 @@ function addAssetFiles(files, refused) {
 ```
 
 * One comment line naming each section or dialog where it starts, and an optional second line saying what it is for.
-* Use no inline `style` attributes. The route rows on the **Pages** tab still have some, per [style.md](style.md#hand-built-pieces).
-* The templates in `Templates/` are served to visitors, not to the dashboard. They use the classes of Base's status page, such as `base-status-card`, `base-btn`, `base-btn-secondary`, `base-btn-stack`, and `base-status-error`, and no dashboard CSS or local `<style>`.
+* Use no inline `style` attributes.
+* The templates in `Templates/` are served to visitors, not to the dashboard. The shell renders inside Base's status template, which loads no Material Icons, no Base script, and no dashboard CSS. Build it only from the template's classes, `base-status-card`, `base-fields`, `base-submit`, `base-btn`, `base-btn-secondary`, `base-btn-stack`, `base-status-error`, `base-note`, `base-spinner`, and `base-logo`, with no local `<style>` and no icon ligatures, since an icon name shows as text there.
 
 ### CSS
 
@@ -185,6 +185,7 @@ function addAssetFiles(files, refused) {
 
 * Store every route password with `SecretProtector`, through `RouteSecrets.Protect`. Never write a secret to the config, a file, or a log in plain text.
 * Send a stored route password to the browser only as `SECRET_KEPT`. The server keeps the stored value when the sentinel comes back.
+* A route password is a clearable secret. The route rows draw it as a Repeater `secret` field with `clearable: true` and `clearText: 'Clear Password'`. **Clear Password** posts an empty password, and the server removes the stored one.
 * Pass every value from a request, a page, or a file through `FormatUtilities.SanitizeForLog` before logging it.
 * Forward a route only to the target fixed in configuration, through the named client `RouteProxy.HttpClientName`, and strip the viewer's Jellyfin credentials before it is sent.
 * Interpret store tiers only in `StoreAccess`. Every store route asks it, so the routes cannot drift apart.

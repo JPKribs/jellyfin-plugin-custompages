@@ -285,7 +285,7 @@ Every save is Base's `createSaveBar` with `fill: true`, and its button reads **S
 | One Save per section | Sections are independent and long | One bar at the bottom of each section's content |
 | Editor dialog | Each record is edited on its own | **Done** in `openEditorDialog` |
 
-* The Save Bar is the last element of what it saves. Nothing sits beside it or below it in that section.
+* The Save Bar is the last element of what it saves. Nothing sits beside it or below it in that section, and no divider line sits above it.
 * Other actions that belong with the save, such as **Reset to Defaults**, **Clear**, or **Test**, go in one `base-button-row` directly above the bar. Each is `raised base-button secondary fill`, or `destructive fill` when it deletes or resets data. A select that belongs there stays a normal select in the row. Never `small`. Base spaces that row. Its buttons have no margin of their own, so their edges line up with the Save Bar's, the row sits one `--base-gap-narrow` above the Save Bar, and its buttons use the same font weight as Save. A plugin adds no margin, gap, or weight of its own. The Save Bar's element goes directly after the row, never inside a wrapper, since Base spaces them as siblings.
 * Never place a Save button by hand, use a `small` Save, or a Save Bar without `fill`. Never add a status line beside it, or plugin CSS that positions it.
 * Call `setDirty(true)` on every edit, and return the save promise from `onSave`. Reject with an `Error` whose message says why the save failed.
@@ -307,7 +307,8 @@ grep -o "export function create[A-Za-z]*" ~/.nuget/packages/jpkribs.jellyfin.bas
 * The typings in that file document every option of every component. Read the component's block before using it.
 * Rows of fields with Add and Remove are a `createRepeater`. A list of checkboxes is a `createCheckboxList`. A used amount out of a limit is a `createUsageMeter`. Parts of a whole are a `createPieChart`.
 * A hand built version of any of these is a defect, even when it looks the same.
-* When a Base component lacks one thing the page needs, use the component and report the gap to Base. Never fall back to building it by hand.
+* A component used wrong is worse than none. Read its options, then look at the result on a real Jellyfin server, not only in the code.
+* When a Base component lacks one thing the page needs, use the component, list the missing option in [Hand Built Pieces](#hand-built-pieces), and ask the Base owner for it. Never put a stand-in where a Base option exists, and never keep a gap without listing it.
 
 ### Fields
 
@@ -329,12 +330,17 @@ grep -o "export function create[A-Za-z]*" ~/.nuget/packages/jpkribs.jellyfin.bas
 | Several fields side by side | `base-field-row` with `base-field` |
 | A secret | `bindSecretField`, `readSecretField`, and `clearSecretField` |
 | A secret in a repeater row | A `secret` field with `clearable: true`, whose Clear button removes a stored one, as the route rows do |
-| A link or a path the reader copies | `createCopyField` |
+| A code, a link, or a path the reader copies | `createCopyField`, with `inline: true` inside a row such as an asset's path |
+| One number on a range, such as an opacity | `createSliderField` |
+| A color | `createColorPicker` |
 | A template with `{name}` tokens | `placeholderHint` and `bindPlaceholders` |
 | Code or JSON, read only | `base-code-block` |
 
 * Use `emby-select`, never `base-selector-dropdown`, for a field. `base-selector-dropdown` is only for the record picker.
 * Every input has a `<label for>`.
+* Never hand roll a slider, a color picker, or a copy field. Base has each one.
+* Mount a Base component that holds inputs outside `.inputContainer`, unless its docs say otherwise. The dashboard widens every input inside `.inputContainer` except checkboxes and radios.
+* A lookup field must look up. Type part of a real name and check that the list fills.
 
 ### Buttons
 
@@ -385,6 +391,7 @@ grep -o "export function create[A-Za-z]*" ~/.nuget/packages/jpkribs.jellyfin.bas
 
 * A record picker's actions read **New**, **Rename**, **Remove**, then **Import** and **Export**, in that order.
 * Use `createPaginatedTable` for any list that can grow past one screen. Rows open with `actions.onRowClick`.
+* Give a list that can grow past one screen `height: 'fill'`, so it ends at the window bottom and scrolls inside.
 
 ### Status
 
@@ -399,8 +406,7 @@ grep -o "export function create[A-Za-z]*" ~/.nuget/packages/jpkribs.jellyfin.bas
 | The result of an action | `shared.setStatus` |
 | A row of reset actions | `base-reset-group` with `base-reset-row` |
 
-* Give each count card in a row its own color, so no two neighbours match. Pages are Public green, User blue, Admin purple, and Unpublished gray. Assets are Images blue, Other purple, and Size gray. Stores are Stores blue, Records green, and Open to Writes orange while above 0.
-
+* Give each count card in a row its own color, so no two neighbours match. Pages are Public green, User blue, Admin purple, and Unpublished gray. Assets are Images blue, Other purple, and Size gray. Stores are Stores blue, Records green, and Open to Writes orange while above 0 and gray at 0.
 * Never use `Dashboard.alert` for a result. It blocks the page. Use `setStatus`.
 * A notice holds one sentence. Use a callout for something the reader must know before acting, not for a result.
 
@@ -444,9 +450,12 @@ grep -o "export function create[A-Za-z]*" ~/.nuget/packages/jpkribs.jellyfin.bas
 
 * Use Base's breakpoints, 768 px for tablet and 600 px for phone. Use 700 px only where Base does, for dialogs.
 * Test every page at 375 px wide. Nothing scrolls sideways except a table.
-* Look at every changed page on a test server before calling it done. Reload the page after installing a build, since the dashboard caches scripts.
+* Click through every changed page in the [harness](testing.md#harness), then look at it on a test server before calling it done. Hard reload the page after installing a build, since the dashboard caches scripts.
 * Spacing comes from `--base-gap-wide` and `--base-gap-narrow`. Never add margins between fields.
 * Never set a width in pixels on a field. Let it fill its container.
+* Keep rows visibly separate, and put what each control does next to it. A lone word such as "Override" at the far edge of a row is not a label.
+* Never put a Base component that draws fixed popups, such as a dropdown, inside an element with `contain`, `transform`, or `filter`. The popup is placed against that element and lands off screen.
+* Watch for class names Jellyfin's CSS also styles. Base's card Repeater adds a bare `card` class, and Jellyfin's global `.card` rule gives it paint containment.
 
 ## Accessibility
 
@@ -468,7 +477,13 @@ This plugin ships no CSS of its own. Every class on its pages comes from Base or
 
 ## Hand Built Pieces
 
-No piece of these pages is built by hand. Every list, row, field, button, and notice comes from Base. Add nothing to this section. When Base lacks something, report the gap to Base.
+No piece of these pages is built by hand. Every list, row, field, button, and notice comes from Base.
+
+When Base lacks an option a page needs, list it here with the page that needs it, and ask the Base owner for it. Remove the entry in the commit that moves to the Base version with the option.
+
+| Page | Missing Base option |
+| :--- | :--- |
+| None | None |
 
 ## Checklist
 

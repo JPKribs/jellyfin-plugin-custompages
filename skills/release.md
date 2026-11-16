@@ -32,7 +32,7 @@ Raising a part sets every part after it to `0`. `12.4.2.4` becomes `12.4.3.0` fo
 
     Check each dashboard script with `node --check`, per [testing.md](testing.md#script-syntax).
 
-5. **Test server.** Install the build on a test server and open each tab. Open a page of each tier signed out, as a user, and as an administrator, and read and write a store.
+5. **Test server.** Install the build on a test server and open each tab with a hard reload. Open a page of each tier signed out, as a user, and as an administrator, and read and write a store.
 
     ```bash
     ./build.sh
@@ -40,7 +40,7 @@ Raising a part sets every part after it to `0`. `12.4.2.4` becomes `12.4.3.0` fo
 
     Every check must run on the commit that is released. Run them again after any later change.
 
-6. **Docs.** Every page describes this release. Retake any screenshot whose subject changed, and all of them when the Base version changed. Update [Security](../docs/Security.md) when a protection changed, and [Versioning](../docs/Versioning.md) when the Jellyfin target changed.
+6. **Docs.** Every page describes this release. Retake any screenshot whose subject changed, and all of them when the Base version changed, with the [screenshot kit](documentation.md#screenshot-kit). Open each new PNG and look at it. Update [Security](../docs/Security.md) when a protection changed, and [Versioning](../docs/Versioning.md) when the Jellyfin target changed.
 
     ```bash
     mkdocs build --strict
@@ -53,12 +53,12 @@ Raising a part sets every part after it to `0`. `12.4.2.4` becomes `12.4.3.0` fo
 Edit `build.yaml`.
 
 1. Set `version` to the new version.
-2. Replace the whole `changelog` with this release's entries. Each release lists only its own changes. See [documentation.md](documentation.md#release-notes) for how to write them.
+2. Replace the whole `changelog` with this release's entries. Each release lists only its own changes, so drop every line that shipped in the last release and every line a later change in this release replaced. See [documentation.md](documentation.md#release-notes) for how to write them.
 3. Say in `changed` when a page, an asset, a route, or a store behaves differently for visitors.
 4. Name the Base version in `developer` when it changed, such as "Uses JPKribs.Jellyfin.Base 2026.11.18", with what it replaced locally.
 5. Keep `description` and `overview` true for this release. `manifest.json` takes its own description, so update both together.
 
-Commit it on its own.
+Commit it on its own, on `master` with every change for the release already merged.
 
 ```bash
 git commit -am "Set the release to 12.4.3.0"
@@ -70,16 +70,29 @@ git push
 
 ## Publish
 
-1. **Draft.** The **Create/Update Release Draft** workflow builds the zip and writes a draft release named `v<version>` with the changelog as its notes. A push that only changes `build.yaml` does not start it, so start it from the Actions tab.
-2. **Check.** Open the draft on GitHub. The notes must match `build.yaml`, and the zip and its `.md5` must be attached.
-3. **Release.** Publish the draft. The **Publish Plugin** workflow takes the attached zip's checksum, adds the version to `manifest.json`, and commits "Update manifest for release v<version>".
-4. **Pull.**
+Follow these steps in order, and skip none.
+
+1. **Draft.** The **Create/Update Release Draft** workflow builds the zip and writes a draft release named `v<version>` with the changelog as its notes. A push that carries any file besides `build.yaml` starts it. A push that only changes `build.yaml` does not, so start it from the Actions tab only then.
 
     ```bash
-    git pull
+    gh run list -L 8
     ```
 
-5. **Verify.** On a test server, add the repository URL `https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-custompages/master/manifest.json`, install the release from the catalog, restart, and open each tab.
+2. **Check.** List the releases and open the draft on GitHub. The notes must match `build.yaml`, and the zip and its `.md5` must be attached. When the workflow ran twice, such as from the push and by hand, two drafts named `v<version>` can exist, and only one has the zip and `.md5`.
+
+    ```bash
+    gh release list -L 5
+    ```
+
+3. **Release.** Publish the draft that has the zip and `.md5`, never the empty one. Delete the empty draft afterward. The **Publish Plugin** workflow takes the attached zip's checksum, adds the version to `manifest.json`, and commits "Update manifest for release v<version>".
+4. **Confirm.** Check that the manifest commit landed and that the checksum of the new version in `manifest.json` matches the `.md5` on the release.
+5. **Pull.**
+
+    ```bash
+    git pull --ff-only
+    ```
+
+6. **Verify.** On a test server, add the repository URL `https://raw.githubusercontent.com/JPKribs/jellyfin-plugin-custompages/master/manifest.json`, install the release from the catalog, restart, and open each tab.
 
 ## When a Release Is Wrong
 
@@ -97,5 +110,6 @@ git push
 * [ ] Docs, screenshots, Security, and Versioning describe this release.
 * [ ] `mkdocs build --strict` passes.
 * [ ] The changelog lists only this release, in the four keys.
-* [ ] The draft matches `build.yaml` before it is published.
+* [ ] The draft matches `build.yaml` and has the zip and `.md5` before it is published, and no empty draft is left.
+* [ ] The manifest checksum matches the release's `.md5`.
 * [ ] The manifest commit is pulled.

@@ -24,6 +24,7 @@ The check to run on your own changes before you call them done. People and AI as
 * [ ] No new files exist that the task did not need, including scratch files and logs.
 * [ ] Nothing is left half done, such as a setting with no UI or a route with no caller.
 * [ ] Nothing on the [stop and ask](../starthere.md#stop-and-ask) list changed without approval.
+* [ ] UI work was not held back as stop and ask only because it sits in a sensitive area. Moving the route rows to a Base component is UI work. A change to stored data, routes, sign in, or secret handling is stop and ask.
 
 ## Base
 
@@ -41,10 +42,13 @@ The check to run on your own changes before you call them done. People and AI as
 
 ## UI
 
-* [ ] Each component is the one [style.md](style.md#components) names for the need.
+* [ ] Each component is the one [style.md](style.md#components) names for the need, used as its options intend.
+* [ ] Every gap in Base is listed in [Hand Built Pieces](style.md#hand-built-pieces), and nothing stands in for a Base option.
 * [ ] Colors come from Base tokens and keep their [meaning](style.md#meaning).
-* [ ] The page works at 375 px wide.
-* [ ] Every changed tab and served page was opened on a test server and looked at, after a reload.
+* [ ] The page works at 1280 and 375 px wide.
+* [ ] Every changed tab was clicked through in the [harness](testing.md#harness), then opened on a test server after a hard reload. A harness run alone does not make it done.
+* [ ] Every changed served page was opened signed out, as a user, and as an administrator.
+* [ ] Count cards in one row each have their own color, labels are Title Case with no trailing colon, and every control says what it does next to it.
 * [ ] Every top level group on a page has the same header, and a section with nothing to show is hidden.
 * [ ] Saves use a full width Save Bar reading Save, other results use `setStatus`, confirms use `confirmDialog`, and nothing uses `Dashboard.alert` or `window.confirm`.
 
@@ -66,9 +70,9 @@ The check to run on your own changes before you call them done. People and AI as
 
 * [ ] Every page the change affects describes the current release only.
 * [ ] Labels in the docs match the page exactly.
-* [ ] Screenshots of anything that changed are retaken.
+* [ ] Screenshots of anything that changed are retaken with the [screenshot kit](documentation.md#screenshot-kit), and all of them when the Base version changed. Each new PNG was opened and looked at.
 * [ ] [Security](../docs/Security.md) still matches the code.
-* [ ] `build.yaml` has a changelog entry for any change a user would notice.
+* [ ] `build.yaml` has a changelog entry for any change a user would notice, and no line that shipped in the last release or that a later change replaced.
 * [ ] `mkdocs build --strict` passes.
 
 ## Reporting

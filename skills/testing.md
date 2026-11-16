@@ -16,6 +16,7 @@ Test each behavior at the lowest layer that can prove it. Go up a layer only for
 | Store | Records, limits, retention, and the store file against a real temp folder | `dotnet test` | Seconds |
 | Controller | A route's status codes, guards, headers, and response shape | `dotnet test` | Seconds |
 | Script syntax | Each dashboard script parses as a module | `node --check` | Seconds |
+| Harness | A tab or a served page renders and behaves right under Jellyfin's real CSS | The [harness](#harness) in headless Chromium | Minutes |
 | Manual | A tab or a served page looks and behaves right on a real Jellyfin | A test server | Minutes |
 
 | A change to | Needs |
@@ -23,10 +24,10 @@ Test each behavior at the lowest layer that can prove it. Go up a layer only for
 | A model, the validator, page rendering, or `StoreAccess` | Unit |
 | `StoreService`, retention, or the store file | Store |
 | `CustomPagesController`, a route attribute, or the hardening headers | Controller |
-| A dashboard script | Script syntax and Manual |
-| A template in `Templates/` | Unit for `PageService`, and Manual signed out, as a user, and as an administrator |
+| A dashboard script | Script syntax, Harness, and Manual |
+| A template in `Templates/` | Unit for `PageService`, Harness, and Manual signed out, as a user, and as an administrator |
 
-The repository has no JavaScript test runner and no end to end harness. Logic a test must reach belongs in C#, where `dotnet test` covers it.
+The repository has no JavaScript test runner. Logic a test must reach belongs in C#, where `dotnet test` covers it.
 
 ## Layout
 
@@ -101,11 +102,27 @@ Check that every name a script imports from `custompages_jpkribs_shared.js` is e
 grep -E "export (function|const) createFilePicker\b" ~/.nuget/packages/jpkribs.jellyfin.base/<version>/assets/jpkribs_shared.d.ts
 ```
 
+## Harness
+
+The harness is the page the [screenshot kit](documentation.md#screenshot-kit) serves. It loads a tab the way the dashboard does, with no Jellyfin server behind it.
+
+* It loads Jellyfin's real stylesheets from the installed jellyfin-web, `index.html`'s first two, then the dark theme and the chunks. Base's CSS alone hides real bugs, such as Jellyfin's `.card` rule or its widened inputs.
+* It mimics the upgrade of each `emby-*` element, so labels, select arrows, and checkboxes are drawn as the dashboard draws them.
+* It serves the tab's HTML and JS from the repository and Base's assets from the NuGet package the plugin builds against, with stub API answers and generic data.
+
+Click through each changed tab like a user, at 1280 and at 375 px wide.
+
+* Type real keystrokes into every picker and lookup, and check that the list fills.
+* Open every tab, every collapsible, and every dialog.
+* Take a screenshot of each state and look at it.
+
+A harness run never makes a change done. It finds problems before the test server does.
+
 ## Manual
 
 Build the plugin, install it on a Jellyfin 12.4 test server, and restart it. See [documentation.md](documentation.md#installing-a-build-by-hand).
 
-* Open each changed tab, and reload it after installing, since the dashboard caches scripts.
+* Open each changed tab with a hard reload after installing, since the dashboard caches scripts.
 * Open a changed served page signed out, as a user, and as an administrator, and check that each sees what its tier allows.
 * Look at each changed tab at 375 px wide.
 * Never test against a server that holds real pages, assets, or store records.
@@ -117,4 +134,5 @@ Build the plugin, install it on a Jellyfin 12.4 test server, and restart it. See
 * [ ] Edges are covered, including null, empty, cancelled, and every tier.
 * [ ] `dotnet test` passes.
 * [ ] Every changed script passes `node --check`, and its Base imports exist.
-* [ ] Every changed tab and served page was checked on a test server.
+* [ ] Every changed tab was clicked through in the harness at 1280 and 375 px, and each screenshot was looked at.
+* [ ] Every changed tab and served page was checked on a test server after a hard reload.

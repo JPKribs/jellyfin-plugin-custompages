@@ -168,19 +168,52 @@ Use `##` for README headings. Keep the README under 40 lines.
 
 * Capture every tab and dialog a docs page describes, and each state of a served page.
 * Capture the dark theme only, which is Jellyfin's default.
-* Capture from a test server whose pages, stores, users, and images have generic names.
+* Capture from the [screenshot kit](#screenshot-kit) with its generic data. Never capture from a live server or its data.
 * Fill lists, counts, and records first, so nothing shows empty unless the shot is of the empty state.
 * Hide nothing with editing. When a value is private, change the test data instead.
 
 ### Sizes
 
+Every capture is headless Chromium at 2x.
+
 | Kind | Size | How |
 | :--- | :--- | :--- |
-| Dialog | 800 wide | The browser at 800 px, cropped to the dialog |
-| Full page | 1920 wide | The browser at 1920 px, cropped to the content area |
-| Phone | 375 wide at 2x | The browser's device mode at 375 px |
+| Dashboard tab | 1428 wide | A 720 px window, clipped to the 714 px content area from the first element of the shot to its last |
+| Served page | 1920 wide | A 960 px window, whole |
 
-Save every capture as PNG. Crop out the browser frame and the Jellyfin header unless the header is the subject.
+Save every capture as PNG, with no browser frame and no Jellyfin header.
+
+### Screenshot Kit
+
+The kit captures every screenshot in `docs/screenshots/` from the repository's own files, with no Jellyfin server. It lives outside the repository in a `custompages-shots` folder.
+
+| File | Does |
+| :--- | :--- |
+| `server.py` | Serves the [harness](testing.md#harness), the tab HTML and JS from the repository, Base's assets from the NuGet package, and jellyfin-web from the installed Jellyfin app. It also serves `/pages/{slug}` from `site/`, answering the shell's content fetch as a signed in user |
+| `harness.html`, `upgrade.js`, `stub.js` | Load a tab under Jellyfin's real stylesheets, upgrade its `emby-*` elements, and answer its API calls with generic pages, stores, users, and images |
+| `build_site.py` | Renders the served pages into `site/` from the repository's templates and Base's status template, with sample content |
+| `shoot.mjs` | Captures **Pages**, **Page Editor**, **Visibility**, **System Access**, **Restricted Page**, **Assets**, and **Stores** into `out/` |
+| `public.mjs` | Captures **House Rules Page**, **Requests Page**, and **Not Authorized** into `out/`, through the real sign in shell |
+
+Point `server.py` and `build_site.py` at the Base version in the csproj, then run the kit from its folder.
+
+```bash
+python3 server.py 8811
+```
+
+```bash
+python3 build_site.py
+```
+
+```bash
+node shoot.mjs
+```
+
+```bash
+node public.mjs
+```
+
+Each script prints any page error. Open every PNG in `out/` and look at it before copying it over the one in `docs/screenshots/` with the same name. A shot that matches the committed one byte for byte needs no commit.
 
 ### Names and Placement
 
@@ -191,7 +224,7 @@ Save every capture as PNG. Crop out the browser frame and the Jellyfin header un
 
 ### When to Retake
 
-Retake a screenshot in the same commit as any change that alters what it shows, including a label, a tab, a layout, or the Jellyfin version in the header. A new Base version changes how every component looks, so retake every screenshot when it is raised. A screenshot that shows a tab or label the plugin no longer has is a bug.
+Retake a screenshot in the same commit as any change that alters what it shows, including a label, a tab, a layout, or a count card's color. A new Base version changes how every component looks, so retake every screenshot when it is raised. A screenshot that shows a tab or label the plugin does not have is a bug.
 
 ## Installing a Build by Hand
 
@@ -237,6 +270,7 @@ changelog:
 ```
 
 * This is the one place that may say "now", "no longer", and "was".
+* List only this release. Drop a line that shipped in the last release, and a line a later change in this release replaced.
 * Write full sentences with no closing period.
 * Write one entry per change a user would notice. Fold internal steps into the change they serve.
 * Name UI labels exactly as the page shows them, without bold or backticks.
@@ -256,7 +290,7 @@ changelog:
 * [ ] Every UI label matches the page exactly and is bold.
 * [ ] Every heading is Title Case.
 * [ ] No em dashes, semicolons, or contractions.
-* [ ] Every screenshot matches the current UI and uses generic test data.
+* [ ] Every screenshot matches the current UI, came from the screenshot kit, and was looked at.
 * [ ] [Security](../docs/Security.md) was reviewed and matches the code.
 * [ ] Every term matches [glossary.md](glossary.md).
 * [ ] `mkdocs build --strict` passes.
