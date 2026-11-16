@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "12.4.2.6",
+        "changelog": "\n## Developer\n- Uses JPKribs.Jellyfin.Base 2026.11.20, which marks the Routes Repeater with base-repeater-layout-inline in place of inline, with no local stopgap or title text to replace\n- The screenshot kit in tools/screenshots captures every docs screenshot from the repository's files and generic sample data, with no Jellyfin server\n- The docs name the count cards, copy fields, Save Bar, and Clear Password, and the guides carry the lessons from review",
+        "targetAbi": "12.4.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v12.4.2.6/jellyfin-plugin-custompages-12.4.2.6.zip",
+        "checksum": "2289e7352f1b72485be6fc7f1887651e",
+        "timestamp": "2026-11-16T09:23:41Z"
+      },
+      {
         "version": "12.4.2.5",
         "changelog": "\n## Changed\n- The count cards on each tab have a color each, such as green for Public and purple for Admin pages\n- Buttons, count cards, image rows, and notices on the dashboard tabs take the JPKribs.Jellyfin.Base 2026.11.19 look\n- The Published and Enabled buttons show their state as filled while on and dimmed while off\n- The Assets tab takes images through a drop zone that also opens a file picker\n- The Stores tab shows a Records bar of how many records a saved store holds out of its Record Limit\n- Dashboard labels and messages are shorter and use Title Case, such as Allow System Access, Writers Edit Own Records, and Notify Administrators\n- Asset visibility reads Anyone, User, and Admin, the same as page visibility\n- Routes are edited in Base's Repeater, which stacks each route's fields on a phone, and Clear Password beside a stored password removes it\n- A page's and a store's URL show in a copy field with a Copy button\n- Open to Writes turns orange while a store takes anonymous writes\n- The sign in, not authorized, and not found cards use Title Case headings\n- Every Save is the same full width Save Bar, with any other actions in a full width row above it\n- A failed save shows its reason, such as the route that needs its password entered again, on the Save Bar\n- Each image row shows its path in a copy field with a Copy button\n\n## Developer\n- Uses JPKribs.Jellyfin.Base 2026.11.19, with its File Picker, Usage Meter, inline Copy Field, and clearable Repeater secrets on the dashboard and AtomicFile for store writes\n- The sign in, not authorized, and not found states of a protected page use the base- classes of Base's status page\n- Adds starthere.md, agent.md, and the guides in skills/",
         "targetAbi": "12.4.0.0",
