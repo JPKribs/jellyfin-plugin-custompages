@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "12.4.2.7",
+        "changelog": "\n## Developer\n- Uses JPKribs.Jellyfin.Base 2026.11.21, which keeps a scrolling Data Table's frame in view and an open card's body on the plain surface, with no local code to replace\n- Raises Microsoft.NET.Test.Sdk to 18.12.0\n- Pins every GitHub Action in the workflows to a commit digest",
+        "targetAbi": "12.4.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v12.4.2.7/jellyfin-plugin-custompages-12.4.2.7.zip",
+        "checksum": "ed60e9aec668a30565b7129531824fd8",
+        "timestamp": "2026-11-19T21:01:05Z"
+      },
+      {
         "version": "12.4.2.6",
         "changelog": "\n## Developer\n- Uses JPKribs.Jellyfin.Base 2026.11.20, which marks the Routes Repeater with base-repeater-layout-inline in place of inline, with no local stopgap or title text to replace\n- The screenshot kit in tools/screenshots captures every docs screenshot from the repository's files and generic sample data, with no Jellyfin server\n- The docs name the count cards, copy fields, Save Bar, and Clear Password, and the guides carry the lessons from review",
         "targetAbi": "12.4.0.0",
