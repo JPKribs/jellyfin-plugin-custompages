@@ -1,7 +1,7 @@
 ---
 name: "Custom Pages"
 guid: "409ef72d-6014-47fd-8928-ebad581bf81b"
-version: "12.4.2.7"
+version: "12.4.2.8"
 targetAbi: "12.4.0.0"
 framework: "net10.0"
 overview: "Author and serve authorization-gated HTML pages at /pages/{slug}."
@@ -16,6 +16,6 @@ artifacts:
 - "Jellyfin.Plugin.CustomPages.dll"
 changelog:
   developer:
-  - Uses JPKribs.Jellyfin.Base 2026.11.21, which keeps a scrolling Data Table's frame in view and an open card's body on the plain surface, with no local code to replace
-  - Raises Microsoft.NET.Test.Sdk to 18.12.0
-  - Pins every GitHub Action in the workflows to a commit digest
+  - Raises every GitHub Action in the workflows to its latest major version, pinned to a commit digest
+  - Builds the docs with Python 3.15 and mkdocs-material 9.8.2
+  - Renovate brings every update in one pull request, with Base on its own, and leaves the packages Jellyfin ships to the Jellyfin version
