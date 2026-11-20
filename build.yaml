@@ -1,7 +1,7 @@
 ---
 name: "Custom Pages"
 guid: "409ef72d-6014-47fd-8928-ebad581bf81b"
-version: "12.4.3.0"
+version: "12.4.4.0"
 targetAbi: "12.4.0.0"
 framework: "net10.0"
 overview: "Serve your own pages from Jellyfin."
@@ -13,17 +13,6 @@ owner: "JPKribs"
 artifacts:
 - "Jellyfin.Plugin.CustomPages.dll"
 changelog:
-  added:
-  - The Pages, Assets, and Stores tabs, the sign in and not found pages, and the server's messages follow the viewer's language, with Jellyfin's own words in every language Jellyfin has
-  changed:
-  - Every label, button, title, and option is written in sentence case, as Jellyfin writes them, such as Allow system access and Record limit
-  - A refused save's reason on the Pages tab comes back in the language the tab is shown in
-  - Store activity log entries are written in the server's display language, with names such as 4 records added
-  - Buttons, confirm dialogs, the Save bar, and other shared controls use Base's wording, such as Copied on a copy field
   developer:
-  - Uses JPKribs.Jellyfin.Base 12.4.0, then 12.4.1, which builds Jellyfin's strings, Base's own strings, and Localization/en-us.json into the plugin and reads the page's language with BaseTranslations.RequestLanguage in place of the local Accept-Language parser
-  - The plugin translations route at /pages/plugin/translations answers with { language, strings, casing } for the tabs
-  - POST /pages/config/check reads the language from ?language=, the X-Jellyfin-Plugin-Language header, then Accept-Language
-  - Localization/casing.json lists the words kept as written, and the build checks every string with Base's JPKT diagnostics
-  - Store activity outcomes are built from keys, so their names are translated with their overviews
-  - The project is organized into Api, Configuration, Web, Web/Templates, Assets, Models, Services, Tasks, and Utilities, with development tools in tools/
+  - Uses JPKribs.Jellyfin.Base 12.4.2, which writes the labels it fills into its own text in sentence case, such as a screen reader name
+  - Sync Branches also runs when the release draft or publish workflow finishes, so the commits they push to master reach unstable at once
