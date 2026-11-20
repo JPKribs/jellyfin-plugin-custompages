@@ -21,8 +21,8 @@ How to write, comment, and test code in this plugin. It covers C#, JavaScript, H
 | Plugin class and config lock | `PluginBase<TPlugin, TConfiguration>` |
 | Dashboard pages and their shared CSS and JS | `GetSharedPages("custompages")` |
 | Scheduled task | `PluginScheduledTask` |
-| Outbound HTTP | `JpkHttp` and `HttpResult` |
-| HTTP handlers | `JpkRetryHandler` with `JpkRetryOptions`, and `RedirectRefusingHandler` |
+| Outbound HTTP | `BaseHttp` and `HttpResult` |
+| HTTP handlers | `BaseRetryHandler` with `BaseRetryOptions`, and `RedirectRefusingHandler` |
 | Addresses a user supplied | `SsrfGuard` |
 | Secrets | `SecretProtector`, `AddPluginSecretProtector`, and `StableSecretProtection` |
 | Comparing a presented secret | `SecretCompare.FixedTimeEquals` |
