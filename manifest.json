@@ -9,6 +9,14 @@
     "category": "General",
     "versions": [
       {
+        "version": "12.4.3.0",
+        "changelog": "\n## Added\n- The Pages, Assets, and Stores tabs, the sign in and not found pages, and the server's messages follow the viewer's language, with Jellyfin's own words in every language Jellyfin has\n\n## Changed\n- Every label, button, title, and option is written in sentence case, as Jellyfin writes them, such as Allow system access and Record limit\n- A refused save's reason on the Pages tab comes back in the language the tab is shown in\n- Store activity log entries are written in the server's display language, with names such as 4 records added\n- Buttons, confirm dialogs, the Save bar, and other shared controls use Base's wording, such as Copied on a copy field\n\n## Developer\n- Uses JPKribs.Jellyfin.Base 12.4.0, then 12.4.1, which builds Jellyfin's strings, Base's own strings, and Localization/en-us.json into the plugin and reads the page's language with BaseTranslations.RequestLanguage in place of the local Accept-Language parser\n- The plugin translations route at /pages/plugin/translations answers with { language, strings, casing } for the tabs\n- POST /pages/config/check reads the language from ?language=, the X-Jellyfin-Plugin-Language header, then Accept-Language\n- Localization/casing.json lists the words kept as written, and the build checks every string with Base's JPKT diagnostics\n- Store activity outcomes are built from keys, so their names are translated with their overviews\n- The project is organized into Api, Configuration, Web, Web/Templates, Assets, Models, Services, Tasks, and Utilities, with development tools in tools/",
+        "targetAbi": "12.4.0.0",
+        "sourceUrl": "https://github.com/JPKribs/jellyfin-plugin-custompages/releases/download/v12.4.3.0/jellyfin-plugin-custompages-12.4.3.0.zip",
+        "checksum": "83b5ca8ea091a5441f2fe5e0be5de8b7",
+        "timestamp": "2026-11-20T20:32:02Z"
+      },
+      {
         "version": "12.4.2.8",
         "changelog": "\n## Developer\n- Raises every GitHub Action in the workflows to its latest major version, pinned to a commit digest\n- Builds the docs with Python 3.15 and mkdocs-material 9.8.2\n- Renovate brings every update in one pull request, with Base on its own, and leaves the packages Jellyfin ships to the Jellyfin version",
         "targetAbi": "12.4.0.0",
