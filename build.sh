@@ -70,13 +70,13 @@ validate_resources() {
 
     local missing_files=()
     local config_files=(
-        "$PROJECT_DIR/Configuration/custompages_pages.html"
-        "$PROJECT_DIR/Configuration/custompages_pages.js"
-        "$PROJECT_DIR/Configuration/custompages_assets.html"
-        "$PROJECT_DIR/Configuration/custompages_assets.js"
-        "$PROJECT_DIR/Templates/custompages_wrapper.html"
-        "$PROJECT_DIR/Templates/custompages_inner.html"
-        "$PROJECT_DIR/Templates/custompages_shell.html"
+        "$PROJECT_DIR/Web/custompages_pages.html"
+        "$PROJECT_DIR/Web/custompages_pages.js"
+        "$PROJECT_DIR/Web/custompages_assets.html"
+        "$PROJECT_DIR/Web/custompages_assets.js"
+        "$PROJECT_DIR/Web/Templates/custompages_wrapper.html"
+        "$PROJECT_DIR/Web/Templates/custompages_inner.html"
+        "$PROJECT_DIR/Web/Templates/custompages_shell.html"
     )
 
     for file in "${config_files[@]}"; do

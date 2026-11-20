@@ -4,11 +4,11 @@ Captures every screenshot in `docs/screenshots/` from the repository's own files
 
 | File | Does |
 | :--- | :--- |
-| `server.py` | Serves the harness, the tab HTML and JS from `Jellyfin.Plugin.CustomPages/Configuration`, Base's assets from the NuGet package, and jellyfin-web. It also serves `/pages/{slug}`, answering the shell's content fetch as a signed in user |
+| `server.py` | Serves the harness, the tab HTML and JS from `Jellyfin.Plugin.CustomPages/Web`, Base's assets from the NuGet package, and jellyfin-web. It also serves `/pages/{slug}`, answering the shell's content fetch as a signed in user |
 | `harness.html` | Loads jellyfin-web's stylesheets in load order, then mounts one tab. The server fills in the stylesheet links |
 | `upgrade.js` | Adds the classes and markup Jellyfin's `emby-*` elements add on upgrade, so the real CSS applies |
 | `stub.js` | A stand-in `ApiClient` with generic pages, stores, users, and images |
-| `public_pages.py` | Renders the served pages from `Jellyfin.Plugin.CustomPages/Templates` and Base's status template, with sample content |
+| `public_pages.py` | Renders the served pages from `Jellyfin.Plugin.CustomPages/Web/Templates` and Base's status template, with sample content |
 | `shoot.mjs` | Opens each subject, sets it up, and writes its PNG to `docs/screenshots/` |
 
 ## Requirements

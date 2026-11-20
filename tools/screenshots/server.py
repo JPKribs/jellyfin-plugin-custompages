@@ -34,7 +34,7 @@ sys.dont_write_bytecode = True
 _spec = importlib.util.spec_from_file_location('public_pages', os.path.join(HERE, 'public_pages.py'))
 PUBLIC = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(PUBLIC)
-PUBLIC.configure(os.path.join(REPO, 'Templates'), os.path.join(BASE, 'templates', 'status.html'))
+PUBLIC.configure(os.path.join(REPO, 'Web', 'Templates'), os.path.join(BASE, 'templates', 'status.html'))
 
 
 def stylesheets():
@@ -88,9 +88,9 @@ class H(http.server.BaseHTTPRequestHandler):
             if 'jpkribs_shared' in n:
                 path = os.path.join(BASE, 'assets', 'jpkribs_shared' + os.path.splitext(n)[1])
             elif os.path.splitext(n)[1] in ('.js', '.css'):
-                path = os.path.join(REPO, 'Configuration', n)
+                path = os.path.join(REPO, 'Web', n)
             else:
-                path = os.path.join(REPO, 'Configuration', n + '.html')
+                path = os.path.join(REPO, 'Web', n + '.html')
         elif u.path.startswith('/jf/'):
             path = os.path.join(JF, u.path[4:])
         elif u.path.startswith('/web/'):

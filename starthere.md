@@ -60,15 +60,19 @@ Explain what you would change, why, and what it risks. Wait for an answer before
 | Path | What it holds |
 | :--- | :--- |
 | `Jellyfin.Plugin.CustomPages/` | The plugin source. |
-| `Jellyfin.Plugin.CustomPages/API/` | `CustomPagesController`, every route under `/pages`. |
-| `Jellyfin.Plugin.CustomPages/Configuration/` | The plugin configuration and the dashboard tabs, as HTML and JS. |
+| `Jellyfin.Plugin.CustomPages/Api/` | `CustomPagesController`, every route under `/pages`. |
+| `Jellyfin.Plugin.CustomPages/Configuration/` | The plugin configuration class. |
+| `Jellyfin.Plugin.CustomPages/Web/` | The dashboard tabs, as HTML and JS. |
+| `Jellyfin.Plugin.CustomPages/Web/Templates/` | The wrapper, inner, and shell templates a served page is built from. |
+| `Jellyfin.Plugin.CustomPages/Assets/` | The plugin logo. |
 | `Jellyfin.Plugin.CustomPages/Models/` | The configuration records and the route responses. |
 | `Jellyfin.Plugin.CustomPages/Services/` | Page rendering, the configuration check, the route proxy, route secrets, and stores. |
 | `Jellyfin.Plugin.CustomPages/Tasks/` | The store retention task. |
-| `Jellyfin.Plugin.CustomPages/Templates/` | The wrapper, inner, and shell templates a served page is built from. |
+| `Jellyfin.Plugin.CustomPages/Utilities/` | Extension methods, such as the page visibility tiers. |
 | `Jellyfin.Plugin.CustomPages.Tests/` | The xUnit tests. |
 | `docs/` | The documentation site, built with MkDocs. |
 | `build.yaml` | The version, the artifacts, and the release notes. |
 | `build.sh` | Builds the plugin zip into `dist/`. |
 | `skills/` | The guides. |
+| `tools/` | Development tools that never ship, such as the screenshot harness. |
 | `../Shared/jellyfin-plugin-base/` | A local checkout of Base, when present. Read it, and never change it from work on this plugin. |

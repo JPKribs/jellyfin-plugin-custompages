@@ -1,5 +1,6 @@
 using System;
 using Jellyfin.Plugin.CustomPages.Models;
+using Jellyfin.Plugin.CustomPages.Utilities;
 
 namespace Jellyfin.Plugin.CustomPages.Services;
 

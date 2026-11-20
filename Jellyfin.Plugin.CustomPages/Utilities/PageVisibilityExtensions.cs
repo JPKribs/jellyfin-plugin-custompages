@@ -1,4 +1,6 @@
-namespace Jellyfin.Plugin.CustomPages.Models;
+using Jellyfin.Plugin.CustomPages.Models;
+
+namespace Jellyfin.Plugin.CustomPages.Utilities;
 
 /// <summary>
 /// Small derived values for <see cref="PageVisibility"/>, kept on the model so callers read intent

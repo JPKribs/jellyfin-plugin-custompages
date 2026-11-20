@@ -25,7 +25,7 @@ Test each behavior at the lowest layer that can prove it. Go up a layer only for
 | `StoreService`, retention, or the store file | Store |
 | `CustomPagesController`, a route attribute, or the hardening headers | Controller |
 | A dashboard script | Script syntax, Harness, and Manual |
-| A template in `Templates/` | Unit for `PageService`, Harness, and Manual signed out, as a user, and as an administrator |
+| A template in `Web/Templates/` | Unit for `PageService`, Harness, and Manual signed out, as a user, and as an administrator |
 
 The repository has no JavaScript test runner. Logic a test must reach belongs in C#, where `dotnet test` covers it.
 
@@ -37,7 +37,7 @@ The test project is flat. Each test file is named after the class it covers.
 | :--- | :--- |
 | `Jellyfin.Plugin.CustomPages/Services/StoreAccess.cs` | `Jellyfin.Plugin.CustomPages.Tests/StoreAccessTests.cs` |
 | `Jellyfin.Plugin.CustomPages/Services/RouteProxy.cs` | `Jellyfin.Plugin.CustomPages.Tests/RouteProxyTests.cs` |
-| `Jellyfin.Plugin.CustomPages/API/CustomPagesController.cs` | `Jellyfin.Plugin.CustomPages.Tests/CustomPagesControllerTests.cs`, with the route groups in `RouteEndpointTests.cs`, `StoreEndpointTests.cs`, and `FaviconTests.cs` |
+| `Jellyfin.Plugin.CustomPages/Api/CustomPagesController.cs` | `Jellyfin.Plugin.CustomPages.Tests/CustomPagesControllerTests.cs`, with the route groups in `RouteEndpointTests.cs`, `StoreEndpointTests.cs`, and `FaviconTests.cs` |
 
 ## C# Tests
 
@@ -93,7 +93,7 @@ dotnet test
 The dashboard scripts are ES modules that only Jellyfin can load. Check that each one parses, from a copy with an `.mjs` name so node reads it as a module.
 
 ```bash
-for f in Jellyfin.Plugin.CustomPages/Configuration/*.js; do cp "$f" "$TMPDIR/$(basename "$f" .js).mjs" && node --check "$TMPDIR/$(basename "$f" .js).mjs"; done
+for f in Jellyfin.Plugin.CustomPages/Web/*.js; do cp "$f" "$TMPDIR/$(basename "$f" .js).mjs" && node --check "$TMPDIR/$(basename "$f" .js).mjs"; done
 ```
 
 Check that every name a script imports from `custompages_jpkribs_shared.js` is exported in Base's typings.

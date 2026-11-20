@@ -87,7 +87,7 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         yield return new PluginPageInfo
         {
             Name = "custompages_pages",
-            EmbeddedResourcePath = $"{ns}.Configuration.custompages_pages.html",
+            EmbeddedResourcePath = $"{ns}.Web.custompages_pages.html",
             MenuSection = "server",
             DisplayName = "Custom Pages",
             EnableInMainMenu = false
@@ -96,33 +96,33 @@ public class Plugin : PluginBase<Plugin, PluginConfiguration>
         yield return new PluginPageInfo
         {
             Name = "custompages_pages.js",
-            EmbeddedResourcePath = $"{ns}.Configuration.custompages_pages.js"
+            EmbeddedResourcePath = $"{ns}.Web.custompages_pages.js"
         };
 
         // Tab 2: Assets.
         yield return new PluginPageInfo
         {
             Name = "custompages_assets",
-            EmbeddedResourcePath = $"{ns}.Configuration.custompages_assets.html"
+            EmbeddedResourcePath = $"{ns}.Web.custompages_assets.html"
         };
 
         yield return new PluginPageInfo
         {
             Name = "custompages_assets.js",
-            EmbeddedResourcePath = $"{ns}.Configuration.custompages_assets.js"
+            EmbeddedResourcePath = $"{ns}.Web.custompages_assets.js"
         };
 
         // Tab 3: Stores.
         yield return new PluginPageInfo
         {
             Name = "custompages_stores",
-            EmbeddedResourcePath = $"{ns}.Configuration.custompages_stores.html"
+            EmbeddedResourcePath = $"{ns}.Web.custompages_stores.html"
         };
 
         yield return new PluginPageInfo
         {
             Name = "custompages_stores.js",
-            EmbeddedResourcePath = $"{ns}.Configuration.custompages_stores.js"
+            EmbeddedResourcePath = $"{ns}.Web.custompages_stores.js"
         };
 
         // Shared base CSS and JS compiled in from the JPKribs.Jellyfin.Base package.

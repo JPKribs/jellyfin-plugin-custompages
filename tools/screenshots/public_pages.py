@@ -19,7 +19,7 @@ def status(heading, message, title=None, button_text='Back to Jellyfin', button_
                                'SPINNER': sp, 'BUTTON': btn, 'CONTENT': content})
 
 def configure(templates, status_template):
-    """Points the renderer at the plugin's Templates folder and Base's status.html."""
+    """Points the renderer at the plugin's Web/Templates folder and Base's status.html."""
     global REPO, STATUS
     REPO, STATUS = templates, status_template
 

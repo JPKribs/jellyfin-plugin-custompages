@@ -1,6 +1,7 @@
 using Jellyfin.Plugin.CustomPages.Configuration;
 using Jellyfin.Plugin.CustomPages.Models;
 using Jellyfin.Plugin.CustomPages.Services;
+using Jellyfin.Plugin.CustomPages.Utilities;
 using Xunit;
 
 namespace Jellyfin.Plugin.CustomPages.Tests;

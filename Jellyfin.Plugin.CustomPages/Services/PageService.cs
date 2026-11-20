@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.CustomPages.Configuration;
 using Jellyfin.Plugin.CustomPages.Models;
+using Jellyfin.Plugin.CustomPages.Utilities;
 using JPKribs.Jellyfin.Base;
 
 namespace Jellyfin.Plugin.CustomPages.Services;

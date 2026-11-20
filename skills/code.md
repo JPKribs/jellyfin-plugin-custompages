@@ -57,6 +57,24 @@ Code belongs in Base when another plugin could use it unchanged. A helper with n
 
 Never commit this plugin against an unreleased Base package.
 
+## Layout
+
+| Path | Holds | Namespace |
+| :--- | :--- | :--- |
+| `Plugin.cs` | The plugin class and its dashboard pages. | root |
+| `PluginServiceRegistrator.cs` | DI registration. | root |
+| `Api/` | `CustomPagesController` and every route under `/pages`. | `.Api` |
+| `Configuration/` | `PluginConfiguration.cs` only. No web files. | `.Configuration` |
+| `Web/` | The dashboard tabs, embedded and served by their file names. | n/a |
+| `Web/Templates/` | The wrapper, inner, and shell templates served to visitors. | n/a |
+| `Assets/` | The plugin logo. | n/a |
+| `Models/` | Configuration records, enums, and route responses. | `.Models` |
+| `Services/` | Page rendering, validation, the route proxy, route secrets, and stores. | `.Services` |
+| `Tasks/` | The store retention task. | `.Tasks` |
+| `Utilities/` | Static helpers and extension methods. | `.Utilities` |
+
+The csproj embeds everything under `Web/` with one wildcard. A new tab file needs only a `PluginPageInfo` in `Plugin.GetPages`. Development tools that never ship live in `tools/` at the repository root.
+
 ## Comments
 
 ### The Rules
@@ -107,7 +125,7 @@ public static StoreAccessLevel ResolveRead(PageStore store, StoreCaller caller)
 * A constructor summary is "Initializes a new instance of the <see cref="Name"/> class."
 * Skip tautologies. `<param name="item">The item.</param>` says nothing, so write what the item is for.
 * Put one type in each file, named after the type. A small enum or record used by one class may share its file, as `StoreAccessLevel` and `StoreCaller` share `StoreAccess.cs`.
-* Match the namespace to the folder. The controller folder is `API/` and its namespace is `Jellyfin.Plugin.CustomPages.Api`.
+* Match the namespace to the folder. The controller folder is `Api/` and its namespace is `Jellyfin.Plugin.CustomPages.Api`.
 
 ### JavaScript
 
@@ -135,7 +153,7 @@ function addAssetFiles(files, refused) {
 
 * One comment line naming each section or dialog where it starts, and an optional second line saying what it is for.
 * Use no inline `style` attributes.
-* The templates in `Templates/` are served to visitors, not to the dashboard. The shell renders inside Base's status template, which loads no Material Icons, no Base script, and no dashboard CSS. Build it only from the template's classes, `base-status-card`, `base-fields`, `base-submit`, `base-btn`, `base-btn-secondary`, `base-btn-stack`, `base-status-error`, `base-note`, `base-spinner`, and `base-logo`, with no local `<style>` and no icon ligatures, since an icon name shows as text there.
+* The templates in `Web/Templates/` are served to visitors, not to the dashboard. The shell renders inside Base's status template, which loads no Material Icons, no Base script, and no dashboard CSS. Build it only from the template's classes, `base-status-card`, `base-fields`, `base-submit`, `base-btn`, `base-btn-secondary`, `base-btn-stack`, `base-status-error`, `base-note`, `base-spinner`, and `base-logo`, with no local `<style>` and no icon ligatures, since an icon name shows as text there.
 
 ### CSS
 
