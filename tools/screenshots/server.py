@@ -1,9 +1,9 @@
 """Custom Pages screenshot server: serves the plugin's tabs, its served pages, Base and jellyfin-web the way Jellyfin does.
 
 Usage: python3 -I server.py 8811
-Base comes from the NuGet package folder at the version the plugin's csproj names. JELLYFIN_WEB picks the jellyfin-web folder.
+The tabs get the plugin's US English strings. Base comes from the NuGet package folder at the version the plugin's csproj names. JELLYFIN_WEB picks the jellyfin-web folder.
 """
-import http.server, importlib.util, os, re, sys, urllib.parse
+import http.server, importlib.util, json, os, re, sys, urllib.parse
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.join(HERE, '..', '..', 'Jellyfin.Plugin.CustomPages')
@@ -26,6 +26,21 @@ def base_folder():
 
 
 BASE = base_folder()
+
+
+def strings():
+    """The US English strings as the plugin serves them: its declared Jellyfin strings, then Localization/en-us.json."""
+    csproj = open(os.path.join(REPO, 'Jellyfin.Plugin.CustomPages.csproj'), encoding='utf-8').read()
+    jellyfin = {src: json.load(open(os.path.join(BASE, 'jellyfin', src, 'en-us.json'), encoding='utf-8')) for src in ('web', 'server')}
+    found = {}
+    for m in re.finditer(r'<JellyfinString Include="([^"]+)"(?:\s+Source="(\w+)")?', csproj):
+        for key in m.group(1).split(';'):
+            found[key] = jellyfin[m.group(2) or 'web'].get(key, key)
+    found.update(json.load(open(os.path.join(REPO, 'Localization', 'en-us.json'), encoding='utf-8')))
+    return found
+
+
+STRINGS = strings()
 if not os.path.isfile(os.path.join(JF, 'index.html')):
     sys.exit('No jellyfin-web at %s. Set JELLYFIN_WEB to a jellyfin-web folder.' % JF)
 
@@ -34,7 +49,7 @@ sys.dont_write_bytecode = True
 _spec = importlib.util.spec_from_file_location('public_pages', os.path.join(HERE, 'public_pages.py'))
 PUBLIC = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(PUBLIC)
-PUBLIC.configure(os.path.join(REPO, 'Web', 'Templates'), os.path.join(BASE, 'templates', 'status.html'))
+PUBLIC.configure(os.path.join(REPO, 'Web', 'Templates'), os.path.join(BASE, 'templates', 'status.html'), STRINGS)
 
 
 def stylesheets():
@@ -72,6 +87,8 @@ class H(http.server.BaseHTTPRequestHandler):
             links = ''.join('<link rel="stylesheet" href="/jf/%s">\n' % name for name in stylesheets())
             page = open(os.path.join(HERE, 'harness.html'), encoding='utf-8').read().replace('<!-- jellyfin-web stylesheets -->\n', links)
             return self.send(200, page.encode('utf-8'), 'text/html')
+        if u.path == '/pages/plugin/translations':
+            return self.send(200, json.dumps(STRINGS).encode('utf-8'), 'application/json')
         if u.path == '/System/Info/Public':
             return self.send(200, b'{"Id":"s1"}', 'application/json')
         m = re.match(r'^/pages/([a-z0-9_-]+)(?:/(user|admin))?$', u.path)

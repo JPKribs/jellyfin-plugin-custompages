@@ -1,27 +1,76 @@
-import { createConfigPage, confirmDialog, createFilePicker, createCopyField } from './configurationpage?name=custompages_jpkribs_shared.js';
+import {
+    createConfigPage, confirmDialog, createFilePicker, createCopyField, loadTranslations, createTranslations, setTabs
+} from './configurationpage?name=custompages_jpkribs_shared.js';
 
 export default function (view) {
     'use strict';
 
     var PLUGIN_ID = '409ef72d-6014-47fd-8928-ebad581bf81b';
-    var TABS = [
-        { href: 'configurationpage?name=custompages_pages', name: 'Pages' },
-        { href: 'configurationpage?name=custompages_assets', name: 'Assets' },
-        { href: 'configurationpage?name=custompages_stores', name: 'Stores' }
-    ];
+    var TAB_INDEX = 1;
+
+    // The strings until the viewer's language loads, so every tr gives the English it is handed.
+    var t = createTranslations({});
+    var ready = null;
+
+    // tabs
+    // Lists the plugin's tabs in the viewer's language. The same in all three page scripts.
+    //
+    // Output
+    // [object[]]: Each tab's href and name.
+    function tabs() {
+        return [
+            { href: 'configurationpage?name=custompages_pages', name: t.tr('TabPages', 'Pages') },
+            { href: 'configurationpage?name=custompages_assets', name: t.tr('TabAssets', 'Assets') },
+            { href: 'configurationpage?name=custompages_stores', name: t.tr('TabStores', 'Stores') }
+        ];
+    }
 
     var Shared = createConfigPage(view, {
         pluginId: PLUGIN_ID,
         tabsKey: 'custompages',
-        tabIndex: 1,
-        tabs: TABS,
+        tabIndex: TAB_INDEX,
+        tabs: tabs,
         bind: bind,
         load: load
     }).shared;
 
     var MAX_ASSET_BYTES = 5 * 1024 * 1024;
     var VISIBILITIES = ['Anonymous', 'User', 'Admin'];
-    var VISIBILITY_LABELS = { Anonymous: 'Anyone', User: 'User', Admin: 'Admin' };
+
+    // visibilityLabel
+    // Names a visibility tier in the viewer's language.
+    //
+    // Inputs
+    // v [string]: The tier, Anonymous, User, or Admin.
+    //
+    // Output
+    // [string]: The tier's name.
+    function visibilityLabel(v) {
+        if (v === 'Admin') return t.tr('TierAdmin');
+        if (v === 'User') return t.tr('LabelUser');
+        return t.tr('TierAnyone');
+    }
+
+    // fillWithCode
+    // Writes a translated sentence into a node, with each {0}, {1} placeholder shown as code.
+    //
+    // Inputs
+    // node [HTMLElement]: The node to fill.
+    // text [string]: The translated sentence.
+    // codes [string[]]: The code shown for each placeholder, in order.
+    function fillWithCode(node, text, codes) {
+        node.textContent = '';
+        String(text).split(/(\{\d+\})/).forEach(function (part) {
+            var m = /^\{(\d+)\}$/.exec(part);
+            if (m && codes[+m[1]] !== undefined) {
+                var code = document.createElement('code');
+                code.textContent = codes[+m[1]];
+                node.appendChild(code);
+            } else if (part) {
+                node.appendChild(document.createTextNode(part));
+            }
+        });
+    }
 
     var assets = [];
     var picker = null;
@@ -57,7 +106,7 @@ export default function (view) {
             renderAssets();
             if (message) Shared.setStatus('assetStatus', message, false);
         }).catch(function () {
-            Shared.setStatus('assetStatus', 'Could not save the images.', true);
+            Shared.setStatus('assetStatus', t.tr('ErrorSaveImages'), true);
         });
     }
 
@@ -92,19 +141,24 @@ export default function (view) {
         // A skipped file is reported once every read settles, so a later success never hides it.
         Promise.all(tasks).then(function () {
             if (skipped.length === files.length) {
-                Shared.setStatus('assetStatus', 'Could not read ' + skipped.join(', ') + '.', true);
+                Shared.setStatus('assetStatus', t.format('ErrorReadFiles', skipped.join(', ')), true);
                 return;
             }
-            var note = (skipped.length ? ' Could not read ' + skipped.join(', ') + '.' : '') + (refused ? ' ' + refused : '');
-            persistAssets('Images uploaded.' + note);
+            var note = (skipped.length ? ' ' + t.format('ErrorReadFiles', skipped.join(', ')) : '') + (refused ? ' ' + refused : '');
+            persistAssets(t.tr('ToastImagesUploaded') + note);
         });
     }
 
     function deleteAsset(name) {
-        confirmDialog('Delete ' + name + '? Pages that use it show a broken image.', { title: 'Delete Image', confirmText: 'Delete', destructive: true }).then(function (ok) {
+        confirmDialog(t.format('ConfirmDeleteAsset', name), {
+            title: t.tr('DeleteImage'),
+            confirmText: t.tr('Delete'),
+            cancelText: t.tr('ButtonCancel'),
+            destructive: true
+        }).then(function (ok) {
             if (!ok) return;
             assets = assets.filter(function (a) { return a.Name !== name; });
-            persistAssets('Image deleted.');
+            persistAssets(t.tr('ToastImageDeleted'));
         });
     }
 
@@ -125,9 +179,9 @@ export default function (view) {
         });
         var size = Shared.formatSize(bytes);
         Shared.renderCards('assetCounts', [
-            { count: images, label: 'Images', color: 'blue' },
-            { count: other, label: 'Other', color: 'purple' },
-            { count: size, label: 'Size', color: 'gray' }
+            { count: images, label: t.tr('Images'), color: 'blue' },
+            { count: other, label: t.tr('Other'), color: 'purple' },
+            { count: size, label: t.tr('LabelSize'), color: 'gray' }
         ]);
     }
 
@@ -170,18 +224,26 @@ export default function (view) {
 
         var info = make('div', 'base-asset-info');
         info.appendChild(make('div', 'base-asset-name', a.Name));
-        var path = createCopyField({ value: 'asset/' + a.Name, inline: true, size: 'small', label: 'Path', copyLabel: 'Copy Path' });
+        var path = createCopyField({
+            value: 'asset/' + a.Name,
+            inline: true,
+            size: 'small',
+            label: t.tr('LabelPath'),
+            copyLabel: t.tr('CopyPath'),
+            copiedText: t.tr('ToastCopied'),
+            failedText: t.tr('ToastCopyFailed')
+        });
         rowFields.push(path);
         info.appendChild(path.element);
         row.appendChild(info);
 
         var actions = make('div', 'base-asset-actions');
         var select = make('select', 'small');
-        select.title = 'Visibility';
-        select.setAttribute('aria-label', 'Visibility');
+        select.title = t.tr('LabelVisibility');
+        select.setAttribute('aria-label', t.tr('LabelVisibility'));
         var visibility = normalizeVisibility(a.Visibility);
         VISIBILITIES.forEach(function (v) {
-            var option = make('option', '', VISIBILITY_LABELS[v]);
+            var option = make('option', '', visibilityLabel(v));
             option.value = v;
             option.selected = v === visibility;
             select.appendChild(option);
@@ -191,7 +253,7 @@ export default function (view) {
         });
         actions.appendChild(select);
 
-        actions.appendChild(rowButton('delete', 'Delete', ' destructive', function () { deleteAsset(a.Name); }));
+        actions.appendChild(rowButton('delete', t.tr('Delete'), ' destructive', function () { deleteAsset(a.Name); }));
 
         row.appendChild(actions);
         return row;
@@ -201,7 +263,7 @@ export default function (view) {
         var idx = assets.findIndex(function (a) { return a.Name === name; });
         if (idx < 0) return;
         assets[idx].Visibility = normalizeVisibility(value);
-        persistAssets('Saved.');
+        persistAssets(t.tr('ToastSaved'));
     }
 
     function renderAssets() {
@@ -214,7 +276,22 @@ export default function (view) {
         assets.forEach(function (a) { list.appendChild(renderAssetRow(a)); });
     }
 
+    // bind
+    // Loads the viewer's strings, then translates the markup and builds the page in that language.
     function bind() {
+        ready = loadTranslations('pages/plugin/translations').then(function (handle) {
+            t = handle;
+            t.apply(view);
+            setTabs('custompages', TAB_INDEX, tabs);
+            if (t.has('AssetsIntro')) fillWithCode(el('assetsIntro'), t.tr('AssetsIntro'), ['asset/logo.png']);
+            if (t.has('AssetsVisibilityInfo')) fillWithCode(el('assetsInfo'), t.tr('AssetsVisibilityInfo'), ['/pages/asset/{name}']);
+            bindPage();
+        });
+    }
+
+    // bindPage
+    // Builds the page's components and wires its controls, once the strings are loaded.
+    function bindPage() {
         // Each pick uploads at once, so the picker is emptied after it hands its files over. Emptying it
         // also clears its refusal message, so a refusal that came with good files joins the result.
         var refused = '';
@@ -222,8 +299,10 @@ export default function (view) {
             accept: 'image/*',
             maxSize: MAX_ASSET_BYTES,
             multiple: true,
-            dropText: 'Drop images here or click to select.',
-            sizeLimitText: '{value} is larger than 5 MB.',
+            dropText: t.tr('DropImages'),
+            sizeLimitText: t.tr('ErrorImageTooLarge'),
+            typeText: t.tr('ErrorFileType'),
+            removeLabel: t.tr('ButtonRemoveNamed'),
             onChange: function (files) {
                 if (!files.length) return;
                 addAssetFiles(files, refused);
@@ -240,7 +319,9 @@ export default function (view) {
     }
 
     function load() {
-        Shared.getConfig().then(function (cfg) {
+        ready.then(function () {
+            return Shared.getConfig();
+        }).then(function (cfg) {
             assets = cfg.Assets || [];
             renderAssets();
         });

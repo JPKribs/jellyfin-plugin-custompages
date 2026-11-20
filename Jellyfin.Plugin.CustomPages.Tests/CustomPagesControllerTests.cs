@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -100,7 +101,7 @@ public class CustomPagesControllerTests
 
         var (shellController, shellPages) = Create();
         shellPages.Find("b").Returns(Page(PageVisibility.User, "b"));
-        shellPages.GetShellHtml(Arg.Any<string>(), Arg.Any<PageVisibility>()).Returns("<html></html>");
+        shellPages.GetShellHtml(Arg.Any<string>(), Arg.Any<PageVisibility>(), Arg.Any<string?>()).Returns("<html></html>");
         shellController.Get("b");
 
         var (userController, userPages) = Create();
@@ -166,7 +167,7 @@ public class CustomPagesControllerTests
     {
         var (controller, pages) = Create();
         pages.Find("nope").Returns((CustomPage?)null);
-        pages.NotFoundHtml("nope").Returns("<html>missing</html>");
+        pages.NotFoundHtml("nope", Arg.Any<string?>()).Returns("<html>missing</html>");
 
         var result = controller.Get("nope");
 
@@ -182,12 +183,39 @@ public class CustomPagesControllerTests
     {
         var (controller, pages) = Create();
         pages.Find("p").Returns(Page(visibility));
-        pages.GetShellHtml("p", visibility).Returns("<html>shell</html>");
+        pages.GetShellHtml("p", visibility, Arg.Any<string?>()).Returns("<html>shell</html>");
 
         var result = controller.Get("p");
 
         Assert.Equal("<html>shell</html>", result.Content);
         pages.DidNotReceive().Render(Arg.Any<CustomPage>());
+    }
+
+    [Fact]
+    public void Get_ProtectedPage_ShellIsInTheBrowsersPreferredLanguage()
+    {
+        var (controller, pages) = Create();
+        controller.Request.Headers.AcceptLanguage = "en;q=0.5, de-DE, fr;q=0.8";
+        pages.Find("p").Returns(Page(PageVisibility.User));
+
+        controller.Get("p");
+
+        pages.Received(1).GetShellHtml("p", PageVisibility.User, "de-DE");
+    }
+
+    [Fact]
+    public void Translations_AllowsAnonymousAndServesTheStrings()
+    {
+        var (controller, _) = Create();
+        var method = typeof(CustomPagesController).GetMethod(nameof(CustomPagesController.Translations))!;
+
+        var result = controller.Translations("en-us");
+
+        Assert.NotEmpty(method.GetCustomAttributes(typeof(AllowAnonymousAttribute), false));
+        var file = Assert.IsType<FileContentResult>(result);
+        var strings = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(file.FileContents)!;
+        Assert.Equal("Custom Pages", strings["HeaderCustomPages"]);
+        Assert.Equal("Sign In", strings["ButtonSignIn"]);
     }
 
     // MARK: Tier gating on the content endpoints

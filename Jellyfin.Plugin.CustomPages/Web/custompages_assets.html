@@ -8,13 +8,14 @@
 
                     <!-- Page title -->
                     <div class="sectionTitleContainer flex align-items-center">
-                        <h1 class="sectionTitle">Assets</h1>
+                        <h1 class="sectionTitle" data-str="TabAssets">Assets</h1>
                     </div>
 
-                    <div class="fieldDescription">
+                    <!-- Filled from AssetsIntro and AssetsVisibilityInfo, with each path as code. -->
+                    <div class="fieldDescription" id="assetsIntro">
                         Hosts images for your pages. Reference one by the path on its row, such as <code>asset/logo.png</code>.
                     </div>
-                    <div class="base-info">
+                    <div class="base-info" id="assetsInfo">
                         Images set to Anyone are public at <code>/pages/asset/{name}</code>. Images set to User or Admin are only embedded into pages of the same or a higher visibility.
                     </div>
 
@@ -26,7 +27,7 @@
                     <div id="assetPicker"></div>
 
                     <!-- Asset list -->
-                    <div id="assetEmpty" class="base-empty-section hidden">No images yet. Add one above.</div>
+                    <div id="assetEmpty" class="base-empty-section hidden" data-str="EmptyImages">No images yet. Add one above.</div>
                     <div id="assetList" class="base-asset-list"></div>
                     <span id="assetStatus" class="base-status-text" role="status"></span>
 

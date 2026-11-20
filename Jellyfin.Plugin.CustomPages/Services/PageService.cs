@@ -217,33 +217,57 @@ public partial class PageService : IPageService
     /// </summary>
     /// <param name="slug">The page slug.</param>
     /// <param name="visibility">The page visibility tier.</param>
+    /// <param name="language">The visitor's language, such as de, or <c>null</c> for US English.</param>
     /// <returns>The shell HTML document.</returns>
-    public string GetShellHtml(string slug, PageVisibility visibility)
+    public string GetShellHtml(string slug, PageVisibility visibility, string? language)
     {
         var tier = visibility.EndpointTier();
         var content = TemplateLoader.Fill("custompages_shell", new Dictionary<string, string>
         {
             ["SLUG"] = StringUtilities.EscapeJsString(slug),
-            ["TIER"] = StringUtilities.EscapeJsString(tier)
+            ["TIER"] = StringUtilities.EscapeJsString(tier),
+            ["SIGNIN_HEADING"] = Text(TranslationKeys.HeaderSignInRequired, language),
+            ["SIGNIN_MESSAGE"] = Text(TranslationKeys.MessageSignInRequired, language),
+            ["SIGNIN_BUTTON"] = Text(TranslationKeys.ButtonSignIn, language),
+            ["DENIED_HEADING"] = Text(TranslationKeys.HeaderNotAuthorized, language),
+            ["DENIED_MESSAGE"] = Text(TranslationKeys.MessageNotAuthorized, language),
+            ["MISSING_HEADING"] = Text(TranslationKeys.HeaderPageMissing, language),
+            ["MISSING_MESSAGE"] = Text(TranslationKeys.MessagePageMissing, language),
+            ["BACK_BUTTON"] = Text(TranslationKeys.ButtonBackToJellyfin, language)
         });
 
-        return StatusPage.Render("Loading…", string.Empty, buttonText: null, showSpinner: true, content: content);
+        return StatusPage.Render(
+            BaseTranslations.Get(TranslationKeys.StatusLoading, language),
+            string.Empty,
+            buttonText: null,
+            showSpinner: true,
+            content: content);
     }
 
     /// <summary>
     /// Renders the Jellyfin-styled page returned when a slug has no enabled page.
     /// </summary>
     /// <param name="slug">The requested slug.</param>
+    /// <param name="language">The visitor's language, such as de, or <c>null</c> for US English.</param>
     /// <returns>A standalone 404 HTML document.</returns>
-    public string NotFoundHtml(string slug)
+    public string NotFoundHtml(string slug, string? language)
     {
-        var where = IsValidSlug(slug) ? "/pages/" + slug : "this address";
+        var where = IsValidSlug(slug) ? "/pages/" + slug : BaseTranslations.Get(TranslationKeys.MessageThisAddress, language);
         return StatusPage.Render(
-            "Page Not Found",
-            "Nothing is published at " + where + ".",
-            buttonText: "Back to Jellyfin",
+            BaseTranslations.Get(TranslationKeys.HeaderPageMissing, language),
+            BaseTranslations.Format(TranslationKeys.MessageNothingPublished, language, where),
+            buttonText: BaseTranslations.Get(TranslationKeys.ButtonBackToJellyfin, language),
             buttonHref: "../web/");
     }
+
+    /// <summary>
+    /// Gets a string for the shell's markup, encoded since a translation is text, never markup.
+    /// </summary>
+    /// <param name="key">The string's key.</param>
+    /// <param name="language">The visitor's language, or <c>null</c> for US English.</param>
+    /// <returns>The encoded string.</returns>
+    private static string Text(string key, string? language)
+        => WebUtility.HtmlEncode(BaseTranslations.Get(key, language));
 
     /// <summary>
     /// Reports whether a slug consists only of the safe URL character set.

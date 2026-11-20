@@ -24,6 +24,31 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Jellyfin's own strings the pages use, in every language Jellyfin has -->
+    <JellyfinString Include="ButtonCancel" />
+    <JellyfinString Include="ButtonSignIn" />
+    <JellyfinString Include="Custom" />
+    <JellyfinString Include="Delete" />
+    <JellyfinString Include="DeleteImage" />
+    <JellyfinString Include="Disabled" />
+    <JellyfinString Include="Images" />
+    <JellyfinString Include="LabelName" />
+    <JellyfinString Include="LabelPassword" />
+    <JellyfinString Include="LabelPath" />
+    <JellyfinString Include="LabelSize" />
+    <JellyfinString Include="LabelSource" />
+    <JellyfinString Include="LabelTitle" />
+    <JellyfinString Include="LabelUser" />
+    <JellyfinString Include="LabelUsername" />
+    <JellyfinString Include="New" />
+    <JellyfinString Include="Other" />
+    <JellyfinString Include="Save" />
+    <JellyfinString Include="Search" />
+    <JellyfinString Include="SelectAll" />
+    <JellyfinString Include="TabAccess" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Dashboard tabs and the served-page templates -->
     <None Remove="Web\**\*" />
     <EmbeddedResource Include="Web\**\*" />

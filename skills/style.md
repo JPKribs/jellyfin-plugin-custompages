@@ -256,7 +256,7 @@ Every config page uses Jellyfin's page shell.
 
 * One registered page per tab, wired with `createConfigPage`, which sets the tabs.
 * Tab names are one Title Case word.
-* The tab list is the `TABS` array at the top of each page script, the same in all three. Change all three together.
+* The tab list is the `tabs` function at the top of each page script, the same in all three. Change all three together.
 * Order tabs from what is used most to what is set once. Custom Pages is **Pages**, **Assets**, **Stores**.
 
 ### Sections

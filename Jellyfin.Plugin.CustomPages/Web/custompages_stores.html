@@ -9,10 +9,11 @@
 
                     <!-- Page title -->
                     <div class="sectionTitleContainer flex align-items-center">
-                        <h1 class="sectionTitle">Stores</h1>
+                        <h1 class="sectionTitle" data-str="TabStores">Stores</h1>
                     </div>
 
-                    <div class="fieldDescription">
+                    <!-- Filled from StoresIntro, with each call as code. -->
+                    <div class="fieldDescription" id="storesIntro">
                         Keeps records that pages with Allow System Access write through <code>pageStore.read('name')</code> and <code>pageStore.write('name', data)</code>.
                         Every page can share one store.
                     </div>
@@ -23,133 +24,134 @@
                     <!-- Store selector -->
                     <div class="base-selector">
                         <div class="selectContainer">
-                            <label class="selectLabel" for="selectStore">Store</label>
+                            <label class="selectLabel" for="selectStore" data-str="LabelStore">Store</label>
                             <select id="selectStore" class="base-selector-dropdown"></select>
                         </div>
                         <div class="base-selector-actions">
-                            <button is="emby-button" type="button" id="btnNewStore" class="raised base-button primary" title="New Store">
+                            <button is="emby-button" type="button" id="btnNewStore" class="raised base-button primary" title="New Store" data-str-title="ButtonNewStore">
                                 <span class="material-icons" aria-hidden="true">add</span>
-                                <span>New</span>
+                                <span data-str="New">New</span>
                             </button>
-                            <button is="emby-button" type="button" id="btnEnableStore" class="raised base-button" aria-pressed="true" title="Enabled">
+                            <button is="emby-button" type="button" id="btnEnableStore" class="raised base-button" aria-pressed="true" title="Enabled" data-str-title="StatusEnabled">
                                 <span class="material-icons" aria-hidden="true">visibility</span>
-                                <span id="enableLabel">Enabled</span>
+                                <span id="enableLabel" data-str="StatusEnabled">Enabled</span>
                             </button>
-                            <button is="emby-button" type="button" id="btnClearStore" class="raised base-button destructive" title="Clear Store">
+                            <button is="emby-button" type="button" id="btnClearStore" class="raised base-button destructive" title="Clear Store" data-str-title="ButtonClearStore">
                                 <span class="material-icons" aria-hidden="true">delete_sweep</span>
-                                <span>Clear</span>
+                                <span data-str="ButtonClear">Clear</span>
                             </button>
-                            <button is="emby-button" type="button" id="btnDeleteStore" class="raised base-button destructive" title="Delete Store">
+                            <button is="emby-button" type="button" id="btnDeleteStore" class="raised base-button destructive" title="Delete Store" data-str-title="ButtonDeleteStore">
                                 <span class="material-icons" aria-hidden="true">delete</span>
-                                <span>Delete</span>
+                                <span data-str="Delete">Delete</span>
                             </button>
                         </div>
                     </div>
 
                     <!-- Empty state -->
-                    <div id="storeEmpty" class="base-empty-section hidden">No stores yet. Select New to add one.</div>
+                    <div id="storeEmpty" class="base-empty-section hidden" data-str="EmptyStores">No stores yet. Select New to add one.</div>
 
                     <!-- Store editor -->
                     <div id="storeEditor" class="hidden">
                         <div class="inputContainer">
-                            <label for="storeName">Name</label>
+                            <label for="storeName" data-str="LabelName">Name</label>
                             <input is="emby-input" type="text" id="storeName" autocomplete="off" />
                         </div>
 
                         <!-- Filled by createCopyField. Hidden while the store has no name. -->
                         <div class="inputContainer hidden" id="storeUrlRow">
-                            <label for="storeUrl">URL</label>
+                            <label for="storeUrl" data-str="LabelUrl">URL</label>
                         </div>
 
                         <div class="selectContainer">
-                            <label class="selectLabel" for="storeRead">Read</label>
+                            <label class="selectLabel" for="storeRead" data-str="LabelRead">Read</label>
                             <select is="emby-select" id="storeRead">
-                                <option value="Admin">Admin</option>
-                                <option value="User">User</option>
-                                <option value="Anonymous">Anyone</option>
+                                <option value="Admin" data-str="TierAdmin">Admin</option>
+                                <option value="User" data-str="LabelUser">User</option>
+                                <option value="Anonymous" data-str="TierAnyone">Anyone</option>
                             </select>
-                            <div class="fieldDescription">
+                            <div class="fieldDescription" data-str="ReadHelp">
                                 Sets the lowest tier that may read the store. A viewer below it reads nothing.
                             </div>
                         </div>
 
                         <div class="selectContainer hidden" id="scopeRow">
-                            <label class="selectLabel" for="storeScope">Scope</label>
+                            <label class="selectLabel" for="storeScope" data-str="LabelScope">Scope</label>
                             <select is="emby-select" id="storeScope">
-                                <option value="All">All records</option>
-                                <option value="Own">User records</option>
+                                <option value="All" data-str="ScopeAll">All records</option>
+                                <option value="Own" data-str="ScopeOwn">User records</option>
                             </select>
-                            <div class="fieldDescription">
+                            <div class="fieldDescription" data-str="ScopeHelp">
                                 Sets how much of the store a reader sees. Administrators always see every record.
                             </div>
                         </div>
 
                         <div class="selectContainer">
-                            <label class="selectLabel" for="storeWrite">Write</label>
+                            <label class="selectLabel" for="storeWrite" data-str="LabelWrite">Write</label>
                             <select is="emby-select" id="storeWrite">
-                                <option value="Admin">Admin</option>
-                                <option value="User">User</option>
-                                <option value="Anonymous">Anyone</option>
+                                <option value="Admin" data-str="TierAdmin">Admin</option>
+                                <option value="User" data-str="LabelUser">User</option>
+                                <option value="Anonymous" data-str="TierAnyone">Anyone</option>
                             </select>
-                            <div class="fieldDescription">
+                            <div class="fieldDescription" data-str="WriteHelp">
                                 Sets the lowest tier that may add a record. Changing a record needs the read tier too.
                             </div>
                         </div>
 
-                        <div class="base-warn hidden" id="anonWriteWarning">
+                        <div class="base-warn hidden" id="anonWriteWarning" data-str="WarnAnonymousWrite">
                             Anyone who can reach this server can add records without signing in. Only the record limit bounds them.
                         </div>
 
-                        <div class="base-warn hidden" id="scopeAllWriteWarning">
+                        <div class="base-warn hidden" id="scopeAllWriteWarning" data-str="WarnScopeAllWrite">
                             Everyone who can read and write this store can change and delete every record in it. Set Scope to User records to limit them to their own.
                         </div>
 
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
                                 <input type="checkbox" is="emby-checkbox" id="storeEditOwn" />
-                                <span class="checkboxLabel">Writers Edit Own Records</span>
+                                <span class="checkboxLabel" data-str="LabelEditOwn">Writers Edit Own Records</span>
                             </label>
-                            <div class="fieldDescription checkboxFieldDescription">
+                            <div class="fieldDescription checkboxFieldDescription" data-str="EditOwnHelp">
                                 Lets a writer change and delete records they created when Scope is User records. Leave it off when records carry a status you write.
                             </div>
                         </div>
 
                         <div class="inputContainer">
-                            <label for="storeMaxRecords">Record Limit</label>
+                            <label for="storeMaxRecords" data-str="LabelRecordLimit">Record Limit</label>
                             <input is="emby-input" type="number" id="storeMaxRecords" min="1" max="100000" />
-                            <div class="fieldDescription">
+                            <div class="fieldDescription" data-str="RecordLimitHelp">
                                 Refuses writes past this count. A record holds at most 64 KB and a store at most 64 MB.
                             </div>
                         </div>
 
                         <div class="selectContainer">
-                            <label class="selectLabel" for="storeRetention">Retention</label>
+                            <label class="selectLabel" for="storeRetention" data-str="LabelRetention">Retention</label>
                             <select is="emby-select" id="storeRetention">
-                                <option value="0">Keep permanently</option>
+                                <option value="0" data-str="RetentionKeep">Keep permanently</option>
+                                <!-- The day counts are filled from RetentionDay and RetentionDays. -->
                                 <option value="1">1 day</option>
                                 <option value="7">7 days</option>
                                 <option value="30">30 days</option>
                                 <option value="90">90 days</option>
                                 <option value="180">180 days</option>
                                 <option value="365">365 days</option>
-                                <option value="custom">Custom</option>
+                                <option value="custom" data-str="Custom">Custom</option>
                             </select>
-                            <div class="fieldDescription">
+                            <div class="fieldDescription" data-str="RetentionHelp">
                                 Removes records once they reach this age, counted from when each was created.
                             </div>
                         </div>
 
                         <div class="inputContainer hidden" id="retentionCustomRow">
-                            <label for="storeRetentionDays">Retention (days)</label>
+                            <label for="storeRetentionDays" data-str="LabelRetentionDays">Retention (days)</label>
                             <input is="emby-input" type="number" id="storeRetentionDays" min="1" max="3650" />
                         </div>
 
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
                                 <input type="checkbox" is="emby-checkbox" id="storeNotify" />
-                                <span class="checkboxLabel">Notify Administrators</span>
+                                <span class="checkboxLabel" data-str="LabelNotifyAdmins">Notify Administrators</span>
                             </label>
-                            <div class="fieldDescription checkboxFieldDescription">
+                            <div class="fieldDescription checkboxFieldDescription" data-str="NotifyHelp">
                                 Writes an activity log entry when records are added or removed. A burst of writes becomes one entry.
                             </div>
                         </div>

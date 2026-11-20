@@ -28,15 +28,17 @@ public interface IPageService
     /// </summary>
     /// <param name="slug">The page slug.</param>
     /// <param name="visibility">The page visibility tier.</param>
+    /// <param name="language">The visitor's language, such as de, or <c>null</c> for US English.</param>
     /// <returns>The shell HTML document.</returns>
-    string GetShellHtml(string slug, PageVisibility visibility);
+    string GetShellHtml(string slug, PageVisibility visibility, string? language);
 
     /// <summary>
     /// Renders the page returned when a slug has no enabled page.
     /// </summary>
     /// <param name="slug">The requested slug.</param>
+    /// <param name="language">The visitor's language, such as de, or <c>null</c> for US English.</param>
     /// <returns>A standalone 404 HTML document.</returns>
-    string NotFoundHtml(string slug);
+    string NotFoundHtml(string slug, string? language);
 
     /// <summary>
     /// Finds a hosted asset by name, case-insensitively.

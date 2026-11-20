@@ -9,6 +9,7 @@
 * **Server side routes.** A page's [named routes](SystemAccess.md#server-side-routes) forward only to targets fixed in configuration, gated to that page's audience before anything is sent, with the viewer's Jellyfin credentials stripped from the forwarded request and route passwords encrypted at rest.
 * **Store tiers.** A [store](StoringData.md) is gated by its own read tier, read scope, and write tier on every call, resolved server side from the caller's credentials rather than from the page that called. The read tier is definitive, changing a record needs both tiers, and record and payload caps bound every store. A store open to anonymous writes is opt in and marked as such in the dashboard.
 * **Hardening headers.** Served pages set `Content-Security-Policy`, `Cache-Control: no-store`, `Referrer-Policy: no-referrer`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, and `X-Robots-Tag: noindex`. Slugs are restricted to `[a-z0-9_-]`.
+* **Plugin strings.** The dashboard reads the plugin's own wording from `/pages/plugin/translations`, which anyone may fetch since it holds no secrets. Its two part address never matches a page slug.
 * **Popups escape the sandbox.** `allow-popups-to-escape-sandbox` is set so that a link to an external site opens as a normal page instead of a crippled sandboxed one. The trade off is that author JavaScript can open and drive an unsandboxed window, which is the widest hole in the sandbox.
 
 ## What a Page Is Allowed to Do

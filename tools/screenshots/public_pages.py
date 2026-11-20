@@ -6,6 +6,7 @@ import html, os, re
 
 REPO = None
 STATUS = None
+STRINGS = {}
 
 def fill(text, values):
     return re.sub(r'\{\{([A-Z_]+)\}\}', lambda m: values.get(m.group(1), m.group(0)), text)
@@ -18,14 +19,20 @@ def status(heading, message, title=None, button_text='Back to Jellyfin', button_
     return fill(read(STATUS), {'TITLE': html.escape(title or heading), 'HEADING': html.escape(heading), 'MESSAGE': html.escape(message),
                                'SPINNER': sp, 'BUTTON': btn, 'CONTENT': content})
 
-def configure(templates, status_template):
-    """Points the renderer at the plugin's Web/Templates folder and Base's status.html."""
-    global REPO, STATUS
-    REPO, STATUS = templates, status_template
+def configure(templates, status_template, strings):
+    """Points the renderer at the plugin's Web/Templates folder, Base's status.html, and the plugin's US English strings."""
+    global REPO, STATUS, STRINGS
+    REPO, STATUS, STRINGS = templates, status_template, strings
 
 def shell(slug, tier):
-    content = fill(read(os.path.join(REPO, 'custompages_shell.html')), {'SLUG': slug, 'TIER': tier})
-    return status('Loading…', '', button_text=None, spinner=True, content=content)
+    text = lambda key: html.escape(STRINGS[key])
+    content = fill(read(os.path.join(REPO, 'custompages_shell.html')), {
+        'SLUG': slug, 'TIER': tier,
+        'SIGNIN_HEADING': text('HeaderSignInRequired'), 'SIGNIN_MESSAGE': text('MessageSignInRequired'), 'SIGNIN_BUTTON': text('ButtonSignIn'),
+        'DENIED_HEADING': text('HeaderNotAuthorized'), 'DENIED_MESSAGE': text('MessageNotAuthorized'),
+        'MISSING_HEADING': text('HeaderPageMissing'), 'MISSING_MESSAGE': text('MessagePageMissing'),
+        'BACK_BUTTON': text('ButtonBackToJellyfin')})
+    return status(STRINGS['StatusLoading'], '', button_text=None, spinner=True, content=content)
 
 def inner(title, css, body, js):
     return fill(read(os.path.join(REPO, 'custompages_inner.html')), {'TITLE': html.escape(title), 'CSS': css, 'BODY': body, 'JS': js})

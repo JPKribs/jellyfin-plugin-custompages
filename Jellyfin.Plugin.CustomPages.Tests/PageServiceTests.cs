@@ -2,6 +2,7 @@ using Jellyfin.Plugin.CustomPages.Configuration;
 using Jellyfin.Plugin.CustomPages.Models;
 using Jellyfin.Plugin.CustomPages.Services;
 using Jellyfin.Plugin.CustomPages.Utilities;
+using JPKribs.Jellyfin.Base;
 using Xunit;
 
 namespace Jellyfin.Plugin.CustomPages.Tests;
@@ -325,7 +326,7 @@ public class PageServiceTests
     [InlineData(PageVisibility.Admin, "'admin'")]
     public void GetShellHtml_BakesInTier(PageVisibility visibility, string expected)
     {
-        var html = CreateService().GetShellHtml("mypage", visibility);
+        var html = CreateService().GetShellHtml("mypage", visibility, null);
 
         Assert.Contains(expected, html, System.StringComparison.Ordinal);
         Assert.Contains("mypage", html, System.StringComparison.Ordinal);
@@ -334,11 +335,40 @@ public class PageServiceTests
     [Fact]
     public void GetShellHtml_JsEscapesSlug()
     {
-        var html = CreateService().GetShellHtml("a'b</script>", PageVisibility.User);
+        var html = CreateService().GetShellHtml("a'b</script>", PageVisibility.User, null);
 
         // The single quote and angle brackets are escaped so they cannot break out of the JS string.
         Assert.Contains("a\\'b\\x3C/script\\x3E", html, System.StringComparison.Ordinal);
         Assert.DoesNotContain("'a'b", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GetShellHtml_FillsEveryStringInUsEnglish()
+    {
+        var html = CreateService().GetShellHtml("mypage", PageVisibility.User, null);
+
+        Assert.Contains("<h1>Sign In Required</h1>", html, System.StringComparison.Ordinal);
+        Assert.Contains("Back to Jellyfin</a>", html, System.StringComparison.Ordinal);
+        Assert.Contains("Loading…", html, System.StringComparison.Ordinal);
+        Assert.DoesNotContain("{{", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void GetShellHtml_UsesTheVisitorsLanguage()
+    {
+        var html = CreateService().GetShellHtml("mypage", PageVisibility.User, "de-DE");
+
+        Assert.Contains(BaseTranslations.Get("ButtonSignIn", "de"), html, System.StringComparison.Ordinal);
+        Assert.DoesNotContain(">Sign In</a>", html, System.StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void NotFoundHtml_UnknownLanguage_FallsBackToUsEnglish()
+    {
+        var html = CreateService().NotFoundHtml("missing-page", "xx-yy");
+
+        Assert.Contains("Page Not Found", html, System.StringComparison.Ordinal);
+        Assert.Contains("Nothing is published at /pages/missing-page.", html, System.StringComparison.Ordinal);
     }
 
     // MARK: Gated asset inlining
@@ -524,14 +554,14 @@ public class PageServiceTests
     [Fact]
     public void NotFoundHtml_ValidSlug_IsReflectedEncoded()
     {
-        var html = CreateService().NotFoundHtml("missing-page");
+        var html = CreateService().NotFoundHtml("missing-page", null);
         Assert.Contains("/pages/missing-page", html, System.StringComparison.Ordinal);
     }
 
     [Fact]
     public void NotFoundHtml_InvalidSlug_IsNotReflected()
     {
-        var html = CreateService().NotFoundHtml("<script>bad</script>");
+        var html = CreateService().NotFoundHtml("<script>bad</script>", null);
 
         Assert.DoesNotContain("<script>bad</script>", html, System.StringComparison.Ordinal);
         Assert.Contains("this address", html, System.StringComparison.Ordinal);

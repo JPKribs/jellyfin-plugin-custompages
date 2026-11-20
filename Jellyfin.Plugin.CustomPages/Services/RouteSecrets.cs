@@ -43,7 +43,7 @@ public static class RouteSecrets
 
         // Every route is paired before any password is rewritten, so a refused save leaves the incoming
         // configuration exactly as it arrived.
-        var pairs = Pair(incoming, stored, out var error);
+        var pairs = Pair(incoming, stored, null, out var error);
         if (error is not null)
         {
             throw new ArgumentException(error);
@@ -62,13 +62,14 @@ public static class RouteSecrets
     /// </summary>
     /// <param name="incoming">The configuration about to be saved.</param>
     /// <param name="stored">The configuration currently in effect.</param>
+    /// <param name="language">The language of the reason, such as de, or <c>null</c> for US English.</param>
     /// <returns>The reason the save would be refused, or <c>null</c> when every kept password pairs.</returns>
-    public static string? Check(PluginConfiguration incoming, PluginConfiguration stored)
+    public static string? Check(PluginConfiguration incoming, PluginConfiguration stored, string? language = null)
     {
         ArgumentNullException.ThrowIfNull(incoming);
         ArgumentNullException.ThrowIfNull(stored);
 
-        Pair(incoming, stored, out var error);
+        Pair(incoming, stored, language, out var error);
         return error;
     }
 
@@ -77,6 +78,7 @@ public static class RouteSecrets
     private static List<(PageApiRoute Route, PageApiRoute? Stored)> Pair(
         PluginConfiguration incoming,
         PluginConfiguration stored,
+        string? language,
         out string? error)
     {
         var pairs = new List<(PageApiRoute Route, PageApiRoute? Stored)>();
@@ -109,7 +111,7 @@ public static class RouteSecrets
                         && !string.IsNullOrEmpty(match.Password)
                         && !SameOrigin(match.Url, route.Url))
                     {
-                        refused.Add((p, r, Refusal(route, page)));
+                        refused.Add((p, r, Refusal(route, page, language)));
                     }
 
                     pairs.Add((route, match));
@@ -133,7 +135,7 @@ public static class RouteSecrets
             }
             else if (IsKept(route.Password))
             {
-                refused.Add((pageIndex, routeIndex, Refusal(route, page)));
+                refused.Add((pageIndex, routeIndex, Refusal(route, page, language)));
             }
 
             pairs.Add((route, match));
@@ -148,9 +150,8 @@ public static class RouteSecrets
         return pairs;
     }
 
-    private static string Refusal(PageApiRoute route, CustomPage page)
-        => "The saved password for route '" + route.Name + "' on page '" + page.Slug
-            + "' could not be carried over, because the route was renamed or now points to a different host. Enter the password again and save.";
+    private static string Refusal(PageApiRoute route, CustomPage page, string? language)
+        => BaseTranslations.Format(TranslationKeys.ErrorRoutePassword, language, route.Name, page.Slug);
 
     private static bool IsKept(string? value)
         => string.Equals(value, SecretProtector.KeptSentinel, StringComparison.Ordinal);

@@ -123,7 +123,7 @@ public class CustomPagesController : ControllerBase
         if (page is null)
         {
             Response.StatusCode = StatusCodes.Status404NotFound;
-            return Content(_pages.NotFoundHtml(slug), HtmlContentType);
+            return Content(_pages.NotFoundHtml(slug, RequestLanguage()), HtmlContentType);
         }
 
         if (!page.Visibility.RequiresAuth())
@@ -131,8 +131,21 @@ public class CustomPagesController : ControllerBase
             return Content(_pages.Render(page), HtmlContentType);
         }
 
-        return Content(_pages.GetShellHtml(page.Slug, page.Visibility), HtmlContentType);
+        return Content(_pages.GetShellHtml(page.Slug, page.Visibility, RequestLanguage()), HtmlContentType);
     }
+
+    /// <summary>
+    /// Serves the plugin's strings in a language, for the dashboard tabs. The strings are not secret, so
+    /// it allows anonymous requests. The two segment route keeps it clear of every page slug.
+    /// </summary>
+    /// <param name="language">The language, such as de. US English when it is missing or unknown.</param>
+    /// <returns>The strings as JSON, or 304 when the caller already has them.</returns>
+    [HttpGet("plugin/translations")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status304NotModified)]
+    public IActionResult Translations([FromQuery] string? language)
+        => BaseTranslations.Serve(language, Request, Response);
 
     /// <summary>
     /// Serves the web client's favicon so pages can reuse the server's real icon at a stable path.
@@ -634,12 +647,13 @@ public class CustomPagesController : ControllerBase
     /// This is advisory only. The save itself runs the same checks and refuses on its own, so a client
     /// that skips this call gains nothing.
     /// </remarks>
+    /// <param name="language">The language of the reason, such as de. US English when it is missing or unknown.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>Whether the configuration would be accepted, with the reason when it would not.</returns>
     [HttpPost("config/check")]
     [Authorize(Policy = AdminPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> CheckConfiguration(CancellationToken cancellationToken)
+    public async Task<IActionResult> CheckConfiguration([FromQuery] string? language, CancellationToken cancellationToken)
     {
         NoStore();
 
@@ -656,7 +670,7 @@ public class CustomPagesController : ControllerBase
 
         if (incoming is null)
         {
-            return Json(new ConfigurationCheckResponse { Ok = false, Message = "The configuration could not be read." });
+            return Json(new ConfigurationCheckResponse { Ok = false, Message = BaseTranslations.Get(TranslationKeys.ErrorConfigUnreadable, language) });
         }
 
         var stored = Plugin.Instance?.ReadConfiguration(static config => config) ?? new PluginConfiguration();
@@ -664,8 +678,8 @@ public class CustomPagesController : ControllerBase
         string? message;
         try
         {
-            ConfigurationValidator.Validate(incoming);
-            message = RouteSecrets.Check(incoming, stored);
+            ConfigurationValidator.Validate(incoming, language);
+            message = RouteSecrets.Check(incoming, stored, language);
         }
         catch (ArgumentException ex)
         {
@@ -864,6 +878,17 @@ public class CustomPagesController : ControllerBase
     /// <summary>
     /// Applies the response headers that keep served pages out of caches, indexes, and third-party frames.
     /// </summary>
+    /// <summary>
+    /// Reads the language the visitor's browser prefers most, for the text of a served page's shell.
+    /// </summary>
+    /// <returns>The language, such as de-DE, or <c>null</c> when the request names none.</returns>
+    private string? RequestLanguage()
+        => Request.GetTypedHeaders().AcceptLanguage
+            .Where(l => l.Value.HasValue && l.Value.Value != "*")
+            .OrderByDescending(l => l.Quality ?? 1)
+            .Select(l => l.Value.Value)
+            .FirstOrDefault();
+
     private void Harden()
     {
         // Referrer-Policy, Cache-Control: no-store, and X-Robots-Tag come from the shared standalone page set.

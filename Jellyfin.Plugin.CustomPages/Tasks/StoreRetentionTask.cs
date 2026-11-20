@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Jellyfin.Plugin.CustomPages.Services;
 using JPKribs.Jellyfin.Base;
+using MediaBrowser.Controller.Configuration;
 using MediaBrowser.Model.Tasks;
 using Microsoft.Extensions.Logging;
 
@@ -21,27 +22,30 @@ public class StoreRetentionTask : PluginScheduledTask
 {
     private readonly IStoreService _stores;
     private readonly ILogger<StoreRetentionTask> _logger;
+    private readonly IServerConfigurationManager _config;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StoreRetentionTask"/> class.
     /// </summary>
     /// <param name="stores">The record store service.</param>
     /// <param name="logger">The logger.</param>
-    public StoreRetentionTask(IStoreService stores, ILogger<StoreRetentionTask> logger)
+    /// <param name="config">The server configuration, read for its display language.</param>
+    public StoreRetentionTask(IStoreService stores, ILogger<StoreRetentionTask> logger, IServerConfigurationManager config)
     {
         _stores = stores;
         _logger = logger;
+        _config = config;
     }
 
     /// <inheritdoc />
-    public override string Name => "Apply Custom Pages store retention";
+    public override string Name => BaseTranslations.Get(TranslationKeys.TaskRetentionName, BaseTranslations.ServerLanguage(_config));
 
     /// <inheritdoc />
     public override string Key => "CustomPagesStoreRetention";
 
     /// <inheritdoc />
-    public override string Description =>
-        "Removes records that have passed the retention set on their store. Stores set to keep records permanently are left alone.";
+    public override string Description
+        => BaseTranslations.Get(TranslationKeys.TaskRetentionDescription, BaseTranslations.ServerLanguage(_config));
 
     /// <inheritdoc />
     public override Task ExecuteAsync(IProgress<double> progress, CancellationToken cancellationToken)

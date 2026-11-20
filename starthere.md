@@ -17,6 +17,7 @@ Each guide in [skills](skills/) covers one kind of work. Read the guide that mat
 | [skills/review.md](skills/review.md) | Call any change done. |
 | [skills/release.md](skills/release.md) | Cut a release. |
 | [skills/branches.md](skills/branches.md) | Pick a branch, sync the two, and promote unstable. |
+| [skills/translations.md](skills/translations.md) | Add or change a string a person reads. |
 
 A task that touches several areas needs every matching guide. A new store setting, for example, needs the glossary, style, code, testing, documentation, and review guides.
 
@@ -66,6 +67,7 @@ Explain what you would change, why, and what it risks. Wait for an answer before
 | `Jellyfin.Plugin.CustomPages/Web/` | The dashboard tabs, as HTML and JS. |
 | `Jellyfin.Plugin.CustomPages/Web/Templates/` | The wrapper, inner, and shell templates a served page is built from. |
 | `Jellyfin.Plugin.CustomPages/Assets/` | The plugin logo. |
+| `Jellyfin.Plugin.CustomPages/Localization/` | The plugin's own strings, in `en-us.json`. |
 | `Jellyfin.Plugin.CustomPages/Models/` | The configuration records and the route responses. |
 | `Jellyfin.Plugin.CustomPages/Services/` | Page rendering, the configuration check, the route proxy, route secrets, and stores. |
 | `Jellyfin.Plugin.CustomPages/Tasks/` | The store retention task. |

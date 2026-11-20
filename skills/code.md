@@ -68,6 +68,7 @@ Never commit this plugin against an unreleased Base package.
 | `Web/` | The dashboard tabs, embedded and served by their file names. | n/a |
 | `Web/Templates/` | The wrapper, inner, and shell templates served to visitors. | n/a |
 | `Assets/` | The plugin logo. | n/a |
+| `Localization/` | The plugin's own strings, in `en-us.json`. See [translations.md](translations.md). | n/a |
 | `Models/` | Configuration records, enums, and route responses. | `.Models` |
 | `Services/` | Page rendering, validation, the route proxy, route secrets, and stores. | `.Services` |
 | `Tasks/` | The store retention task. | `.Tasks` |
@@ -191,9 +192,10 @@ function addAssetFiles(files, refused) {
 
 ## JavaScript Conventions
 
-* Each config page is an ES module whose default export takes the view and calls `createConfigPage` with the plugin ID, `tabsKey: 'custompages'`, its tab index, the `TABS` list, `bind`, and `load`.
+* Each config page is an ES module whose default export takes the view and calls `createConfigPage` with the plugin ID, `tabsKey: 'custompages'`, its tab index, the `tabs` function, `bind`, and `load`.
 * The page scripts use `'use strict'`, `var`, and function declarations. Keep new code in the same style as the file around it.
 * Keep one handle for each Base component a page draws, such as `userPicker` and `usageMeter`. Draw it once in `bind`, and call `setValue` when only its values change.
+* `bind` loads the strings with `loadTranslations('pages/plugin/translations')`, applies them, then builds the page. `load` waits for them, so script built text is always in the viewer's language.
 * Escape every value placed in HTML with `Shared.escapeHtml`.
 * Report a save, delete, or clear on the editor's Save Bar. `onSave` returns the save promise, which rejects with an `Error` carrying the reason. Report other results with `Shared.setStatus` on the status line beside the action.
 * Save through `Shared.getConfig` and `Shared.saveConfig`, changing only the list the tab owns, so a save never drops another tab's edits.

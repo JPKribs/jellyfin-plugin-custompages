@@ -1,23 +1,69 @@
-import { createConfigPage, confirmDialog, createUsageMeter, createCopyField, createSaveBar } from './configurationpage?name=custompages_jpkribs_shared.js';
+import {
+    createConfigPage, confirmDialog, createUsageMeter, createCopyField, createSaveBar, loadTranslations, createTranslations, setTabs
+} from './configurationpage?name=custompages_jpkribs_shared.js';
 
 export default function (view) {
     'use strict';
 
     var PLUGIN_ID = '409ef72d-6014-47fd-8928-ebad581bf81b';
-    var TABS = [
-        { href: 'configurationpage?name=custompages_pages', name: 'Pages' },
-        { href: 'configurationpage?name=custompages_assets', name: 'Assets' },
-        { href: 'configurationpage?name=custompages_stores', name: 'Stores' }
-    ];
+    var TAB_INDEX = 2;
+
+    // The strings until the viewer's language loads, so every tr gives the English it is handed.
+    var t = createTranslations({});
+    var ready = null;
+
+    // tabs
+    // Lists the plugin's tabs in the viewer's language. The same in all three page scripts.
+    //
+    // Output
+    // [object[]]: Each tab's href and name.
+    function tabs() {
+        return [
+            { href: 'configurationpage?name=custompages_pages', name: t.tr('TabPages', 'Pages') },
+            { href: 'configurationpage?name=custompages_assets', name: t.tr('TabAssets', 'Assets') },
+            { href: 'configurationpage?name=custompages_stores', name: t.tr('TabStores', 'Stores') }
+        ];
+    }
 
     var Shared = createConfigPage(view, {
         pluginId: PLUGIN_ID,
         tabsKey: 'custompages',
-        tabIndex: 2,
-        tabs: TABS,
+        tabIndex: TAB_INDEX,
+        tabs: tabs,
         bind: bind,
         load: load
     }).shared;
+
+    // fillWithCode
+    // Writes a translated sentence into a node, with each {0}, {1} placeholder shown as code.
+    //
+    // Inputs
+    // node [HTMLElement]: The node to fill.
+    // text [string]: The translated sentence.
+    // codes [string[]]: The code shown for each placeholder, in order.
+    function fillWithCode(node, text, codes) {
+        node.textContent = '';
+        String(text).split(/(\{\d+\})/).forEach(function (part) {
+            var m = /^\{(\d+)\}$/.exec(part);
+            if (m && codes[+m[1]] !== undefined) {
+                var code = document.createElement('code');
+                code.textContent = codes[+m[1]];
+                node.appendChild(code);
+            } else if (part) {
+                node.appendChild(document.createTextNode(part));
+            }
+        });
+    }
+
+    // nameRetentionPresets
+    // Names each preset retention in days, in the viewer's language.
+    function nameRetentionPresets() {
+        Array.prototype.forEach.call(el('storeRetention').options, function (option) {
+            var days = parseInt(option.value, 10);
+            if (!days) return;
+            option.textContent = days === 1 ? t.format('RetentionDay', days) : t.format('RetentionDays', days);
+        });
+    }
 
     var VISIBILITIES = ['Anonymous', 'User', 'Admin'];
     var SCOPES = ['All', 'Own'];
@@ -81,17 +127,18 @@ export default function (view) {
             if (normalizeVisibility(s.WriteAccess, 'User') === 'Anonymous' && s.Enabled !== false) open++;
         });
         Shared.renderCards('storeCounts', [
-            { count: stores.length, label: 'Stores', color: 'blue' },
-            { count: total, label: 'Records', color: 'green' },
-            { count: open, label: 'Open to Writes', color: open > 0 ? 'orange' : 'gray' }
+            { count: stores.length, label: t.tr('TabStores'), color: 'blue' },
+            { count: total, label: t.tr('CardRecords'), color: 'green' },
+            { count: open, label: t.tr('CardOpenToWrites'), color: open > 0 ? 'orange' : 'gray' }
         ]);
     }
 
     function setEnabledVisual(enabled) {
         var btn = el('btnEnableStore');
         btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-        btn.title = enabled ? 'Enabled' : 'Disabled';
-        el('enableLabel').textContent = enabled ? 'Enabled' : 'Disabled';
+        var text = enabled ? t.tr('StatusEnabled') : t.tr('Disabled');
+        btn.title = text;
+        el('enableLabel').textContent = text;
         btn.querySelector('.material-icons').textContent = enabled ? 'visibility' : 'visibility_off';
     }
 
@@ -135,7 +182,8 @@ export default function (view) {
         renderCounts();
         var select = el('selectStore');
         select.innerHTML = stores.map(function (s, i) {
-            var label = (s.Name || 'new store') + (s.Enabled === false ? ', disabled' : '');
+            var name = s.Name || t.tr('StoreOptionNew');
+            var label = s.Enabled === false ? t.format('StoreOptionDisabled', name) : name;
             return '<option value="' + i + '">' + Shared.escapeHtml(label) + '</option>';
         }).join('');
 
@@ -211,7 +259,7 @@ export default function (view) {
             renderSelect();
             return loadCounts();
         }, function () {
-            throw new Error('Could not save the store.');
+            throw new Error(t.tr('ErrorSaveStore'));
         });
     }
 
@@ -225,12 +273,12 @@ export default function (view) {
         if (!s) return Promise.resolve();
         readEditorInto(s);
 
-        if (!s.Name) return Promise.reject(new Error('Enter a name.'));
+        if (!s.Name) return Promise.reject(new Error(t.tr('ErrorEnterName')));
 
         var clash = stores.some(function (other, i) {
             return i !== currentIndex && (other.Name || '').toLowerCase() === s.Name.toLowerCase();
         });
-        if (clash) return Promise.reject(new Error('Another store already uses that name.'));
+        if (clash) return Promise.reject(new Error(t.tr('ErrorStoreNameTaken')));
 
         return persist();
     }
@@ -238,7 +286,15 @@ export default function (view) {
     // mountSaveBar
     // Builds the editor's Save Bar. A failed save's Error message is its failed line.
     function mountSaveBar() {
-        saveBar = createSaveBar({ fill: true, onSave: save });
+        saveBar = createSaveBar({
+            fill: true,
+            onSave: save,
+            saveText: t.tr('Save'),
+            pendingText: t.tr('SaveBarPending'),
+            savingText: t.tr('SaveBarSaving'),
+            savedText: t.tr('SaveBarSaved'),
+            failedText: t.tr('SaveBarFailed')
+        });
         el('storeSaveBar').appendChild(saveBar.element);
     }
 
@@ -250,24 +306,29 @@ export default function (view) {
         var s = stores[currentIndex];
         var name = (s && s.Name || '').toLowerCase();
         if (!name) {
-            saveBar.setState('failed', 'Save the store before clearing it.');
+            saveBar.setState('failed', t.tr('ErrorSaveBeforeClear'));
             return;
         }
 
         var count = counts[name];
-        var message = 'Clear ' + name + '? '
-            + (typeof count === 'number' ? 'Its ' + count + ' ' + (count === 1 ? 'record is' : 'records are') : 'Every record is')
-            + ' deleted, and a configuration backup cannot bring them back.';
-        confirmDialog(message, { title: 'Clear Store', confirmText: 'Clear', destructive: true }).then(function (ok) {
+        var message = typeof count !== 'number'
+            ? t.format('ConfirmClearStoreUnknown', name)
+            : t.format(count === 1 ? 'ConfirmClearStoreOne' : 'ConfirmClearStoreMany', name, count);
+        confirmDialog(message, {
+            title: t.tr('ButtonClearStore'),
+            confirmText: t.tr('ButtonClear'),
+            cancelText: t.tr('ButtonCancel'),
+            destructive: true
+        }).then(function (ok) {
             if (!ok) return;
             Shared.apiRequest('pages/store/' + encodeURIComponent(name) + '/clear', 'POST').then(function (result) {
                 counts[name] = 0;
                 renderCounts();
                 updateUsage();
                 var removed = (result && result.removed) || 0;
-                saveBar.setState('saved', 'Removed ' + removed + ' ' + (removed === 1 ? 'record' : 'records') + '.');
+                saveBar.setState('saved', t.format(removed === 1 ? 'ToastRecordRemoved' : 'ToastRecordsRemoved', removed));
             }).catch(function () {
-                saveBar.setState('failed', 'Could not clear the store.');
+                saveBar.setState('failed', t.tr('ErrorClearStore'));
             });
         });
     }
@@ -278,14 +339,19 @@ export default function (view) {
         var name = (s.Name || '').toLowerCase();
         var count = counts[name];
         var message = typeof count === 'number' && count > 0
-            ? 'Delete ' + name + '? Its records stay on disk and return when a store with the same name is added.'
-            : 'Delete this store? Pages that call it stop working.';
-        confirmDialog(message, { title: 'Delete Store', confirmText: 'Delete', destructive: true }).then(function (ok) {
+            ? t.format('ConfirmDeleteStoreKept', name)
+            : t.tr('ConfirmDeleteStore');
+        confirmDialog(message, {
+            title: t.tr('ButtonDeleteStore'),
+            confirmText: t.tr('Delete'),
+            cancelText: t.tr('ButtonCancel'),
+            destructive: true
+        }).then(function (ok) {
             if (!ok) return;
             stores.splice(currentIndex, 1);
             currentIndex = Math.min(currentIndex, stores.length - 1);
             persist().then(function () {
-                saveBar.setState('saved', 'Store deleted.');
+                saveBar.setState('saved', t.tr('ToastStoreDeleted'));
             }, function (err) {
                 saveBar.setState('failed', err.message);
             });
@@ -305,10 +371,32 @@ export default function (view) {
         });
     }
 
+    // bind
+    // Loads the viewer's strings, then translates the markup and builds the page in that language.
     function bind() {
-        usageMeter = createUsageMeter({ label: 'Records', usedText: '{used} of {total} records' });
+        ready = loadTranslations('pages/plugin/translations').then(function (handle) {
+            t = handle;
+            t.apply(view);
+            setTabs('custompages', TAB_INDEX, tabs);
+            if (t.has('StoresIntro')) {
+                fillWithCode(el('storesIntro'), t.tr('StoresIntro'), ["pageStore.read('name')", "pageStore.write('name', data)"]);
+            }
+            nameRetentionPresets();
+            bindPage();
+        });
+    }
+
+    // bindPage
+    // Builds the page's components and wires its controls, once the strings are loaded.
+    function bindPage() {
+        usageMeter = createUsageMeter({ label: t.tr('CardRecords'), usedText: t.tr('UsageRecords') });
         el('storeUsage').appendChild(usageMeter.element);
-        urlField = createCopyField({ label: 'URL', copyLabel: 'Copy URL' });
+        urlField = createCopyField({
+            label: t.tr('LabelUrl'),
+            copyLabel: t.tr('CopyUrl'),
+            copiedText: t.tr('ToastCopied'),
+            failedText: t.tr('ToastCopyFailed')
+        });
         urlField.input.id = 'storeUrl';
         el('storeUrlRow').appendChild(urlField.element);
         mountSaveBar();
@@ -344,7 +432,9 @@ export default function (view) {
     }
 
     function load() {
-        Shared.getConfig().then(function (cfg) {
+        ready.then(function () {
+            return Shared.getConfig();
+        }).then(function (cfg) {
             stores = (cfg.Stores || []).map(function (s) {
                 return {
                     Name: s.Name || '',

@@ -1,25 +1,60 @@
 import {
-    createConfigPage, confirmDialog, createUserMultiSelector, createRepeater, createCopyField, createSaveBar, SECRET_KEPT
+    createConfigPage, confirmDialog, createUserMultiSelector, createRepeater, createCopyField, createSaveBar, SECRET_KEPT,
+    loadTranslations, createTranslations, setTabs
 } from './configurationpage?name=custompages_jpkribs_shared.js';
 
 export default function (view) {
     'use strict';
 
     var PLUGIN_ID = '409ef72d-6014-47fd-8928-ebad581bf81b';
-    var TABS = [
-        { href: 'configurationpage?name=custompages_pages', name: 'Pages' },
-        { href: 'configurationpage?name=custompages_assets', name: 'Assets' },
-        { href: 'configurationpage?name=custompages_stores', name: 'Stores' }
-    ];
+    var TAB_INDEX = 0;
+
+    // The strings until the viewer's language loads, so every tr gives the English it is handed.
+    var t = createTranslations({});
+    var ready = null;
+
+    // tabs
+    // Lists the plugin's tabs in the viewer's language. The same in all three page scripts.
+    //
+    // Output
+    // [object[]]: Each tab's href and name.
+    function tabs() {
+        return [
+            { href: 'configurationpage?name=custompages_pages', name: t.tr('TabPages', 'Pages') },
+            { href: 'configurationpage?name=custompages_assets', name: t.tr('TabAssets', 'Assets') },
+            { href: 'configurationpage?name=custompages_stores', name: t.tr('TabStores', 'Stores') }
+        ];
+    }
 
     var Shared = createConfigPage(view, {
         pluginId: PLUGIN_ID,
         tabsKey: 'custompages',
-        tabIndex: 0,
-        tabs: TABS,
+        tabIndex: TAB_INDEX,
+        tabs: tabs,
         bind: bind,
         load: load
     }).shared;
+
+    // fillWithCode
+    // Writes a translated sentence into a node, with each {0}, {1} placeholder shown as code.
+    //
+    // Inputs
+    // node [HTMLElement]: The node to fill.
+    // text [string]: The translated sentence.
+    // codes [string[]]: The code shown for each placeholder, in order.
+    function fillWithCode(node, text, codes) {
+        node.textContent = '';
+        String(text).split(/(\{\d+\})/).forEach(function (part) {
+            var m = /^\{(\d+)\}$/.exec(part);
+            if (m && codes[+m[1]] !== undefined) {
+                var code = document.createElement('code');
+                code.textContent = codes[+m[1]];
+                node.appendChild(code);
+            } else if (part) {
+                node.appendChild(document.createTextNode(part));
+            }
+        });
+    }
 
     function slugify(value) {
         return String(value || '')
@@ -31,12 +66,18 @@ export default function (view) {
     var VISIBILITIES = ['Anonymous', 'User', 'Admin'];
 
     var PANE = { html: 'Html', css: 'Css', js: 'Js' };
-    var PANE_HINT = {
-        html: 'HTML that will be combined with CSS and JS into a final page.',
-        css: 'Styles that will be added to the final page using a <style> element.',
-        js: 'JavaScript that will be added to the final page using a <script> element.'
-    };
-    var SINGLE_HINT = 'A complete HTML document served exactly as written.';
+
+    // paneHint
+    // Gives the hint under the source editor for the pane it shows.
+    //
+    // Output
+    // [string]: The hint in the viewer's language.
+    function paneHint() {
+        if (editorSingle) return t.tr('HintSingleFile');
+        if (currentPane === 'css') return t.tr('HintCss');
+        if (currentPane === 'js') return t.tr('HintJs');
+        return t.tr('HintHtml');
+    }
 
     var pages = [];
     var currentIndex = -1;
@@ -69,10 +110,10 @@ export default function (view) {
             else c.pub++;
         });
         Shared.renderCards('pageCounts', [
-            { count: c.pub, label: 'Public', color: 'green' },
-            { count: c.user, label: 'User', color: 'blue' },
-            { count: c.admin, label: 'Admin', color: 'purple' },
-            { count: c.unpublished, label: 'Unpublished', color: 'gray' }
+            { count: c.pub, label: t.tr('CardPublic'), color: 'green' },
+            { count: c.user, label: t.tr('LabelUser'), color: 'blue' },
+            { count: c.admin, label: t.tr('TierAdmin'), color: 'purple' },
+            { count: c.unpublished, label: t.tr('StatusUnpublished'), color: 'gray' }
         ]);
     }
 
@@ -80,7 +121,8 @@ export default function (view) {
         renderCounts();
         var select = el('selectPage');
         select.innerHTML = pages.map(function (p, i) {
-            var label = (p.Slug || 'new page') + (p.Enabled === false ? ', unpublished' : '');
+            var name = p.Slug || t.tr('PageOptionNew');
+            var label = p.Enabled === false ? t.format('PageOptionUnpublished', name) : name;
             return '<option value="' + i + '">' + Shared.escapeHtml(label) + '</option>';
         }).join('');
 
@@ -100,8 +142,9 @@ export default function (view) {
     function setPublishVisual(enabled) {
         var btn = el('btnPublish');
         btn.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-        btn.title = enabled ? 'Published' : 'Unpublished';
-        el('publishLabel').textContent = enabled ? 'Published' : 'Unpublished';
+        var text = enabled ? t.tr('StatusPublished') : t.tr('StatusUnpublished');
+        btn.title = text;
+        el('publishLabel').textContent = text;
         btn.querySelector('.material-icons').textContent = enabled ? 'visibility' : 'visibility_off';
     }
 
@@ -113,7 +156,7 @@ export default function (view) {
         var p = pages[currentIndex];
         if (!p) return;
         el('pageSource').value = p[activeField()] || '';
-        el('sourceHint').textContent = editorSingle ? SINGLE_HINT : PANE_HINT[currentPane];
+        el('sourceHint').textContent = paneHint();
     }
 
     function flushSource() {
@@ -141,7 +184,13 @@ export default function (view) {
         if (userPicker) return;
         // Administrators are excluded because they always have access. Offering one would let an
         // administrator be unchecked in a list the server ignores for them anyway.
-        userPicker = createUserMultiSelector({ showSelectAll: true, adminFilter: 'exclude' });
+        userPicker = createUserMultiSelector({
+            showSelectAll: true,
+            adminFilter: 'exclude',
+            placeholder: t.tr('Search'),
+            selectAllText: t.tr('SelectAll'),
+            emptyMessage: t.tr('NoUsersAvailable')
+        });
         el('allowedUsers').appendChild(userPicker.element);
     }
 
@@ -174,7 +223,12 @@ export default function (view) {
 
     function mountUrlField() {
         if (urlField) return;
-        urlField = createCopyField({ label: 'URL', copyLabel: 'Copy URL' });
+        urlField = createCopyField({
+            label: t.tr('LabelUrl'),
+            copyLabel: t.tr('CopyUrl'),
+            copiedText: t.tr('ToastCopied'),
+            failedText: t.tr('ToastCopyFailed')
+        });
         urlField.input.id = 'pageUrl';
         el('pageUrlRow').appendChild(urlField.element);
     }
@@ -201,14 +255,18 @@ export default function (view) {
         if (routeEditor) return;
         routeEditor = createRepeater({
             fields: [
-                { key: 'Name', label: 'Name', placeholder: 'name' },
-                { key: 'Url', label: 'Target URL', placeholder: 'http://host:port/path', width: '2fr' },
-                { key: 'Username', label: 'Username', placeholder: 'Optional' },
-                { key: 'Password', label: 'Password', type: 'secret', placeholder: 'Optional', clearable: true, clearText: 'Clear Password' }
+                { key: 'Name', label: t.tr('LabelName'), placeholder: 'name' },
+                { key: 'Url', label: t.tr('LabelTargetUrl'), placeholder: 'http://host:port/path', width: '2fr' },
+                { key: 'Username', label: t.tr('LabelUsername'), placeholder: t.tr('PlaceholderOptional') },
+                {
+                    key: 'Password', label: t.tr('LabelPassword'), type: 'secret', placeholder: t.tr('PlaceholderOptional'),
+                    clearable: true, clearText: t.tr('ButtonClearPassword')
+                }
             ],
-            addText: 'Add Route',
-            rowName: 'Route',
-            emptyText: 'No routes yet. Add one below.'
+            addText: t.tr('ButtonAddRoute'),
+            removeText: t.tr('ButtonRemoveNamed'),
+            rowName: t.tr('RowRoute'),
+            emptyText: t.tr('EmptyRoutes')
         });
         el('routesList').appendChild(routeEditor.element);
     }
@@ -258,22 +316,22 @@ export default function (view) {
         if (!p) return Promise.resolve();
         readEditorInto(p);
 
-        if (!p.Slug) return Promise.reject(new Error('Enter a slug.'));
+        if (!p.Slug) return Promise.reject(new Error(t.tr('ErrorEnterSlug')));
 
         // Saving "only the users I pick" with nobody picked would store an empty list, which the
         // server reads as every user at the tier. Stop rather than quietly widen the page.
         if (el('pageVisibility').value === 'User'
             && el('pageAccess').value === 'specific'
             && !p.AllowedUserIds.length) {
-            return Promise.reject(new Error('Select at least one user, or set Access to All Users.'));
+            return Promise.reject(new Error(t.tr('ErrorSelectUser')));
         }
 
         var clash = pages.some(function (other, i) {
             return i !== currentIndex && (other.Slug || '').toLowerCase() === p.Slug.toLowerCase();
         });
-        if (clash) return Promise.reject(new Error('Another page already uses that slug.'));
+        if (clash) return Promise.reject(new Error(t.tr('ErrorSlugTaken')));
 
-        return persistPages('Could not save the page.');
+        return persistPages(t.tr('ErrorSavePage'));
     }
 
     // Jellyfin answers a refused configuration save with a generic error, so the server is asked first
@@ -281,7 +339,7 @@ export default function (view) {
     // password cannot be carried over reaches the administrator. The check is advisory: if it cannot
     // be reached the save goes ahead, and the server still enforces the same rules on the save itself.
     function checkConfig(candidate) {
-        return Shared.apiRequest('pages/config/check', 'POST', candidate)
+        return Shared.apiRequest('pages/config/check?language=' + encodeURIComponent(t.language || ''), 'POST', candidate)
             .catch(function () { return null; });
     }
 
@@ -316,7 +374,15 @@ export default function (view) {
     // Builds the editor's Save Bar. A failed save's Error message, such as the server's reason, is its failed line.
     function mountSaveBar() {
         if (saveBar) return;
-        saveBar = createSaveBar({ fill: true, onSave: save });
+        saveBar = createSaveBar({
+            fill: true,
+            onSave: save,
+            saveText: t.tr('Save'),
+            pendingText: t.tr('SaveBarPending'),
+            savingText: t.tr('SaveBarSaving'),
+            savedText: t.tr('SaveBarSaved'),
+            failedText: t.tr('SaveBarFailed')
+        });
         el('pageSaveBar').appendChild(saveBar.element);
     }
 
@@ -345,20 +411,40 @@ export default function (view) {
     function deletePage() {
         var p = pages[currentIndex];
         if (!p) return;
-        var label = p.Slug || 'this page';
-        confirmDialog('Delete /pages/' + label + '? This cannot be undone.', { title: 'Delete Page', confirmText: 'Delete', destructive: true }).then(function (ok) {
+        var label = p.Slug || t.tr('ConfirmThisPage');
+        confirmDialog(t.format('ConfirmDeletePage', label), {
+            title: t.tr('ButtonDeletePage'),
+            confirmText: t.tr('Delete'),
+            cancelText: t.tr('ButtonCancel'),
+            destructive: true
+        }).then(function (ok) {
             if (!ok) return;
             pages.splice(currentIndex, 1);
             currentIndex = -1;
-            persistPages('Could not delete the page.').then(function () {
-                saveBar.setState('saved', 'Page deleted.');
+            persistPages(t.tr('ErrorDeletePage')).then(function () {
+                saveBar.setState('saved', t.tr('ToastPageDeleted'));
             }, function (err) {
                 saveBar.setState('failed', err.message);
             });
         });
     }
 
+    // bind
+    // Loads the viewer's strings, then translates the markup and builds the page in that language.
     function bind() {
+        ready = loadTranslations('pages/plugin/translations').then(function (handle) {
+            t = handle;
+            t.apply(view);
+            setTabs('custompages', TAB_INDEX, tabs);
+            if (t.has('PagesIntro')) fillWithCode(el('pagesIntro'), t.tr('PagesIntro'), ['/pages/{slug}']);
+            if (t.has('RoutesHelp')) fillWithCode(el('routesHelp'), t.tr('RoutesHelp'), ["serverFetch('name', options)"]);
+            bindPage();
+        });
+    }
+
+    // bindPage
+    // Builds the page's components and wires its controls, once the strings are loaded.
+    function bindPage() {
         mountUserPicker();
         mountUrlField();
         mountRoutes();
@@ -397,7 +483,9 @@ export default function (view) {
     }
 
     function load() {
-        Shared.getConfig().then(function (cfg) {
+        ready.then(function () {
+            return Shared.getConfig();
+        }).then(function (cfg) {
             pages = cfg.Pages || [];
             currentIndex = pages.length ? 0 : -1;
             renderSelect();

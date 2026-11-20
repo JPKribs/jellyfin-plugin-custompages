@@ -1,0 +1,55 @@
+# Translations
+
+How this plugin shows its text in the viewer's language. Base builds the strings in and checks them on every build. The full reference is Base's [Translations](https://jpkribs.github.io/jellyfin-plugin-base/Translations/) guide.
+
+## Where the Strings Live
+
+| Strings | Where |
+| :--- | :--- |
+| Jellyfin's own | `<JellyfinString Include="Key" />` items in `Jellyfin.Plugin.CustomPages/Jellyfin.Plugin.CustomPages.csproj` |
+| This plugin's own | `Jellyfin.Plugin.CustomPages/Localization/en-us.json`, one file per language |
+| The endpoint pages load them from | `GET /pages/plugin/translations`, which answers with `BaseTranslations.Serve` |
+
+## Rules
+
+* Every word a person reads comes from a key. No hard coded English in a page, a script, or a message the server shows.
+* Use a Jellyfin string whenever Jellyfin has the words. Search the web client's `src/strings/en-us.json` and the server's `Localization/Core/en-US.json` before adding a key.
+* Add a local key only when Jellyfin has no string for it. Put it in `en-us.json` with its US English.
+* One string, one key. The build fails on a key said twice or English said twice.
+* Keep placeholders as `{0}`, `{1}`. Never build a sentence from pieces, since word order differs by language.
+* A key is PascalCase and says what the text is, such as `HeaderQueue`, `LabelApiKey`, `ButtonRetry`, `ToastSaved`, `ErrorServerUnreachable`.
+* Log lines and exception text for admins in the log stay in English and need no key.
+
+## Add a String
+
+1. Search Jellyfin's strings for the words.
+2. Found: add `<JellyfinString Include="Key" />` to the csproj.
+3. Not found: add `"Key": "English"` to `Localization/en-us.json`.
+4. Use it.
+    * Markup: `data-str="Key"`, `data-str-title`, `data-str-label`, or `data-str-placeholder`, with the English as the element's own text.
+    * Script: `t.tr('Key')` or `t.format('Key', value)` on the handle from `loadTranslations('pages/plugin/translations')`.
+    * C#: `BaseTranslations.Get(TranslationKeys.Key, language)` or `BaseTranslations.Format(...)`. Text for everyone, such as an activity log entry, uses `BaseTranslations.ServerLanguage(config)`.
+5. Build. Fix every `JPKT` error and warning.
+
+## This Plugin
+
+* The custom pages themselves are the author's content and are never translated. Only the plugin's tabs, the served page shell, and its server messages are.
+* The served page shell has no Base script. `PageService` fills its text on the server, in the language the browser's `Accept-Language` prefers.
+* The Pages tab sends its language to `pages/config/check?language=`, so a refused save's reason comes back in it.
+* Each tab loads its strings in `bind` before it builds anything, and `load` waits for them. Script built text calls `t.tr('Key')` with no fallback.
+* A sentence that holds code, such as `/pages/{slug}`, keeps its English in the markup and is filled by `fillWithCode`, with each `{0}` drawn as code.
+* Pass a translated text option to every Base component that has one, such as the Save Bar's `saveText` and a confirm's `cancelText`.
+* The activity summary names, such as "4 Records Added", come from Base's `ActivitySummary` in US English. Their overviews are in the server's display language.
+* The screenshot harness serves `pages/plugin/translations` in US English, built from the csproj and `Localization/en-us.json`.
+* `TranslationKeyTests` checks that every key a tab uses has a string.
+
+## Add a Language
+
+Add `Localization/<code>.json`, such as `de.json` or `pt-br.json`, with only keys `en-us.json` has. A missing key falls back to the language's base and then to US English. Jellyfin's strings come in every language Jellyfin has, with no file.
+
+## Checklist
+
+* [ ] No English in a page, script, or server message outside `Localization/en-us.json`.
+* [ ] Jellyfin's string used wherever it has the words.
+* [ ] The build has no `JPKT` error or warning.
+* [ ] The pages show the strings, checked once in another language such as `de`.

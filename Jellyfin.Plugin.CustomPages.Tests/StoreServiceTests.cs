@@ -62,7 +62,7 @@ public class StoreServiceTests : IDisposable
         {
             // Quiet and longest spells of an hour, so a summary is only written when a test flushes it.
             var logger = new ActivityLogger(_activityManager, NullLogger<ActivityLogger>.Instance);
-            _activity = new StoreActivity(logger, new ActivitySummary(logger, TimeSpan.FromHours(1), TimeSpan.FromHours(1)));
+            _activity = new StoreActivity(logger, new ActivitySummary(logger, TimeSpan.FromHours(1), TimeSpan.FromHours(1)), () => null);
         }
 
         return new StoreService(paths, NullLogger<StoreService>.Instance, () => _config, _activity, _clock);
@@ -932,11 +932,21 @@ public class StoreServiceTests : IDisposable
     }
 
     [Fact]
+    public void RetentionTask_NameAndDescription_ComeFromTheStrings()
+    {
+        var task = new Jellyfin.Plugin.CustomPages.Tasks.StoreRetentionTask(
+            Substitute.For<IStoreService>(), NullLogger<Jellyfin.Plugin.CustomPages.Tasks.StoreRetentionTask>.Instance, ServerConfig());
+
+        Assert.Equal("Apply Custom Pages store retention", task.Name);
+        Assert.StartsWith("Removes records that have passed the retention", task.Description, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task RetentionTask_PassesItsCancellationTokenToTheSweep()
     {
         var stores = Substitute.For<IStoreService>();
         var task = new Jellyfin.Plugin.CustomPages.Tasks.StoreRetentionTask(
-            stores, NullLogger<Jellyfin.Plugin.CustomPages.Tasks.StoreRetentionTask>.Instance);
+            stores, NullLogger<Jellyfin.Plugin.CustomPages.Tasks.StoreRetentionTask>.Instance, ServerConfig());
         using var source = new System.Threading.CancellationTokenSource();
 
         await task.ExecuteAsync(new Progress<double>(), source.Token);
@@ -950,10 +960,17 @@ public class StoreServiceTests : IDisposable
         var store = Define();
         store.RetentionDays = 1;
         var task = new Jellyfin.Plugin.CustomPages.Tasks.StoreRetentionTask(
-            Create(), NullLogger<Jellyfin.Plugin.CustomPages.Tasks.StoreRetentionTask>.Instance);
+            Create(), NullLogger<Jellyfin.Plugin.CustomPages.Tasks.StoreRetentionTask>.Instance, ServerConfig());
         using var cancelled = new System.Threading.CancellationTokenSource();
         cancelled.Cancel();
 
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => task.ExecuteAsync(new Progress<double>(), cancelled.Token));
+    }
+
+    private static MediaBrowser.Controller.Configuration.IServerConfigurationManager ServerConfig()
+    {
+        var config = Substitute.For<MediaBrowser.Controller.Configuration.IServerConfigurationManager>();
+        config.Configuration.Returns(new MediaBrowser.Model.Configuration.ServerConfiguration { UICulture = "en-US" });
+        return config;
     }
 }

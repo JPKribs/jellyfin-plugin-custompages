@@ -1,20 +1,21 @@
 <!-- Content fragment injected into the base JPKribs.Jellyfin.Base status card. -->
+<!-- The text comes from the plugin's strings in the visitor's language, filled in by PageService. -->
 <div id="signin" class="hidden">
-    <h1>Sign In Required</h1>
-    <p>Sign in to your account to view this page.</p>
-    <a id="signinLink" class="base-btn" href="/web/">Sign In</a>
+    <h1>{{SIGNIN_HEADING}}</h1>
+    <p>{{SIGNIN_MESSAGE}}</p>
+    <a id="signinLink" class="base-btn" href="/web/">{{SIGNIN_BUTTON}}</a>
 </div>
 
 <div id="denied" class="hidden">
-    <h1>Not Authorized</h1>
-    <p>Your account does not have access to this page.</p>
-    <a id="homeLink" class="base-btn" href="/web/">Back to Jellyfin</a>
+    <h1>{{DENIED_HEADING}}</h1>
+    <p>{{DENIED_MESSAGE}}</p>
+    <a id="homeLink" class="base-btn" href="/web/">{{BACK_BUTTON}}</a>
 </div>
 
 <div id="missing" class="hidden">
-    <h1>Page Not Found</h1>
-    <p>This page is no longer available.</p>
-    <a id="missingLink" class="base-btn" href="/web/">Back to Jellyfin</a>
+    <h1>{{MISSING_HEADING}}</h1>
+    <p>{{MISSING_MESSAGE}}</p>
+    <a id="missingLink" class="base-btn" href="/web/">{{BACK_BUTTON}}</a>
 </div>
 
 <script>
