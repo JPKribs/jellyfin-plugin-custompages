@@ -30,7 +30,7 @@ def shell(slug, tier):
         'SLUG': slug, 'TIER': tier,
         'SIGNIN_HEADING': text('HeaderSignInRequired'), 'SIGNIN_MESSAGE': text('MessageSignInRequired'), 'SIGNIN_BUTTON': text('ButtonSignIn'),
         'DENIED_HEADING': text('HeaderNotAuthorized'), 'DENIED_MESSAGE': text('MessageNotAuthorized'),
-        'MISSING_HEADING': text('HeaderPageMissing'), 'MISSING_MESSAGE': text('MessagePageMissing'),
+        'MISSING_HEADING': text('HeaderPageNotFound'), 'MISSING_MESSAGE': text('MessagePageMissing'),
         'BACK_BUTTON': text('ButtonBackToJellyfin')})
     return status(STRINGS['StatusLoading'], '', button_text=None, spinner=True, content=content)
 

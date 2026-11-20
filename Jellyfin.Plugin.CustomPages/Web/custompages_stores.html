@@ -14,7 +14,7 @@
 
                     <!-- Filled from StoresIntro, with each call as code. -->
                     <div class="fieldDescription" id="storesIntro">
-                        Keeps records that pages with Allow System Access write through <code>pageStore.read('name')</code> and <code>pageStore.write('name', data)</code>.
+                        Keeps records that pages with Allow system access write through <code>pageStore.read('name')</code> and <code>pageStore.write('name', data)</code>.
                         Every page can share one store.
                     </div>
 
@@ -28,7 +28,7 @@
                             <select id="selectStore" class="base-selector-dropdown"></select>
                         </div>
                         <div class="base-selector-actions">
-                            <button is="emby-button" type="button" id="btnNewStore" class="raised base-button primary" title="New Store" data-str-title="ButtonNewStore">
+                            <button is="emby-button" type="button" id="btnNewStore" class="raised base-button primary" title="New store" data-str-title="ButtonNewStore">
                                 <span class="material-icons" aria-hidden="true">add</span>
                                 <span data-str="New">New</span>
                             </button>
@@ -36,11 +36,11 @@
                                 <span class="material-icons" aria-hidden="true">visibility</span>
                                 <span id="enableLabel" data-str="StatusEnabled">Enabled</span>
                             </button>
-                            <button is="emby-button" type="button" id="btnClearStore" class="raised base-button destructive" title="Clear Store" data-str-title="ButtonClearStore">
+                            <button is="emby-button" type="button" id="btnClearStore" class="raised base-button destructive" title="Clear store" data-str-title="ButtonClearStore">
                                 <span class="material-icons" aria-hidden="true">delete_sweep</span>
                                 <span data-str="ButtonClear">Clear</span>
                             </button>
-                            <button is="emby-button" type="button" id="btnDeleteStore" class="raised base-button destructive" title="Delete Store" data-str-title="ButtonDeleteStore">
+                            <button is="emby-button" type="button" id="btnDeleteStore" class="raised base-button destructive" title="Delete store" data-str-title="ButtonDeleteStore">
                                 <span class="material-icons" aria-hidden="true">delete</span>
                                 <span data-str="Delete">Delete</span>
                             </button>
@@ -108,7 +108,7 @@
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
                                 <input type="checkbox" is="emby-checkbox" id="storeEditOwn" />
-                                <span class="checkboxLabel" data-str="LabelEditOwn">Writers Edit Own Records</span>
+                                <span class="checkboxLabel" data-str="LabelEditOwn">Writers edit own records</span>
                             </label>
                             <div class="fieldDescription checkboxFieldDescription" data-str="EditOwnHelp">
                                 Lets a writer change and delete records they created when Scope is User records. Leave it off when records carry a status you write.
@@ -116,7 +116,7 @@
                         </div>
 
                         <div class="inputContainer">
-                            <label for="storeMaxRecords" data-str="LabelRecordLimit">Record Limit</label>
+                            <label for="storeMaxRecords" data-str="LabelRecordLimit">Record limit</label>
                             <input is="emby-input" type="number" id="storeMaxRecords" min="1" max="100000" />
                             <div class="fieldDescription" data-str="RecordLimitHelp">
                                 Refuses writes past this count. A record holds at most 64 KB and a store at most 64 MB.
@@ -149,7 +149,7 @@
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
                                 <input type="checkbox" is="emby-checkbox" id="storeNotify" />
-                                <span class="checkboxLabel" data-str="LabelNotifyAdmins">Notify Administrators</span>
+                                <span class="checkboxLabel" data-str="LabelNotifyAdmins">Notify administrators</span>
                             </label>
                             <div class="fieldDescription checkboxFieldDescription" data-str="NotifyHelp">
                                 Writes an activity log entry when records are added or removed. A burst of writes becomes one entry.

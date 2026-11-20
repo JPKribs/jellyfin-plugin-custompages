@@ -48,7 +48,7 @@ The check to run on your own changes before you call them done. People and AI as
 * [ ] The page works at 1280 and 375 px wide.
 * [ ] Every changed tab was clicked through in the [harness](testing.md#harness), then opened on a test server after a hard reload. A harness run alone does not make it done.
 * [ ] Every changed served page was opened signed out, as a user, and as an administrator.
-* [ ] Count cards in one row each have their own color, labels are Title Case with no trailing colon, and every control says what it does next to it.
+* [ ] Count cards in one row each have their own color, labels are in sentence case with no trailing colon, and every control says what it does next to it.
 * [ ] Every top level group on a page has the same header, and a section with nothing to show is hidden.
 * [ ] Saves use a full width Save Bar reading Save, other results use `setStatus`, confirms use `confirmDialog`, and nothing uses `Dashboard.alert` or `window.confirm`.
 

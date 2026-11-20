@@ -231,7 +231,7 @@ public partial class PageService : IPageService
             ["SIGNIN_BUTTON"] = Text(TranslationKeys.ButtonSignIn, language),
             ["DENIED_HEADING"] = Text(TranslationKeys.HeaderNotAuthorized, language),
             ["DENIED_MESSAGE"] = Text(TranslationKeys.MessageNotAuthorized, language),
-            ["MISSING_HEADING"] = Text(TranslationKeys.HeaderPageMissing, language),
+            ["MISSING_HEADING"] = Text(TranslationKeys.HeaderPageNotFound, language),
             ["MISSING_MESSAGE"] = Text(TranslationKeys.MessagePageMissing, language),
             ["BACK_BUTTON"] = Text(TranslationKeys.ButtonBackToJellyfin, language)
         });
@@ -254,7 +254,7 @@ public partial class PageService : IPageService
     {
         var where = IsValidSlug(slug) ? "/pages/" + slug : BaseTranslations.Get(TranslationKeys.MessageThisAddress, language);
         return StatusPage.Render(
-            BaseTranslations.Get(TranslationKeys.HeaderPageMissing, language),
+            BaseTranslations.Get(TranslationKeys.HeaderPageNotFound, language),
             BaseTranslations.Format(TranslationKeys.MessageNothingPublished, language, where),
             buttonText: BaseTranslations.Get(TranslationKeys.ButtonBackToJellyfin, language),
             buttonHref: "../web/");

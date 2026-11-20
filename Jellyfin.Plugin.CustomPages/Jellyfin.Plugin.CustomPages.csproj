@@ -30,6 +30,7 @@
     <JellyfinString Include="Delete" />
     <JellyfinString Include="DeleteImage" />
     <JellyfinString Include="Disabled" />
+    <JellyfinString Include="HeaderPageNotFound" />
     <JellyfinString Include="Images" />
     <JellyfinString Include="LabelName" />
     <JellyfinString Include="LabelPassword" />

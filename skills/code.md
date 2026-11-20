@@ -205,7 +205,7 @@ function addAssetFiles(files, refused) {
 
 * Store every route password with `SecretProtector`, through `RouteSecrets.Protect`. Never write a secret to the config, a file, or a log in plain text.
 * Send a stored route password to the browser only as `SECRET_KEPT`. The server keeps the stored value when the sentinel comes back.
-* A route password is a clearable secret. The route rows draw it as a Repeater `secret` field with `clearable: true` and `clearText: 'Clear Password'`. **Clear Password** posts an empty password, and the server removes the stored one.
+* A route password is a clearable secret. The route rows draw it as a Repeater `secret` field with `clearable: true` and `clearText: t.tr('ButtonClearPassword')`. **Clear password** posts an empty password, and the server removes the stored one.
 * Pass every value from a request, a page, or a file through `FormatUtilities.SanitizeForLog` before logging it.
 * Forward a route only to the target fixed in configuration, through the named client `RouteProxy.HttpClientName`, and strip the viewer's Jellyfin credentials before it is sent.
 * Interpret store tiers only in `StoreAccess`. Every store route asks it, so the routes cannot drift apart.

@@ -43,6 +43,14 @@ How this plugin shows its text in the viewer's language. Base builds the strings
 * The screenshot harness serves `pages/plugin/translations` in US English as `{ language, strings, casing }`, built from Base's strings, the csproj, `Localization/en-us.json`, and `Localization/casing.json`.
 * `TranslationKeyTests` checks that every key a tab uses has a string.
 
+## Casing
+
+* Every local label, heading, button, tab, column header, option, title, and toast is in sentence case, mirroring Jellyfin, such as "Allow system access". Sentences are already sentence case.
+* `Localization/casing.json` is a JSON array of the words and phrases written as listed, such as `"Custom Pages"` and `"HTML"`. Add a product name, format, or acronym the plugin uses there, unless it is one of Base's defaults, such as `Jellyfin`, `URL`, or `API`.
+* Jellyfin's strings stay as Jellyfin writes them. Add `Case="sentence"` or `Case="title"` to a `JellyfinString` only when that one reads wrong next to its neighbors.
+* Text built at runtime is converted with `ToSentenceCase` or `ToTitleCase` in C#, and `sentenceCase` or `titleCase`, or `t.sentence` and `t.title`, on a page. Each keeps the casing list.
+* When two local strings become the same English after recasing, merge them into one key. When a local string becomes a Jellyfin string's English, declare the Jellyfin string and use it.
+
 ## Add a Language
 
 Add `Localization/<code>.json`, such as `de.json` or `pt-br.json`, with only keys `en-us.json` has. A missing key falls back to the language's base and then to US English. Jellyfin's strings come in every language Jellyfin has, with no file.

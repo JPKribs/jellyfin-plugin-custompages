@@ -875,7 +875,7 @@ public class StoreServiceTests : IDisposable
 
         await Task.Delay(50);
         await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l =>
-            l.Name == "2 Records Cleared"
+            l.Name == "2 records cleared"
             && l.ShortOverview == "2 records were cleared from downloads by an administrator from the dashboard"
             && l.Type == "CustomPages.StoreClear"));
     }

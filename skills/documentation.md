@@ -30,7 +30,7 @@ The plugin requires Jellyfin 12.4, so leave out notes about older Jellyfin versi
 
 * Use present tense and plain declarative sentences.
 * Describe the system in the third person. "Custom Pages serves the page."
-* Address the reader in the second person only in steps. "Turn on **Allow System Access** for the page."
+* Address the reader in the second person only in steps. "Turn on **Allow system access** for the page."
 * State one fact per sentence. Aim for 20 words or fewer and split anything over 30.
 * Use no contractions. Write "cannot", not "can't".
 * Use no em dashes, en dashes as dashes, or semicolons. Split the sentence, or join it with a comma and "and".
@@ -54,7 +54,7 @@ The plugin requires Jellyfin 12.4, so leave out notes about older Jellyfin versi
 * Write a label exactly as the page shows it, in bold. **Retention (days)**.
 * Write a path through the UI with `>` between the steps, in bold. **Dashboard > Plugins > Custom Pages**.
 * Write a tab as its label, in bold. **Pages**, **Assets**, **Stores**.
-* Quote activity log names and on-screen messages in double quotes. "12 Records Added".
+* Quote activity log names and on-screen messages in double quotes. "12 records added".
 * Write routes, files, settings keys, and values in code. `POST /pages/store/{name}/write`.
 
 A docs page and the UI must use the same word for the same thing. When a label changes, search `docs/` for the old one and change it everywhere in the same commit.
@@ -118,7 +118,7 @@ When a page has many settings with defaults, use a table instead.
 
 | Setting | What it does | Default |
 | :--- | :--- | :--- |
-| **Record Limit** | Refuses writes past this count | 1000 |
+| **Record limit** | Refuses writes past this count | 1000 |
 
 Table cells have no closing period. Keep them to one sentence.
 
@@ -252,7 +252,7 @@ Release notes live in the `changelog` of `build.yaml`, under four keys. The publ
 ```yaml
 changelog:
   changed:
-    - The Stores tab shows a Records bar of how many records a saved store holds out of its Record Limit
+    - The Stores tab shows a Records bar of how many records a saved store holds out of its Record limit
   fixed:
     - The arrows on collapsible sections are back to their usual size
 ```

@@ -34,20 +34,23 @@ These rules apply to every string a user can see. That includes HTML, JS, C# mes
 
 ### Casing
 
-| Text | Case | Example |
-| :--- | :--- | :--- |
-| Tab | Title Case, one word | Stores |
-| Section and collapsible title | Title Case | Custom Pages |
-| Field label | Title Case | Record Limit |
-| Checkbox label | Title Case | Allow System Access |
-| Button | Title Case, verb first | Add Route |
-| Dialog title | Title Case | Delete Page |
-| Badge and status chip | Title Case | Unpublished |
-| Count card | Title Case | Open to Writes |
-| Activity log name | Title Case | 12 Records Added |
-| Description, message, placeholder sentence | Sentence case | Serves one complete HTML document instead of separate HTML, CSS, and JS. |
+Every label, heading, button, tab, column header, option, title, and toast is in sentence case, mirroring Jellyfin, such as **Allow media playback**. Capitalize the first word and proper nouns only.
 
-Title Case capitalizes every word except short articles, conjunctions, and prepositions in the middle, such as "a", "and", "of", "to", and "in". Keep acronyms as written, such as "HTML", "CSS", "URL", "KB", and "MB".
+| Text | Example |
+| :--- | :--- |
+| Tab | Stores |
+| Section and collapsible title | Custom Pages |
+| Field label | Record limit |
+| Checkbox label | Allow system access |
+| Button, verb first | Add route |
+| Dialog title | Delete page |
+| Badge and status chip | Unpublished |
+| Count card | Open to writes |
+| Activity log name | 12 records added |
+| Description, message, placeholder sentence | Serves one complete HTML document instead of separate HTML, CSS, and JS. |
+
+* Words in `Localization/casing.json`, and Base's defaults such as `Jellyfin`, `URL`, and `API`, are written as listed there, such as **Custom Pages**, **HTML**, and **KB**.
+* Jellyfin's own strings stay as Jellyfin writes them. See [translations.md](translations.md#casing).
 
 ### Words to Use
 
@@ -71,14 +74,14 @@ Pick the word on the left every time.
 | Slug | Path, Route | The last part of a page's address |
 | Could not | Failed to, Unable to | An error message |
 
-The control names its own result. **Delete Page** destroys the page's source, so it is Delete. **Remove** on a route row takes the route out of the page, so it is Remove. **Clear** deletes every record in a store and keeps the store.
+The control names its own result. **Delete page** destroys the page's source, so it is Delete. **Remove** on a route row takes the route out of the page, so it is Remove. **Clear** deletes every record in a store and keeps the store.
 
 ### Labels
 
 * Two to four words. Name the thing the field holds, not the action.
 * Put a unit at the end in lowercase parentheses, such as **Retention (days)**. Use symbols for standard units, such as `KB` and `MB`.
 * No colons, periods, or question marks.
-* A checkbox label names the feature it turns on, never "Enable X". Write **Notify Administrators**, not **Enable Notifications**. The one exception is the master switch at the top of a section, which reads **Enable** followed by the section name.
+* A checkbox label names the feature it turns on, never "Enable X". Write **Notify administrators**, not **Enable notifications**. The one exception is the master switch at the top of a section, which reads **Enable** followed by the section name.
 
 ### Descriptions
 
@@ -112,10 +115,10 @@ A placeholder shows an example of a valid value. It is never the only place an i
 
 ### Buttons
 
-* A verb, or a verb and a noun. **Save**, **New**, **Add Route**.
-* Name the object when the page has more than one of that action, such as **Add Route** beside the page's own **New**.
+* A verb, or a verb and a noun. **Save**, **New**, **Add route**.
+* Name the object when the page has more than one of that action, such as **Add route** beside the page's own **New**.
 * Every Save reads **Save**, with no noun after it, even when a page has several.
-* An icon only button carries a `title` of one to three words, such as `Remove`, `Move Up`, or `Retry`. Never a sentence.
+* An icon only button carries a `title` of one to three words, such as `Remove`, `Move up`, or `Retry`. Never a sentence.
 * A button that runs for a while shows progress in place. See [Progress](#progress).
 
 ### Messages
@@ -144,14 +147,14 @@ A confirm asks one question and states the consequence.
 
 ```js
 confirmDialog('Delete /pages/rules? This cannot be undone.', {
-    title: 'Delete Page',
+    title: 'Delete page',
     confirmText: 'Delete',
     destructive: true
 });
 ```
 
 * The message is a question, then one sentence on the consequence. "Delete logo.png? Pages that use it show a broken image."
-* The title is the action in Title Case, such as **Delete Page**. Never leave the default **Confirm**.
+* The title is the action in sentence case, such as **Delete page**. Never leave the default **Confirm**.
 * The confirm button repeats the action verb, such as **Remove** or **Delete**. Never **OK** or **Yes**.
 * Set `destructive: true` for anything that loses data.
 * Never "Are you sure you want to". Ask the question directly.
@@ -173,7 +176,8 @@ Use `shared.emptySection(text)` for a region and `shared.emptySection(text, { in
 
 Use `ActivitySummary` and `ActivityText` from Base.
 
-* The name is short and Title Case. "12 Records Added".
+* The name is short and in sentence case. "12 records added".
+* Build each `ActivityOutcome` from keys, a name for one and a name for many with `{0}` for the count, so the entry is in the server's display language.
 * The overview is one sentence with no closing period, as Base writes it. "12 records were added to queue (12)".
 * Use the same verb the UI uses for the action.
 
@@ -240,7 +244,7 @@ Every config page uses Jellyfin's page shell.
                     <div class="sectionTitleContainer flex align-items-center">
                         <h1 class="sectionTitle">Stores</h1>
                     </div>
-                    <div class="fieldDescription">Keeps records that pages with Allow System Access write.</div>
+                    <div class="fieldDescription">Keeps records that pages with Allow system access write.</div>
                 </div>
             </form>
         </div>
@@ -255,7 +259,7 @@ Every config page uses Jellyfin's page shell.
 ### Tabs
 
 * One registered page per tab, wired with `createConfigPage`, which sets the tabs.
-* Tab names are one Title Case word.
+* Tab names are one word.
 * The tab list is the `tabs` function at the top of each page script, the same in all three. Change all three together.
 * Order tabs from what is used most to what is set once. Custom Pages is **Pages**, **Assets**, **Stores**.
 
@@ -406,7 +410,7 @@ grep -o "export function create[A-Za-z]*" ~/.nuget/packages/jpkribs.jellyfin.bas
 | The result of an action | `shared.setStatus` |
 | A row of reset actions | `base-reset-group` with `base-reset-row` |
 
-* Give each count card in a row its own color, so no two neighbours match. Pages are Public green, User blue, Admin purple, and Unpublished gray. Assets are Images blue, Other purple, and Size gray. Stores are Stores blue, Records green, and Open to Writes orange while above 0 and gray at 0.
+* Give each count card in a row its own color, so no two neighbours match. Pages are Public green, User blue, Admin purple, and Unpublished gray. Assets are Images blue, Other purple, and Size gray. Stores are Stores blue, Records green, and Open to writes orange while above 0 and gray at 0.
 * Never use `Dashboard.alert` for a result. It blocks the page. Use `setStatus`.
 * A notice holds one sentence. Use a callout for something the reader must know before acting, not for a result.
 
@@ -421,7 +425,7 @@ grep -o "export function create[A-Za-z]*" ~/.nuget/packages/jpkribs.jellyfin.bas
 | One number with a label | `createStatCard` |
 
 * Pick the chart by the question it answers. A single used of total bar is a Usage Meter, never a Bar Chart.
-* Name each slice with a glossary term in Title Case, such as **Cached Links**.
+* Name each slice with a glossary term in sentence case, such as **Cached links**.
 * Take colors from Base's series colors. Set a color only when it carries a [meaning](#meaning).
 * Give every chart a `label`, and an `emptyText` sentence for when it has nothing to draw.
 * Scope a chart to what the page shows. A chart beside a server picker counts that server only.
@@ -443,7 +447,7 @@ grep -o "export function create[A-Za-z]*" ~/.nuget/packages/jpkribs.jellyfin.bas
 | A dialog already in the page markup | `bindDialog` |
 
 * Build dialogs in JS with `openDialog` and its wrappers. Use `bindDialog` only when the markup is large and static.
-* A dialog title is Title Case and names what the dialog does.
+* A dialog title is in sentence case and names what the dialog does.
 * Buttons read, from left to right, the destructive action, then **Cancel**, then the primary action.
 
 ## Layout
@@ -493,7 +497,7 @@ Run every new or changed string through this list.
 * [ ] No colon at the end of a label, and none in a sentence unless it introduces a list.
 * [ ] One sentence, or two when the second is the fix or the consequence.
 * [ ] Sentences end with a period. Labels, buttons, and titles do not.
-* [ ] Title Case for labels, buttons, titles, tabs, and badges. Sentence case for sentences.
+* [ ] Sentence case for labels, buttons, titles, tabs, badges, and sentences, with casing.json words as listed.
 * [ ] No "please", "successfully", exclamation marks, ALL CAPS, "(s)", or contractions.
 * [ ] The word matches [Words to Use](#words-to-use).
 * [ ] Base's typings were searched before any markup was built by hand.

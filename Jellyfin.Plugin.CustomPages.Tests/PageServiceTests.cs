@@ -347,7 +347,7 @@ public class PageServiceTests
     {
         var html = CreateService().GetShellHtml("mypage", PageVisibility.User, null);
 
-        Assert.Contains("<h1>Sign In Required</h1>", html, System.StringComparison.Ordinal);
+        Assert.Contains("<h1>Sign in required</h1>", html, System.StringComparison.Ordinal);
         Assert.Contains("Back to Jellyfin</a>", html, System.StringComparison.Ordinal);
         Assert.Contains("Loading…", html, System.StringComparison.Ordinal);
         Assert.DoesNotContain("{{", html, System.StringComparison.Ordinal);
@@ -367,7 +367,7 @@ public class PageServiceTests
     {
         var html = CreateService().NotFoundHtml("missing-page", "xx-yy");
 
-        Assert.Contains("Page Not Found", html, System.StringComparison.Ordinal);
+        Assert.Contains("Page not found", html, System.StringComparison.Ordinal);
         Assert.Contains("Nothing is published at /pages/missing-page.", html, System.StringComparison.Ordinal);
     }
 

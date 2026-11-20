@@ -27,7 +27,7 @@
                             <select id="selectPage" class="base-selector-dropdown"></select>
                         </div>
                         <div class="base-selector-actions">
-                            <button is="emby-button" type="button" id="btnNewPage" class="raised base-button primary" title="New Page" data-str-title="ButtonNewPage">
+                            <button is="emby-button" type="button" id="btnNewPage" class="raised base-button primary" title="New page" data-str-title="ButtonNewPage">
                                 <span class="material-icons" aria-hidden="true">add</span>
                                 <span data-str="New">New</span>
                             </button>
@@ -35,7 +35,7 @@
                                 <span class="material-icons" aria-hidden="true">visibility</span>
                                 <span id="publishLabel" data-str="StatusPublished">Published</span>
                             </button>
-                            <button is="emby-button" type="button" id="btnDeletePage" class="raised base-button destructive" title="Delete Page" data-str-title="ButtonDeletePage">
+                            <button is="emby-button" type="button" id="btnDeletePage" class="raised base-button destructive" title="Delete page" data-str-title="ButtonDeletePage">
                                 <span class="material-icons" aria-hidden="true">delete</span>
                                 <span data-str="Delete">Delete</span>
                             </button>
@@ -75,8 +75,8 @@
                         <div class="selectContainer hidden" id="accessRow">
                             <label class="selectLabel" for="pageAccess" data-str="TabAccess">Access</label>
                             <select is="emby-select" id="pageAccess">
-                                <option value="all" data-str="AccessAllUsers">All Users</option>
-                                <option value="specific" data-str="AccessSpecificUsers">Specific Users</option>
+                                <option value="all" data-str="AccessAllUsers">All users</option>
+                                <option value="specific" data-str="AccessSpecificUsers">Specific users</option>
                             </select>
                         </div>
 
@@ -92,7 +92,7 @@
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
                                 <input type="checkbox" is="emby-checkbox" id="pageSingleFile" />
-                                <span class="checkboxLabel" data-str="LabelSingleFile">Use a Single Webpage File</span>
+                                <span class="checkboxLabel" data-str="LabelSingleFile">Use a single webpage file</span>
                             </label>
                             <div class="fieldDescription checkboxFieldDescription" data-str="SingleFileHelp">
                                 Serves one complete HTML document instead of separate HTML, CSS, and JS.
@@ -102,14 +102,14 @@
                         <div class="checkboxContainer checkboxContainer-withDescription">
                             <label class="emby-checkbox-label">
                                 <input type="checkbox" is="emby-checkbox" id="pageUnsandboxed" />
-                                <span class="checkboxLabel" data-str="LabelAllowSystemAccess">Allow System Access</span>
+                                <span class="checkboxLabel" data-str="LabelAllowSystemAccess">Allow system access</span>
                             </label>
                             <div class="fieldDescription checkboxFieldDescription" data-str="AllowSystemAccessHelp">
                                 Runs the page unsandboxed with the same access as the web client. Only for pages you wrote.
                             </div>
                         </div>
 
-                        <!-- Routes, filled by createRepeater. Shown while Allow System Access is on. -->
+                        <!-- Routes, filled by createRepeater. Shown while Allow system access is on. -->
                         <div class="base-indent hidden" id="routesRow">
                             <div class="base-section">
                                 <div class="base-section-content" id="routesList">
