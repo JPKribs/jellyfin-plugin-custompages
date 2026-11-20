@@ -36,7 +36,7 @@ public class ConfigurationCheckTests
 
     private static async Task<JsonElement> Check(string body)
     {
-        var result = await Create(body).CheckConfiguration(null, CancellationToken.None);
+        var result = await Create(body).CheckConfiguration(CancellationToken.None);
         var content = Assert.IsType<ContentResult>(result);
         return JsonDocument.Parse(content.Content!).RootElement;
     }

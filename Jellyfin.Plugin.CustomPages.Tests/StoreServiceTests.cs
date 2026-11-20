@@ -546,7 +546,7 @@ public class StoreServiceTests : IDisposable
         // ActivityLogger is fire and forget, so let the continuation run before asserting.
         await Task.Delay(50);
         await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l =>
-            l.Name == "1 Record Added"
+            l.Name == "1 record added"
             && l.ShortOverview == "1 record was added to downloads (1), including Big Buck Bunny (1)"
             && l.Type == "CustomPages.RecordsAdded"));
     }
@@ -570,7 +570,7 @@ public class StoreServiceTests : IDisposable
 
         await Task.Delay(50);
         await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l =>
-            l.Name == "10 Records Added" && l.ShortOverview == "10 records were added to downloads (10)"));
+            l.Name == "10 records added" && l.ShortOverview == "10 records were added to downloads (10)"));
     }
 
     [Fact]
@@ -706,7 +706,7 @@ public class StoreServiceTests : IDisposable
         // The label was given when the record was written, so the removal names it too.
         await Task.Delay(50);
         await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l =>
-            l.Name == "1 Record Removed"
+            l.Name == "1 record removed"
             && l.ShortOverview == "1 record was removed from downloads (1), including Big Buck Bunny (1)"
             && l.Type == "CustomPages.RecordsRemoved"));
     }
@@ -726,8 +726,8 @@ public class StoreServiceTests : IDisposable
 
         await Task.Delay(50);
         await _activityManager.Received(2).CreateAsync(Arg.Any<ActivityLog>());
-        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l => l.Name == "2 Records Added"));
-        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l => l.Name == "1 Record Removed"));
+        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l => l.Name == "2 records added"));
+        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l => l.Name == "1 record removed"));
     }
 
     // MARK: File format

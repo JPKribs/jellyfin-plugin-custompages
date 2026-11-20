@@ -288,12 +288,7 @@ export default function (view) {
     function mountSaveBar() {
         saveBar = createSaveBar({
             fill: true,
-            onSave: save,
-            saveText: t.tr('Save'),
-            pendingText: t.tr('SaveBarPending'),
-            savingText: t.tr('SaveBarSaving'),
-            savedText: t.tr('SaveBarSaved'),
-            failedText: t.tr('SaveBarFailed')
+            onSave: save
         });
         el('storeSaveBar').appendChild(saveBar.element);
     }
@@ -317,7 +312,6 @@ export default function (view) {
         confirmDialog(message, {
             title: t.tr('ButtonClearStore'),
             confirmText: t.tr('ButtonClear'),
-            cancelText: t.tr('ButtonCancel'),
             destructive: true
         }).then(function (ok) {
             if (!ok) return;
@@ -344,7 +338,6 @@ export default function (view) {
         confirmDialog(message, {
             title: t.tr('ButtonDeleteStore'),
             confirmText: t.tr('Delete'),
-            cancelText: t.tr('ButtonCancel'),
             destructive: true
         }).then(function (ok) {
             if (!ok) return;
@@ -393,9 +386,7 @@ export default function (view) {
         el('storeUsage').appendChild(usageMeter.element);
         urlField = createCopyField({
             label: t.tr('LabelUrl'),
-            copyLabel: t.tr('CopyUrl'),
-            copiedText: t.tr('ToastCopied'),
-            failedText: t.tr('ToastCopyFailed')
+            copyLabel: t.tr('CopyUrl')
         });
         urlField.input.id = 'storeUrl';
         el('storeUrlRow').appendChild(urlField.element);

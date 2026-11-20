@@ -187,8 +187,6 @@ export default function (view) {
         userPicker = createUserMultiSelector({
             showSelectAll: true,
             adminFilter: 'exclude',
-            placeholder: t.tr('Search'),
-            selectAllText: t.tr('SelectAll'),
             emptyMessage: t.tr('NoUsersAvailable')
         });
         el('allowedUsers').appendChild(userPicker.element);
@@ -225,9 +223,7 @@ export default function (view) {
         if (urlField) return;
         urlField = createCopyField({
             label: t.tr('LabelUrl'),
-            copyLabel: t.tr('CopyUrl'),
-            copiedText: t.tr('ToastCopied'),
-            failedText: t.tr('ToastCopyFailed')
+            copyLabel: t.tr('CopyUrl')
         });
         urlField.input.id = 'pageUrl';
         el('pageUrlRow').appendChild(urlField.element);
@@ -264,7 +260,6 @@ export default function (view) {
                 }
             ],
             addText: t.tr('ButtonAddRoute'),
-            removeText: t.tr('ButtonRemoveNamed'),
             rowName: t.tr('RowRoute'),
             emptyText: t.tr('EmptyRoutes')
         });
@@ -339,7 +334,7 @@ export default function (view) {
     // password cannot be carried over reaches the administrator. The check is advisory: if it cannot
     // be reached the save goes ahead, and the server still enforces the same rules on the save itself.
     function checkConfig(candidate) {
-        return Shared.apiRequest('pages/config/check?language=' + encodeURIComponent(t.language || ''), 'POST', candidate)
+        return Shared.apiRequest('pages/config/check', 'POST', candidate)
             .catch(function () { return null; });
     }
 
@@ -376,12 +371,7 @@ export default function (view) {
         if (saveBar) return;
         saveBar = createSaveBar({
             fill: true,
-            onSave: save,
-            saveText: t.tr('Save'),
-            pendingText: t.tr('SaveBarPending'),
-            savingText: t.tr('SaveBarSaving'),
-            savedText: t.tr('SaveBarSaved'),
-            failedText: t.tr('SaveBarFailed')
+            onSave: save
         });
         el('pageSaveBar').appendChild(saveBar.element);
     }
@@ -415,7 +405,6 @@ export default function (view) {
         confirmDialog(t.format('ConfirmDeletePage', label), {
             title: t.tr('ButtonDeletePage'),
             confirmText: t.tr('Delete'),
-            cancelText: t.tr('ButtonCancel'),
             destructive: true
         }).then(function (ok) {
             if (!ok) return;

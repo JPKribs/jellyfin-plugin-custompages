@@ -1,7 +1,7 @@
 """Custom Pages screenshot server: serves the plugin's tabs, its served pages, Base and jellyfin-web the way Jellyfin does.
 
 Usage: python3 -I server.py 8811
-The tabs get the plugin's US English strings. Base comes from the NuGet package folder at the version the plugin's csproj names. JELLYFIN_WEB picks the jellyfin-web folder.
+The tabs get the plugin's US English strings, in the shape BaseTranslations.Serve answers with. Base comes from the NuGet package folder at the version the plugin's csproj names. JELLYFIN_WEB picks the jellyfin-web folder.
 """
 import http.server, importlib.util, json, os, re, sys, urllib.parse
 
@@ -29,16 +29,26 @@ BASE = base_folder()
 
 
 def strings():
-    """The US English strings as the plugin serves them: its declared Jellyfin strings, then Localization/en-us.json."""
+    """The US English strings as the plugin serves them: Base's own strings, its declared Jellyfin strings, then
+    Localization/en-us.json."""
     csproj = open(os.path.join(REPO, 'Jellyfin.Plugin.CustomPages.csproj'), encoding='utf-8').read()
     jellyfin = {src: json.load(open(os.path.join(BASE, 'jellyfin', src, 'en-us.json'), encoding='utf-8')) for src in ('web', 'server')}
     found = {}
+    own = os.path.join(BASE, 'strings', 'en-us.json')
+    if os.path.isfile(own):
+        found.update(json.load(open(own, encoding='utf-8')))
     for m in re.finditer(r'<JellyfinString Include="([^"]+)"(?:\s+Source="(\w+)")?', csproj):
         for key in m.group(1).split(';'):
             found[key] = jellyfin[m.group(2) or 'web'].get(key, key)
     found.update(json.load(open(os.path.join(REPO, 'Localization', 'en-us.json'), encoding='utf-8')))
     return found
 
+
+# Base's default casing list, then the plugin's Localization/casing.json, as BaseTranslations.Serve gives them.
+CASING = ['Jellyfin', 'TV', 'ID', 'API', 'URL', 'HTTP', 'HTTPS', 'IP', 'DNS', 'HDR', 'SDR', '4K']
+_casing = os.path.join(REPO, 'Localization', 'casing.json')
+if os.path.isfile(_casing):
+    CASING += json.load(open(_casing, encoding='utf-8'))
 
 STRINGS = strings()
 if not os.path.isfile(os.path.join(JF, 'index.html')):
@@ -88,7 +98,8 @@ class H(http.server.BaseHTTPRequestHandler):
             page = open(os.path.join(HERE, 'harness.html'), encoding='utf-8').read().replace('<!-- jellyfin-web stylesheets -->\n', links)
             return self.send(200, page.encode('utf-8'), 'text/html')
         if u.path == '/pages/plugin/translations':
-            return self.send(200, json.dumps(STRINGS).encode('utf-8'), 'application/json')
+            body = {'language': 'en-us', 'strings': STRINGS, 'casing': CASING}
+            return self.send(200, json.dumps(body).encode('utf-8'), 'application/json')
         if u.path == '/System/Info/Public':
             return self.send(200, b'{"Id":"s1"}', 'application/json')
         m = re.match(r'^/pages/([a-z0-9_-]+)(?:/(user|admin))?$', u.path)

@@ -200,7 +200,20 @@ public class CustomPagesControllerTests
 
         controller.Get("p");
 
-        pages.Received(1).GetShellHtml("p", PageVisibility.User, "de-DE");
+        pages.Received(1).GetShellHtml("p", PageVisibility.User, "de-de");
+    }
+
+    [Fact]
+    public void Get_ProtectedPage_ShellFollowsThePagesLanguageHeaderOverTheBrowsers()
+    {
+        var (controller, pages) = Create();
+        controller.Request.Headers.AcceptLanguage = "fr";
+        controller.Request.Headers["X-Jellyfin-Plugin-Language"] = "de";
+        pages.Find("p").Returns(Page(PageVisibility.User));
+
+        controller.Get("p");
+
+        pages.Received(1).GetShellHtml("p", PageVisibility.User, "de");
     }
 
     [Fact]
@@ -213,7 +226,8 @@ public class CustomPagesControllerTests
 
         Assert.NotEmpty(method.GetCustomAttributes(typeof(AllowAnonymousAttribute), false));
         var file = Assert.IsType<FileContentResult>(result);
-        var strings = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(file.FileContents)!;
+        using var body = System.Text.Json.JsonDocument.Parse(file.FileContents);
+        var strings = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(body.RootElement.GetProperty("strings"))!;
         Assert.Equal("Custom Pages", strings["HeaderCustomPages"]);
         Assert.Equal("Sign In", strings["ButtonSignIn"]);
     }

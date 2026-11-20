@@ -153,7 +153,6 @@ export default function (view) {
         confirmDialog(t.format('ConfirmDeleteAsset', name), {
             title: t.tr('DeleteImage'),
             confirmText: t.tr('Delete'),
-            cancelText: t.tr('ButtonCancel'),
             destructive: true
         }).then(function (ok) {
             if (!ok) return;
@@ -229,9 +228,7 @@ export default function (view) {
             inline: true,
             size: 'small',
             label: t.tr('LabelPath'),
-            copyLabel: t.tr('CopyPath'),
-            copiedText: t.tr('ToastCopied'),
-            failedText: t.tr('ToastCopyFailed')
+            copyLabel: t.tr('CopyPath')
         });
         rowFields.push(path);
         info.appendChild(path.element);
@@ -301,8 +298,6 @@ export default function (view) {
             multiple: true,
             dropText: t.tr('DropImages'),
             sizeLimitText: t.tr('ErrorImageTooLarge'),
-            typeText: t.tr('ErrorFileType'),
-            removeLabel: t.tr('ButtonRemoveNamed'),
             onChange: function (files) {
                 if (!files.length) return;
                 addAssetFiles(files, refused);

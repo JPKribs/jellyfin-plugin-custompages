@@ -34,13 +34,13 @@ How this plugin shows its text in the viewer's language. Base builds the strings
 ## This Plugin
 
 * The custom pages themselves are the author's content and are never translated. Only the plugin's tabs, the served page shell, and its server messages are.
-* The served page shell has no Base script. `PageService` fills its text on the server, in the language the browser's `Accept-Language` prefers.
-* The Pages tab sends its language to `pages/config/check?language=`, so a refused save's reason comes back in it.
+* The served page shell has no Base script. `PageService` fills its text on the server, in the language `BaseTranslations.RequestLanguage` reads, which is the browser's `Accept-Language` for a visitor.
+* The Pages tab calls `pages/config/check` through `Shared.apiRequest`, which sends the page's language in `X-Jellyfin-Plugin-Language`. The controller reads it with `BaseTranslations.RequestLanguage(Request)`, so a refused save's reason comes back in it.
 * Each tab loads its strings in `bind` before it builds anything, and `load` waits for them. Script built text calls `t.tr('Key')` with no fallback.
 * A sentence that holds code, such as `/pages/{slug}`, keeps its English in the markup and is filled by `fillWithCode`, with each `{0}` drawn as code.
-* Pass a translated text option to every Base component that has one, such as the Save Bar's `saveText` and a confirm's `cancelText`.
-* The activity summary names, such as "4 Records Added", come from Base's `ActivitySummary` in US English. Their overviews are in the server's display language.
-* The screenshot harness serves `pages/plugin/translations` in US English, built from the csproj and `Localization/en-us.json`.
+* Base's components translate their own default text, such as the Save Bar's lines and a confirm's **Cancel**. Pass a text option only when it says something different from Base's default, such as **Add route** or **Delete**.
+* Each `ActivityOutcome` in `StoreActivity` is built from keys, such as `ActivityAddedOne` and `ActivityAddedMany`, so the names, such as "4 records added", and the overviews are in the server's display language.
+* The screenshot harness serves `pages/plugin/translations` in US English as `{ language, strings, casing }`, built from Base's strings, the csproj, `Localization/en-us.json`, and `Localization/casing.json`.
 * `TranslationKeyTests` checks that every key a tab uses has a string.
 
 ## Add a Language

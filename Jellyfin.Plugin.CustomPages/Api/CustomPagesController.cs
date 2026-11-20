@@ -123,7 +123,7 @@ public class CustomPagesController : ControllerBase
         if (page is null)
         {
             Response.StatusCode = StatusCodes.Status404NotFound;
-            return Content(_pages.NotFoundHtml(slug, RequestLanguage()), HtmlContentType);
+            return Content(_pages.NotFoundHtml(slug, BaseTranslations.RequestLanguage(Request)), HtmlContentType);
         }
 
         if (!page.Visibility.RequiresAuth())
@@ -131,7 +131,7 @@ public class CustomPagesController : ControllerBase
             return Content(_pages.Render(page), HtmlContentType);
         }
 
-        return Content(_pages.GetShellHtml(page.Slug, page.Visibility, RequestLanguage()), HtmlContentType);
+        return Content(_pages.GetShellHtml(page.Slug, page.Visibility, BaseTranslations.RequestLanguage(Request)), HtmlContentType);
     }
 
     /// <summary>
@@ -647,15 +647,15 @@ public class CustomPagesController : ControllerBase
     /// This is advisory only. The save itself runs the same checks and refuses on its own, so a client
     /// that skips this call gains nothing.
     /// </remarks>
-    /// <param name="language">The language of the reason, such as de. US English when it is missing or unknown.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns>Whether the configuration would be accepted, with the reason when it would not.</returns>
+    /// <returns>Whether the configuration would be accepted, with the reason in the page's language when it would not.</returns>
     [HttpPost("config/check")]
     [Authorize(Policy = AdminPolicy)]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<IActionResult> CheckConfiguration([FromQuery] string? language, CancellationToken cancellationToken)
+    public async Task<IActionResult> CheckConfiguration(CancellationToken cancellationToken)
     {
         NoStore();
+        var language = BaseTranslations.RequestLanguage(Request);
 
         PluginConfiguration? incoming;
         try
@@ -878,17 +878,6 @@ public class CustomPagesController : ControllerBase
     /// <summary>
     /// Applies the response headers that keep served pages out of caches, indexes, and third-party frames.
     /// </summary>
-    /// <summary>
-    /// Reads the language the visitor's browser prefers most, for the text of a served page's shell.
-    /// </summary>
-    /// <returns>The language, such as de-DE, or <c>null</c> when the request names none.</returns>
-    private string? RequestLanguage()
-        => Request.GetTypedHeaders().AcceptLanguage
-            .Where(l => l.Value.HasValue && l.Value.Value != "*")
-            .OrderByDescending(l => l.Quality ?? 1)
-            .Select(l => l.Value.Value)
-            .FirstOrDefault();
-
     private void Harden()
     {
         // Referrer-Policy, Cache-Control: no-store, and X-Robots-Tag come from the shared standalone page set.
