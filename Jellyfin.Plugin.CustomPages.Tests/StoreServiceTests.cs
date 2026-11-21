@@ -546,8 +546,8 @@ public class StoreServiceTests : IDisposable
         // ActivityLogger is fire and forget, so let the continuation run before asserting.
         await Task.Delay(50);
         await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l =>
-            l.Name == "1 record added"
-            && l.ShortOverview == "1 record was added to downloads (1), including Big Buck Bunny (1)"
+            l.Name == "Record added"
+            && l.ShortOverview == "Added Big Buck Bunny to downloads"
             && l.Type == "CustomPages.RecordsAdded"));
     }
 
@@ -570,7 +570,7 @@ public class StoreServiceTests : IDisposable
 
         await Task.Delay(50);
         await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l =>
-            l.Name == "10 records added" && l.ShortOverview == "10 records were added to downloads (10)"));
+            l.Name == "Records added" && l.ShortOverview == "Added 10 records to downloads"));
     }
 
     [Fact]
@@ -590,9 +590,9 @@ public class StoreServiceTests : IDisposable
     // MARK: Activity log wording
 
     [Theory]
-    [InlineData(1, null, "1 record was added to downloads (1)")]
-    [InlineData(1, "Big Buck Bunny", "1 record was added to downloads (1), including Big Buck Bunny (1)")]
-    [InlineData(4, null, "4 records were added to downloads (4)")]
+    [InlineData(1, null, "Added a record to downloads")]
+    [InlineData(1, "Big Buck Bunny", "Added Big Buck Bunny to downloads")]
+    [InlineData(4, null, "Added 4 records to downloads")]
     public void AddedOverview_ReadsAsASentence(int count, string? label, string expected)
     {
         var reasons = new Dictionary<string, int>();
@@ -615,16 +615,18 @@ public class StoreServiceTests : IDisposable
             new Dictionary<string, int> { ["Holiday photos"] = 1 });
 
         Assert.Equal(
-            "3 records were removed from queue (2), downloads (1), including Holiday photos (1)",
+            "Removed 3 records from queue (2), downloads, including Holiday photos",
             StoreActivity.RemovedOverview(tally));
     }
 
     [Theory]
-    [InlineData(1, "1 record was cleared from downloads by an administrator from the dashboard")]
-    [InlineData(5, "5 records were cleared from downloads by an administrator from the dashboard")]
-    public void ClearedOverview_ReadsAsASentence(int removed, string expected)
+    [InlineData(1, null, "Cleared 1 record from downloads")]
+    [InlineData(5, null, "Cleared 5 records from downloads")]
+    [InlineData(1, "Johnny", "Johnny cleared 1 record from downloads")]
+    [InlineData(5, "Johnny", "Johnny cleared 5 records from downloads")]
+    public void ClearedOverview_ReadsAsASentence(int removed, string? userName, string expected)
     {
-        Assert.Equal(expected, StoreActivity.ClearedOverview("downloads", removed));
+        Assert.Equal(expected, StoreActivity.ClearedOverview("downloads", removed, userName));
     }
 
     // MARK: Labels
@@ -706,8 +708,8 @@ public class StoreServiceTests : IDisposable
         // The label was given when the record was written, so the removal names it too.
         await Task.Delay(50);
         await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l =>
-            l.Name == "1 record removed"
-            && l.ShortOverview == "1 record was removed from downloads (1), including Big Buck Bunny (1)"
+            l.Name == "Record removed"
+            && l.ShortOverview == "Removed Big Buck Bunny from downloads"
             && l.Type == "CustomPages.RecordsRemoved"));
     }
 
@@ -726,8 +728,8 @@ public class StoreServiceTests : IDisposable
 
         await Task.Delay(50);
         await _activityManager.Received(2).CreateAsync(Arg.Any<ActivityLog>());
-        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l => l.Name == "2 records added"));
-        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l => l.Name == "1 record removed"));
+        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l => l.Name == "Records added"));
+        await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l => l.Name == "Record removed"));
     }
 
     // MARK: File format
@@ -871,12 +873,12 @@ public class StoreServiceTests : IDisposable
         service.Create(store, Data("b"), null, Alice);
         store.NotifyOnWrite = true;
 
-        Assert.Equal(2, service.Clear(store));
+        Assert.Equal(2, service.Clear(store, "Johnny"));
 
         await Task.Delay(50);
         await _activityManager.Received(1).CreateAsync(Arg.Is<ActivityLog>(l =>
-            l.Name == "2 records cleared"
-            && l.ShortOverview == "2 records were cleared from downloads by an administrator from the dashboard"
+            l.Name == "Store cleared"
+            && l.ShortOverview == "Johnny cleared 2 records from downloads"
             && l.Type == "CustomPages.StoreClear"));
     }
 

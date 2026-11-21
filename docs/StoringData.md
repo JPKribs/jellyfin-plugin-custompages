@@ -99,9 +99,9 @@ Retention is applied two ways so it always holds. Reading or writing a store dro
 
 ## Notifying Administrators
 
-Turn on **Notify administrators** and both write entries to Jellyfin's activity log, where the dashboard already surfaces plugin events. Clearing the store from the dashboard writes its own entry straight away too, such as `12 records cleared`, reading `12 records were cleared from queue by an administrator from the dashboard`.
+Turn on **Notify administrators** and both write entries to Jellyfin's activity log, where the dashboard already surfaces plugin events. Clearing the store from the dashboard writes its own entry straight away too, named `Store cleared` and reading `Johnny cleared 12 records from queue`.
 
-Additions and removals are summed rather than written one at a time, so a submission form under load cannot bury the rest of the feed. Each is written as one entry once writes have gone quiet for 30 seconds, and at least every 5 minutes while they keep coming. The entry counts the records and names the stores they went to, such as `4 records added` reading `4 records were added to queue (3), downloads (1)`, and removals read the same way as `3 records removed`.
+Additions and removals are summed rather than written one at a time, so a submission form under load cannot bury the rest of the feed. Each is written as one entry once writes have gone quiet for 30 seconds, and at least every 5 minutes while they keep coming. The entry counts the records and names the stores they went to, such as `Records added` reading `Added 4 records to queue (3), downloads`, and removals read the same way under `Records removed`.
 
 Pass a **label** when you write and the entry names the record as well as counting it:
 
@@ -109,7 +109,7 @@ Pass a **label** when you write and the entry names the record as well as counti
 pageStore.write('queue', { url: value, status: 'queued' }, { label: 'Holiday photos' });
 ```
 
-That reads as `1 record was added to queue (1), including Holiday photos (1)`, and the same label comes back on `1 record removed` when the record is deleted, so the page only supplies it once. An update carrying no label keeps the one the record already has, since writing a status onto a record is not renaming it. Records written without a label are counted but not named. The label is capped and flattened before it reaches the feed, so a page cannot write a line break into it.
+That reads as `Added Holiday photos to queue`, and the same label comes back as `Removed Holiday photos from queue` when the record is deleted, so the page only supplies it once. An update carrying no label keeps the one the record already has, since writing a status onto a record is not renaming it. Records written without a label are counted but not named. The label is capped and flattened before it reaches the feed, so a page cannot write a line break into it.
 
 ## Limits and Storage
 

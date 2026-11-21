@@ -314,7 +314,7 @@ public sealed class StoreService : IStoreService
     }
 
     /// <inheritdoc />
-    public int Clear(PageStore store)
+    public int Clear(PageStore store, string? userName = null)
     {
         ArgumentNullException.ThrowIfNull(store);
 
@@ -347,7 +347,7 @@ public sealed class StoreService : IStoreService
             // a single administrator action and the most consequential change a store can see.
             if (store.NotifyOnWrite && _activity is not null)
             {
-                _activity.StoreCleared(store.Name, removed.Count);
+                _activity.StoreCleared(store.Name, removed.Count, userName);
             }
 
             return removed.Count;
@@ -455,7 +455,7 @@ public sealed class StoreService : IStoreService
         {
             state.PayloadBytes = MeasureAll(state.Records);
             Persist(state);
-            _logger.LogInformation(
+            _logger.LogDebug(
                 "Custom Pages: removed {Count} expired records from store {Store}", removed, store.Name);
         }
 

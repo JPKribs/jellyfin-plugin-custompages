@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Security.Claims;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -394,5 +395,21 @@ public class StoreEndpointTests
         SetBody(controller, "{\"id\":\"r1\"}");
 
         Assert.Equal(404, StatusOf(await controller.StoreDelete("downloads", CancellationToken.None)));
+    }
+
+    // MARK: Clear
+
+    [Fact]
+    public void Clear_NamesTheAdministratorForTheActivityLog()
+    {
+        var (controller, stores) = Create(Credential.Admin);
+        var store = Store();
+        stores.Find("downloads").Returns(store);
+        controller.ControllerContext.HttpContext.User = new ClaimsPrincipal(
+            new ClaimsIdentity(new[] { new Claim(ClaimTypes.Name, "Johnny") }, "Test"));
+
+        controller.StoreClear("downloads");
+
+        stores.Received(1).Clear(store, "Johnny");
     }
 }

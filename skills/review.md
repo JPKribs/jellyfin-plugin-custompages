@@ -39,6 +39,7 @@ The check to run on your own changes before you call them done. People and AI as
 * [ ] Every new or changed string passes the [style checklist](style.md#checklist).
 * [ ] Every term matches [glossary.md](glossary.md). A new term was added there first.
 * [ ] The UI, docs, messages, and code use the same word for each concept.
+* [ ] Every activity entry and server log line passes the [logging checklist](logging.md#checklist).
 
 ## UI
 

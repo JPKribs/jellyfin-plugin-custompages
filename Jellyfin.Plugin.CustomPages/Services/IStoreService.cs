@@ -95,8 +95,9 @@ public interface IStoreService
     /// Deletes every record in a store. Used by the dashboard, never reachable from a page.
     /// </summary>
     /// <param name="store">The store to empty.</param>
+    /// <param name="userName">The administrator clearing it, named in the activity log, or <c>null</c> for an API key.</param>
     /// <returns>The number of records removed.</returns>
-    int Clear(PageStore store);
+    int Clear(PageStore store, string? userName = null);
 
     /// <summary>
     /// Returns how many records a store currently holds.

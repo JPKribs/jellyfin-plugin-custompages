@@ -54,7 +54,7 @@ The plugin requires Jellyfin 12.4, so leave out notes about older Jellyfin versi
 * Write a label exactly as the page shows it, in bold. **Retention (days)**.
 * Write a path through the UI with `>` between the steps, in bold. **Dashboard > Plugins > Custom Pages**.
 * Write a tab as its label, in bold. **Pages**, **Assets**, **Stores**.
-* Quote activity log names and on-screen messages in double quotes. "12 records added".
+* Quote activity log names and on-screen messages in double quotes. "Records added".
 * Write routes, files, settings keys, and values in code. `POST /pages/store/{name}/write`.
 
 A docs page and the UI must use the same word for the same thing. When a label changes, search `docs/` for the old one and change it everywhere in the same commit.

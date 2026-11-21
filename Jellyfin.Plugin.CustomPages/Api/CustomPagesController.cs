@@ -635,7 +635,7 @@ public class CustomPagesController : ControllerBase
         }
 
         NoStore();
-        return Json(new StoreClearResponse { Removed = _stores.Clear(store) });
+        return Json(new StoreClearResponse { Removed = _stores.Clear(store, User.Identity?.Name) });
     }
 
     /// <summary>

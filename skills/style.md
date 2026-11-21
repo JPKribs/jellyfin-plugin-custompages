@@ -46,7 +46,7 @@ Every label, heading, button, tab, column header, option, title, and toast is in
 | Dialog title | Delete page |
 | Badge and status chip | Unpublished |
 | Count card | Open to writes |
-| Activity log name | 12 records added |
+| Activity log name | Records added |
 | Description, message, placeholder sentence | Serves one complete HTML document instead of separate HTML, CSS, and JS. |
 
 * Words in `Localization/casing.json`, and Base's defaults such as `Jellyfin`, `URL`, and `API`, are written as listed there, such as **Custom Pages**, **HTML**, and **KB**.
@@ -176,9 +176,10 @@ Use `shared.emptySection(text)` for a region and `shared.emptySection(text, { in
 
 Use `ActivitySummary` and `ActivityText` from Base.
 
-* The name is short and in sentence case. "12 records added".
-* Build each `ActivityOutcome` from keys, a name for one and a name for many with `{0}` for the count, so the entry is in the server's display language.
-* The overview is one sentence with no closing period, as Base writes it. "12 records were added to queue (12)".
+* Follow [logging.md](logging.md#activity-log).
+* The name is short, generic, and in sentence case, with no count. "Records added".
+* Build each `ActivityOutcome` from keys, a name for one and a name for many with no count, so the entry is in the server's display language.
+* The overview is one sentence with no closing period, as Base writes it. "Added 12 records to queue".
 * Use the same verb the UI uses for the action.
 
 ### Messages From C#

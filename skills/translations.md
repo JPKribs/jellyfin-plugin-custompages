@@ -39,7 +39,7 @@ How this plugin shows its text in the viewer's language. Base builds the strings
 * Each tab loads its strings in `bind` before it builds anything, and `load` waits for them. Script built text calls `t.tr('Key')` with no fallback.
 * A sentence that holds code, such as `/pages/{slug}`, keeps its English in the markup and is filled by `fillWithCode`, with each `{0}` drawn as code.
 * Base's components translate their own default text, such as the Save Bar's lines and a confirm's **Cancel**. Pass a text option only when it says something different from Base's default, such as **Add route** or **Delete**.
-* Each `ActivityOutcome` in `StoreActivity` is built from keys, such as `ActivityAddedOne` and `ActivityAddedMany`, so the names, such as "4 records added", and the overviews are in the server's display language.
+* Each `ActivityOutcome` in `StoreActivity` is built from keys, such as `ActivityAddedOne` and `ActivityAddedMany`, so the names, such as "Records added", and the overviews are in the server's display language.
 * The screenshot harness serves `pages/plugin/translations` in US English as `{ language, strings, casing }`, built from Base's strings, the csproj, `Localization/en-us.json`, and `Localization/casing.json`.
 * `TranslationKeyTests` checks that every key a tab uses has a string.
 

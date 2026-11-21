@@ -13,6 +13,5 @@ owner: "JPKribs"
 artifacts:
 - "Jellyfin.Plugin.CustomPages.dll"
 changelog:
-  developer:
-  - Uses JPKribs.Jellyfin.Base 12.4.3, which writes the labels it fills into its own text in sentence case, such as a screen reader name
-  - Sync Branches also runs when the release draft or publish workflow finishes, so the commits they push to master reach unstable at once
+  changed:
+  - Store activity log entries have a generic name, such as "Records added", and an overview that says each fact once, such as "Added Holiday photos to queue", naming the administrator who clears a store
